@@ -68,7 +68,7 @@ const BookingForm = () => {
         cook_id: booking.cookId,
         cook_name: booking.cookName,
         menu_selected: booking.menuSelected,
-        booking_date: booking.bookingDate,
+        booking_date: booking.bookingDates.join(", "),
         frequency: booking.frequency,
         party_size: booking.partySize,
         dietary: booking.dietary,
