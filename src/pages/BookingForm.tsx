@@ -1,0 +1,235 @@
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useBooking } from "@/context/BookingContext";
+import { ArrowLeft } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import cooqLogo from "@/assets/cooq-logo.png";
+
+const steps = ["Preferences", "Match", "Profile", "Details", "Confirm"];
+
+const BookingForm = () => {
+  const navigate = useNavigate();
+  const { booking, updateBooking } = useBooking();
+  const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const groceryFee = booking.groceryAddon ? Math.round(booking.menuPrice * 0.1) : 0;
+  const total = booking.menuPrice + groceryFee;
+
+  const validate = () => {
+    const e: Record<string, string> = {};
+    if (!booking.customerName.trim()) e.customerName = "Required";
+    if (!booking.email.trim() || !/\S+@\S+\.\S+/.test(booking.email)) e.email = "Valid email required";
+    if (!booking.phone.trim()) e.phone = "Required";
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  };
+
+  const handleSubmit = async () => {
+    if (!validate()) return;
+    setLoading(true);
+    try {
+      const { error } = await supabase.from("bookings").insert({
+        customer_name: booking.customerName,
+        email: booking.email,
+        phone: booking.phone,
+        area: booking.location,
+        address: booking.address,
+        cook_id: booking.cookId,
+        cook_name: booking.cookName,
+        menu_selected: booking.menuSelected,
+        booking_date: booking.bookingDate,
+        frequency: booking.frequency,
+        party_size: booking.partySize,
+        dietary: booking.dietary,
+        allergies_notes: booking.allergyNotes,
+        grocery_addon: booking.groceryAddon,
+        total_aed: total,
+        status: "pending",
+      });
+      if (error) throw error;
+      updateBooking({ totalAed: total });
+      navigate("/confirmation");
+    } catch (err) {
+      console.error("Booking error:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatDate = (d: string) => {
+    if (!d) return "";
+    return new Date(d).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
+  };
+
+  const Input = ({
+    label,
+    value,
+    onChange,
+    placeholder,
+    error,
+    type = "text",
+  }: {
+    label: string;
+    value: string;
+    onChange: (v: string) => void;
+    placeholder?: string;
+    error?: string;
+    type?: string;
+  }) => (
+    <div className="mb-4">
+      <label className="font-body text-sm font-medium text-foreground mb-1 block">{label}</label>
+      <input
+        type={type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="w-full p-3 rounded-lg border border-border bg-card font-body text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+      />
+      {error && <p className="font-body text-xs text-destructive mt-1">{error}</p>}
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen bg-background flex flex-col">
+      <nav className="flex items-center gap-3 px-6 py-4">
+        <button onClick={() => navigate(-1)} className="text-foreground">
+          <ArrowLeft className="w-5 h-5" />
+        </button>
+        <img src={cooqLogo} alt="Cooq" className="h-7" />
+      </nav>
+
+      {/* Progress */}
+      <div className="px-6 mb-4">
+        <div className="flex gap-1">
+          {steps.map((s, i) => (
+            <div key={s} className={`h-1.5 rounded-full flex-1 ${i <= 3 ? "bg-primary" : "bg-border"}`} />
+          ))}
+        </div>
+        <div className="flex justify-between mt-1">
+          {steps.map((s, i) => (
+            <span key={s} className={`font-body text-[10px] ${i <= 3 ? "text-primary" : "text-muted-foreground"}`}>
+              {s}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      <div className="px-6 pb-6 flex-1">
+        {/* Order summary */}
+        <div className="bg-primary/10 rounded-xl p-4 mb-6">
+          <p className="font-body text-sm font-semibold text-foreground">
+            {booking.cookName} · {booking.cookCuisine}
+          </p>
+          <p className="font-body text-sm text-muted-foreground">
+            {booking.menuSelected} · {formatDate(booking.bookingDate)}
+          </p>
+          <p className="font-body text-sm text-muted-foreground">{booking.frequency}</p>
+          <p className="font-body text-base font-semibold text-copper mt-1">AED {booking.menuPrice}</p>
+        </div>
+
+        {/* Form */}
+        <Input
+          label="Full name *"
+          value={booking.customerName}
+          onChange={(v) => updateBooking({ customerName: v })}
+          error={errors.customerName}
+        />
+        <Input
+          label="Email address *"
+          type="email"
+          value={booking.email}
+          onChange={(v) => updateBooking({ email: v })}
+          error={errors.email}
+        />
+        <Input
+          label="Phone number *"
+          value={booking.phone}
+          onChange={(v) => updateBooking({ phone: v })}
+          placeholder="+971"
+          error={errors.phone}
+        />
+        <Input
+          label="Dubai area / community"
+          value={booking.location}
+          onChange={(v) => updateBooking({ location: v })}
+        />
+        <Input
+          label="Full address / building name"
+          value={booking.address}
+          onChange={(v) => updateBooking({ address: v })}
+        />
+
+        <div className="mb-4">
+          <label className="font-body text-sm font-medium text-foreground mb-1 block">Party size</label>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => updateBooking({ partySize: Math.max(1, booking.partySize - 1) })}
+              className="w-9 h-9 rounded-full bg-card border border-border flex items-center justify-center font-body font-bold"
+            >
+              −
+            </button>
+            <span className="font-body text-lg font-semibold">{booking.partySize}</span>
+            <button
+              onClick={() => updateBooking({ partySize: Math.min(20, booking.partySize + 1) })}
+              className="w-9 h-9 rounded-full bg-card border border-border flex items-center justify-center font-body font-bold"
+            >
+              +
+            </button>
+          </div>
+        </div>
+
+        <div className="mb-4">
+          <label className="font-body text-sm font-medium text-foreground mb-1 block">Dietary requirements</label>
+          <p className="font-body text-sm text-muted-foreground">{booking.dietary.join(", ") || "None"}</p>
+        </div>
+
+        <div className="mb-6">
+          <label className="font-body text-sm font-medium text-foreground mb-1 block">Allergies or special notes</label>
+          <textarea
+            value={booking.allergyNotes}
+            onChange={(e) => updateBooking({ allergyNotes: e.target.value })}
+            className="w-full p-3 rounded-lg border border-border bg-card font-body text-sm resize-none h-20 focus:outline-none focus:ring-2 focus:ring-primary"
+          />
+        </div>
+
+        {/* Grocery toggle */}
+        <div className="flex items-center justify-between p-4 rounded-xl bg-card border border-border mb-2" style={{ boxShadow: "var(--shadow-card)" }}>
+          <div>
+            <p className="font-body text-sm font-semibold text-foreground">Add grocery shopping</p>
+            <p className="font-body text-xs text-muted-foreground">+10% = AED {Math.round(booking.menuPrice * 0.1)}</p>
+          </div>
+          <button
+            onClick={() => updateBooking({ groceryAddon: !booking.groceryAddon })}
+            className={`w-12 h-7 rounded-full transition-colors relative ${booking.groceryAddon ? "bg-primary" : "bg-border"}`}
+          >
+            <div
+              className={`w-5 h-5 rounded-full bg-card absolute top-1 transition-transform ${
+                booking.groceryAddon ? "translate-x-6" : "translate-x-1"
+              }`}
+            />
+          </button>
+        </div>
+        <p className="font-body text-xs text-muted-foreground mb-6">
+          We handle the ingredient sourcing. Cook arrives with everything.
+        </p>
+
+        {/* Total */}
+        <div className="flex justify-between items-center mb-6">
+          <span className="font-body text-base font-semibold text-foreground">Total</span>
+          <span className="font-display text-xl font-bold text-copper">AED {total}</span>
+        </div>
+
+        <button
+          disabled={loading}
+          onClick={handleSubmit}
+          className="w-full py-4 rounded-lg bg-copper text-accent-foreground font-body font-semibold text-base disabled:opacity-40 transition-opacity"
+        >
+          {loading ? "Saving..." : "Confirm Booking →"}
+        </button>
+      </div>
+    </div>
+  );
+};
+
+export default BookingForm;
