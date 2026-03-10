@@ -7,6 +7,35 @@ import cooqLogo from "@/assets/cooq-logo.png";
 
 const steps = ["Preferences", "Match", "Profile", "Details", "Confirm"];
 
+// IMPORTANT: Defined OUTSIDE the component so React doesn't remount on every render
+const FormInput = ({
+  label,
+  value,
+  onChange,
+  placeholder,
+  error,
+  type = "text",
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  error?: string;
+  type?: string;
+}) => (
+  <div className="mb-4">
+    <label className="font-body text-sm font-medium text-foreground mb-1 block">{label}</label>
+    <input
+      type={type}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder={placeholder}
+      className="w-full p-3 rounded-lg border border-border bg-card font-body text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+    />
+    {error && <p className="font-body text-xs text-destructive mt-1">{error}</p>}
+  </div>
+);
+
 const BookingForm = () => {
   const navigate = useNavigate();
   const { booking, updateBooking } = useBooking();
@@ -14,7 +43,8 @@ const BookingForm = () => {
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const groceryFee = booking.groceryAddon ? Math.round(booking.menuPrice * 0.1) : 0;
-  const total = booking.menuPrice + groceryFee;
+  const addOnFee = booking.addOns.length * 25; // AED 25 per add-on category
+  const total = booking.menuPrice + groceryFee + addOnFee;
 
   const validate = () => {
     const e: Record<string, string> = {};
@@ -62,34 +92,6 @@ const BookingForm = () => {
     return new Date(d).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
   };
 
-  const Input = ({
-    label,
-    value,
-    onChange,
-    placeholder,
-    error,
-    type = "text",
-  }: {
-    label: string;
-    value: string;
-    onChange: (v: string) => void;
-    placeholder?: string;
-    error?: string;
-    type?: string;
-  }) => (
-    <div className="mb-4">
-      <label className="font-body text-sm font-medium text-foreground mb-1 block">{label}</label>
-      <input
-        type={type}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        className="w-full p-3 rounded-lg border border-border bg-card font-body text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-      />
-      {error && <p className="font-body text-xs text-destructive mt-1">{error}</p>}
-    </div>
-  );
-
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <nav className="flex items-center gap-3 px-6 py-4">
@@ -124,37 +126,49 @@ const BookingForm = () => {
           <p className="font-body text-sm text-muted-foreground">
             {booking.menuSelected} · {formatDate(booking.bookingDate)}
           </p>
-          <p className="font-body text-sm text-muted-foreground">{booking.frequency}</p>
+          <p className="font-body text-sm text-muted-foreground">
+            {booking.frequency} · {booking.selectedDays.join(", ")}
+          </p>
+          {booking.addOns.length > 0 && (
+            <p className="font-body text-xs text-muted-foreground">
+              Add-ons: {booking.addOns.join(", ")}
+            </p>
+          )}
+          {booking.swappedDishes.length > 0 && (
+            <p className="font-body text-xs text-primary">
+              {booking.swappedDishes.length} dish swap{booking.swappedDishes.length > 1 ? "s" : ""} applied
+            </p>
+          )}
           <p className="font-body text-base font-semibold text-copper mt-1">AED {booking.menuPrice}</p>
         </div>
 
         {/* Form */}
-        <Input
+        <FormInput
           label="Full name *"
           value={booking.customerName}
           onChange={(v) => updateBooking({ customerName: v })}
           error={errors.customerName}
         />
-        <Input
+        <FormInput
           label="Email address *"
           type="email"
           value={booking.email}
           onChange={(v) => updateBooking({ email: v })}
           error={errors.email}
         />
-        <Input
+        <FormInput
           label="Phone number *"
           value={booking.phone}
           onChange={(v) => updateBooking({ phone: v })}
           placeholder="+971"
           error={errors.phone}
         />
-        <Input
+        <FormInput
           label="Dubai area / community"
           value={booking.location}
           onChange={(v) => updateBooking({ location: v })}
         />
-        <Input
+        <FormInput
           label="Full address / building name"
           value={booking.address}
           onChange={(v) => updateBooking({ address: v })}
@@ -215,9 +229,28 @@ const BookingForm = () => {
         </p>
 
         {/* Total */}
-        <div className="flex justify-between items-center mb-6">
-          <span className="font-body text-base font-semibold text-foreground">Total</span>
-          <span className="font-display text-xl font-bold text-copper">AED {total}</span>
+        <div className="space-y-1 mb-6">
+          <div className="flex justify-between font-body text-sm text-muted-foreground">
+            <span>Menu base</span>
+            <span>AED {booking.menuPrice}</span>
+          </div>
+          {booking.groceryAddon && (
+            <div className="flex justify-between font-body text-sm text-muted-foreground">
+              <span>Grocery concierge</span>
+              <span>AED {groceryFee}</span>
+            </div>
+          )}
+          {addOnFee > 0 && (
+            <div className="flex justify-between font-body text-sm text-muted-foreground">
+              <span>Add-ons ({booking.addOns.length})</span>
+              <span>AED {addOnFee}</span>
+            </div>
+          )}
+          <div className="h-px bg-border my-2" />
+          <div className="flex justify-between items-center">
+            <span className="font-body text-base font-semibold text-foreground">Total</span>
+            <span className="font-display text-xl font-bold text-copper">AED {total}</span>
+          </div>
         </div>
 
         <button

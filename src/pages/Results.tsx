@@ -17,6 +17,10 @@ const Results = () => {
     .filter(Boolean)
     .join(" · ");
 
+  const daysDisplay = booking.selectedDays.length > 0
+    ? booking.selectedDays.join(", ")
+    : "";
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <nav className="flex items-center gap-3 px-6 py-4">
@@ -30,6 +34,9 @@ const Results = () => {
         <p className="font-body text-xs font-semibold tracking-[0.15em] uppercase text-copper mb-1">Your Matches</p>
         <h1 className="font-display italic text-2xl text-foreground mb-2">3 cooks match your preferences</h1>
         <p className="font-body text-sm text-muted-foreground">{summary}</p>
+        {daysDisplay && (
+          <p className="font-body text-xs text-muted-foreground mt-1">Days: {daysDisplay}</p>
+        )}
       </div>
 
       <div className="flex-1 px-6 pb-6 space-y-4">

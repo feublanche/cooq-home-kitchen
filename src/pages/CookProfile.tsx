@@ -2,8 +2,10 @@ import { useState, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useBooking } from "@/context/BookingContext";
 import { getCookById } from "@/data/cooks";
-import { ArrowLeft, Star, Check, ShieldCheck } from "lucide-react";
+import { ArrowLeft, Star, Check, ShieldCheck, RefreshCw } from "lucide-react";
 import cooqLogo from "@/assets/cooq-logo.png";
+
+const addOnOptions = ["Soups", "Snacks", "Desserts", "Sides"];
 
 const CookProfile = () => {
   const { id } = useParams<{ id: string }>();
@@ -14,6 +16,13 @@ const CookProfile = () => {
   const [selectedMenu, setSelectedMenu] = useState<string>("");
   const [bookingType, setBookingType] = useState<"one-time" | "subscribe">("one-time");
   const [selectedDate, setSelectedDate] = useState<string>("");
+  const [selectedAddOns, setSelectedAddOns] = useState<string[]>([]);
+  
+  // Swap credits: max 2 swaps
+  const [swapMode, setSwapMode] = useState(false);
+  const [swaps, setSwaps] = useState<{ original: string; replacement: string }[]>([]);
+  const [swapOriginal, setSwapOriginal] = useState("");
+  const [swapReplacement, setSwapReplacement] = useState("");
 
   const next14Days = useMemo(() => {
     const today = new Date();
@@ -27,9 +36,29 @@ const CookProfile = () => {
   if (!cook) return <div className="p-6 font-body">Cook not found.</div>;
 
   const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const currentMenu = cook.menus.find((m) => m.id === selectedMenu);
 
   const price = bookingType === "subscribe" ? 297 : 350;
   const canBook = selectedMenu && selectedDate;
+
+  const toggleAddOn = (a: string) => {
+    setSelectedAddOns((prev) =>
+      prev.includes(a) ? prev.filter((x) => x !== a) : [...prev, a]
+    );
+  };
+
+  const addSwap = () => {
+    if (swapOriginal && swapReplacement && swaps.length < 2) {
+      setSwaps([...swaps, { original: swapOriginal, replacement: swapReplacement }]);
+      setSwapOriginal("");
+      setSwapReplacement("");
+      if (swaps.length + 1 >= 2) setSwapMode(false);
+    }
+  };
+
+  const removeSwap = (i: number) => {
+    setSwaps(swaps.filter((_, idx) => idx !== i));
+  };
 
   const handleBook = () => {
     const menu = cook.menus.find((m) => m.id === selectedMenu);
@@ -42,6 +71,8 @@ const CookProfile = () => {
       bookingType,
       bookingDate: selectedDate,
       totalAed: price,
+      addOns: selectedAddOns,
+      swappedDishes: swaps,
     });
     navigate("/book");
   };
@@ -85,13 +116,17 @@ const CookProfile = () => {
 
         {/* Signature Menus */}
         <p className="font-body text-xs font-semibold tracking-[0.15em] uppercase text-copper mb-4">Signature Menus</p>
-        <div className="space-y-3 mb-6">
+        <div className="space-y-3 mb-4">
           {cook.menus.map((menu) => {
             const isSelected = selectedMenu === menu.id;
             return (
               <button
                 key={menu.id}
-                onClick={() => setSelectedMenu(menu.id)}
+                onClick={() => {
+                  setSelectedMenu(menu.id);
+                  setSwaps([]);
+                  setSwapMode(false);
+                }}
                 className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
                   isSelected ? "border-primary bg-primary/5" : "border-border bg-card"
                 }`}
@@ -112,10 +147,112 @@ const CookProfile = () => {
           })}
         </div>
 
+        {/* Swap Credits */}
+        {selectedMenu && currentMenu && (
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-2">
+              <p className="font-body text-xs text-muted-foreground italic">
+                Auto grocery shopping list will be generated
+              </p>
+            </div>
+            
+            <div className="bg-card rounded-xl p-4 border border-border" style={{ boxShadow: "var(--shadow-card)" }}>
+              <div className="flex items-center gap-2 mb-2">
+                <RefreshCw className="w-4 h-4 text-primary" />
+                <p className="font-body text-sm font-semibold text-foreground">
+                  Swap Credits: {2 - swaps.length} remaining
+                </p>
+              </div>
+              <p className="font-body text-xs text-muted-foreground mb-3">
+                Personalise your menu — swap up to 2 dishes
+              </p>
+
+              {swaps.map((s, i) => (
+                <div key={i} className="flex items-center justify-between bg-primary/5 rounded-lg px-3 py-2 mb-2">
+                  <span className="font-body text-xs text-foreground">
+                    <span className="line-through text-muted-foreground">{s.original}</span> → {s.replacement}
+                  </span>
+                  <button onClick={() => removeSwap(i)} className="font-body text-xs text-destructive">✕</button>
+                </div>
+              ))}
+
+              {swaps.length < 2 && (
+                <>
+                  {!swapMode ? (
+                    <button
+                      onClick={() => setSwapMode(true)}
+                      className="font-body text-xs text-copper font-medium"
+                    >
+                      + Use a swap credit
+                    </button>
+                  ) : (
+                    <div className="space-y-2">
+                      <select
+                        value={swapOriginal}
+                        onChange={(e) => setSwapOriginal(e.target.value)}
+                        className="w-full p-2 rounded-lg border border-border bg-card font-body text-xs focus:outline-none focus:ring-2 focus:ring-primary"
+                      >
+                        <option value="">Dish to remove...</option>
+                        {currentMenu.meals
+                          .filter((m) => !swaps.some((s) => s.original === m))
+                          .map((m) => (
+                            <option key={m} value={m}>{m}</option>
+                          ))}
+                      </select>
+                      <input
+                        value={swapReplacement}
+                        onChange={(e) => setSwapReplacement(e.target.value)}
+                        placeholder="Replace with..."
+                        className="w-full p-2 rounded-lg border border-border bg-card font-body text-xs focus:outline-none focus:ring-2 focus:ring-primary"
+                      />
+                      <div className="flex gap-2">
+                        <button
+                          onClick={addSwap}
+                          disabled={!swapOriginal || !swapReplacement}
+                          className="px-3 py-1.5 rounded-lg bg-primary text-primary-foreground font-body text-xs font-medium disabled:opacity-40"
+                        >
+                          Confirm Swap
+                        </button>
+                        <button
+                          onClick={() => { setSwapMode(false); setSwapOriginal(""); setSwapReplacement(""); }}
+                          className="px-3 py-1.5 rounded-lg bg-muted text-foreground font-body text-xs"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Add-ons */}
         {selectedMenu && (
-          <p className="font-body text-xs text-muted-foreground mb-6 italic">
-            Auto grocery shopping list will be generated
-          </p>
+          <>
+            <p className="font-body text-xs font-semibold tracking-[0.15em] uppercase text-copper mb-3">Add-ons</p>
+            <div className="grid grid-cols-2 gap-3 mb-8">
+              {addOnOptions.map((a) => {
+                const isSelected = selectedAddOns.includes(a);
+                return (
+                  <button
+                    key={a}
+                    onClick={() => toggleAddOn(a)}
+                    className={`px-4 py-3 rounded-lg font-body text-sm font-medium transition-all border ${
+                      isSelected
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-card text-foreground border-border hover:border-primary/50"
+                    }`}
+                    style={!isSelected ? { boxShadow: "var(--shadow-card)" } : {}}
+                  >
+                    {a}
+                    <span className="block text-xs mt-0.5 opacity-75">+AED 25</span>
+                  </button>
+                );
+              })}
+            </div>
+          </>
         )}
 
         {/* Booking type */}
