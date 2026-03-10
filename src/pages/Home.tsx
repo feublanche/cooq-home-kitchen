@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { Shield, Clock, Snowflake } from "lucide-react";
+import { Shield, Clock, Snowflake, User } from "lucide-react";
 import cooqLogo from "@/assets/cooq-logo.png";
 
 const Home = () => {
