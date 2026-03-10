@@ -2,7 +2,8 @@ import { useState, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useBooking } from "@/context/BookingContext";
 import { getCookById } from "@/data/cooks";
-import { ArrowLeft, Star, Check, ShieldCheck, RefreshCw } from "lucide-react";
+import { getGroceryListForMenu, getPantryListForMenu, categoryIcons } from "@/data/groceryData";
+import { ArrowLeft, Star, Check, ShieldCheck, RefreshCw, ShoppingCart, ChevronDown, ChevronUp } from "lucide-react";
 import cooqLogo from "@/assets/cooq-logo.png";
 
 const addOnOptions = ["Soups", "Snacks", "Desserts", "Sides"];
@@ -208,12 +209,14 @@ const CookProfile = () => {
           </>
         )}
 
+        {/* Grocery & Pantry Lists */}
+        {selectedMenu && currentMenu && (
+          <GroceryPantrySection meals={currentMenu.meals} />
+        )}
+
         {/* Swap Credits */}
         {selectedMenu && currentMenu && (
           <div className="mb-6">
-            <p className="font-body text-xs text-muted-foreground italic mb-3">
-              Auto grocery shopping list will be generated
-            </p>
 
             <div className="bg-card rounded-xl p-4 border border-border" style={{ boxShadow: "var(--shadow-card)" }}>
               <div className="flex items-center gap-2 mb-2">
@@ -410,6 +413,116 @@ const CookProfile = () => {
         >
           Book {cook.firstName} {cook.lastInitial}. →
         </button>
+      </div>
+    </div>
+  );
+};
+
+// Grocery & Pantry collapsible section
+const GroceryPantrySection = ({ meals }: { meals: string[] }) => {
+  const [showGrocery, setShowGrocery] = useState(false);
+  const [showPantry, setShowPantry] = useState(false);
+
+  const groceryList = useMemo(() => getGroceryListForMenu(meals), [meals]);
+  const pantryList = useMemo(() => getPantryListForMenu(meals), [meals]);
+
+  // Group grocery by category
+  const groupedGrocery = useMemo(() => {
+    const groups: Record<string, typeof groceryList> = {};
+    for (const item of groceryList) {
+      if (!groups[item.category]) groups[item.category] = [];
+      groups[item.category].push(item);
+    }
+    return groups;
+  }, [groceryList]);
+
+  const groupedPantry = useMemo(() => {
+    const groups: Record<string, typeof pantryList> = {};
+    for (const item of pantryList) {
+      if (!groups[item.category]) groups[item.category] = [];
+      groups[item.category].push(item);
+    }
+    return groups;
+  }, [pantryList]);
+
+  return (
+    <div className="mb-6 space-y-3">
+      {/* Grocery Shopping List */}
+      <div className="bg-card rounded-xl border border-border overflow-hidden" style={{ boxShadow: "var(--shadow-card)" }}>
+        <button
+          type="button"
+          onClick={() => setShowGrocery(!showGrocery)}
+          className="w-full flex items-center justify-between p-4"
+        >
+          <div className="flex items-center gap-2">
+            <ShoppingCart className="w-4 h-4 text-copper" />
+            <span className="font-body text-sm font-semibold text-foreground">Grocery Shopping List</span>
+            <span className="font-body text-xs text-muted-foreground">({groceryList.length} items)</span>
+          </div>
+          {showGrocery ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+        </button>
+        {showGrocery && (
+          <div className="px-4 pb-4 space-y-3">
+            <p className="font-body text-xs text-muted-foreground">
+              Fresh ingredients needed for your selected menu:
+            </p>
+            {Object.entries(groupedGrocery).map(([cat, items]) => (
+              <div key={cat}>
+                <p className="font-body text-xs font-semibold text-copper capitalize mb-1">
+                  {categoryIcons[cat] || "📦"} {cat}
+                </p>
+                <div className="space-y-1">
+                  {items.map((item, i) => (
+                    <div key={i} className="flex justify-between font-body text-sm text-foreground">
+                      <span>{item.name}</span>
+                      <span className="text-muted-foreground text-xs">{item.quantity}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Pantry Essentials */}
+      <div className="bg-card rounded-xl border border-border overflow-hidden" style={{ boxShadow: "var(--shadow-card)" }}>
+        <button
+          type="button"
+          onClick={() => setShowPantry(!showPantry)}
+          className="w-full flex items-center justify-between p-4"
+        >
+          <div className="flex items-center gap-2">
+            <span className="text-base">🏠</span>
+            <span className="font-body text-sm font-semibold text-foreground">Pantry Essentials</span>
+            <span className="font-body text-xs text-muted-foreground">({pantryList.length} items)</span>
+          </div>
+          {showPantry ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+        </button>
+        {showPantry && (
+          <div className="px-4 pb-4 space-y-3">
+            <p className="font-body text-xs text-muted-foreground">
+              Make sure these staples are in your kitchen:
+            </p>
+            {Object.entries(groupedPantry).map(([cat, items]) => (
+              <div key={cat}>
+                <p className="font-body text-xs font-semibold text-copper capitalize mb-1">
+                  {categoryIcons[cat] || "📦"} {cat}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {items.map((item, i) => (
+                    <span
+                      key={i}
+                      className="px-2.5 py-1 rounded-full bg-primary/10 font-body text-xs text-foreground"
+                    >
+                      {item.name}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

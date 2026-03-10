@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useBooking } from "@/context/BookingContext";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Info } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import cooqLogo from "@/assets/cooq-logo.png";
 
@@ -213,7 +213,16 @@ const BookingForm = () => {
         {/* Grocery toggle */}
         <div className="flex items-center justify-between p-4 rounded-xl bg-card border border-border mb-2" style={{ boxShadow: "var(--shadow-card)" }}>
           <div>
-            <p className="font-body text-sm font-semibold text-foreground">Add grocery shopping</p>
+            <div className="flex items-center gap-1.5">
+              <p className="font-body text-sm font-semibold text-foreground">Add grocery shopping</p>
+              <div className="group relative">
+                <Info className="w-3.5 h-3.5 text-muted-foreground cursor-help" />
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-56 p-3 rounded-lg bg-foreground text-background font-body text-xs leading-relaxed opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity z-20 shadow-lg">
+                  Your Cooq will purchase the groceries and submit the receipt to you for reimbursement. This fee covers the shopping service only.
+                  <div className="absolute top-full left-1/2 -translate-x-1/2 w-2 h-2 bg-foreground rotate-45 -mt-1" />
+                </div>
+              </div>
+            </div>
             <p className="font-body text-xs text-muted-foreground">+10% = AED {Math.round(booking.menuPrice * 0.1)}</p>
           </div>
           <button
@@ -228,7 +237,7 @@ const BookingForm = () => {
           </button>
         </div>
         <p className="font-body text-xs text-muted-foreground mb-6">
-          We handle the ingredient sourcing. Cook arrives with everything.
+          Your Cooq handles the shopping. They'll submit the grocery receipt for your reimbursement.
         </p>
 
         {/* Total */}

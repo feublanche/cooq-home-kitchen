@@ -11,6 +11,8 @@ import CookProfile from "./pages/CookProfile";
 import BookingForm from "./pages/BookingForm";
 import Confirmation from "./pages/Confirmation";
 import Admin from "./pages/Admin";
+import Login from "./pages/Login";
+import MyBookings from "./pages/MyBookings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -31,6 +33,8 @@ const App = () => (
               <Route path="/book" element={<BookingForm />} />
               <Route path="/confirmation" element={<Confirmation />} />
               <Route path="/admin" element={<Admin />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/my-bookings" element={<MyBookings />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </div>
