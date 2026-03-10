@@ -21,11 +21,12 @@ const frequencyToCount: Record<string, number> = {
 
 const Tile = ({ label, selected, onClick }: { label: string; selected: boolean; onClick: () => void }) => (
   <button
-    onClick={onClick}
-    className={`px-4 py-3 rounded-lg font-body text-sm font-medium transition-all border ${
+    type="button"
+    onClick={(e) => { e.preventDefault(); e.stopPropagation(); onClick(); }}
+    className={`px-4 py-4 rounded-lg font-body text-sm font-medium transition-all border cursor-pointer select-none relative z-10 ${
       selected
         ? "bg-primary text-primary-foreground border-primary"
-        : "bg-card text-foreground border-border hover:border-primary/50"
+        : "bg-card text-foreground border-border hover:border-primary/50 active:scale-95"
     }`}
     style={!selected ? { boxShadow: "var(--shadow-card)" } : {}}
   >
