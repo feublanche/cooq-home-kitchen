@@ -6,14 +6,17 @@ export interface BookingState {
   // Step 2
   frequency: string;
   meals: string[];
-  // Step 3
-  startDate: string;
+  // Step 3 - selected days of the week
+  selectedDays: string[];
   partySize: number;
   // Step 4
   cuisines: string[];
   // Step 5
   dietary: string[];
   allergyNotes: string;
+  // Step 6 - language / gender
+  languages: string[];
+  genderPreference: string;
   // Cook selection
   cookId: string;
   cookName: string;
@@ -21,6 +24,10 @@ export interface BookingState {
   // Menu
   menuSelected: string;
   menuPrice: number;
+  // Swap credits (max 2 dish swaps)
+  swappedDishes: { original: string; replacement: string }[];
+  // Add-ons
+  addOns: string[];
   // Booking type
   bookingType: "one-time" | "subscribe";
   // Selected date
@@ -38,16 +45,20 @@ const defaultState: BookingState = {
   location: "",
   frequency: "",
   meals: [],
-  startDate: "",
+  selectedDays: [],
   partySize: 2,
   cuisines: [],
   dietary: [],
   allergyNotes: "",
+  languages: [],
+  genderPreference: "",
   cookId: "",
   cookName: "",
   cookCuisine: "",
   menuSelected: "",
   menuPrice: 350,
+  swappedDishes: [],
+  addOns: [],
   bookingType: "one-time",
   bookingDate: "",
   customerName: "",
