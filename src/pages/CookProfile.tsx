@@ -209,12 +209,14 @@ const CookProfile = () => {
           </>
         )}
 
+        {/* Grocery & Pantry Lists */}
+        {selectedMenu && currentMenu && (
+          <GroceryPantrySection meals={currentMenu.meals} />
+        )}
+
         {/* Swap Credits */}
         {selectedMenu && currentMenu && (
           <div className="mb-6">
-            <p className="font-body text-xs text-muted-foreground italic mb-3">
-              Auto grocery shopping list will be generated
-            </p>
 
             <div className="bg-card rounded-xl p-4 border border-border" style={{ boxShadow: "var(--shadow-card)" }}>
               <div className="flex items-center gap-2 mb-2">
