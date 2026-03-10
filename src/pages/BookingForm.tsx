@@ -68,7 +68,7 @@ const BookingForm = () => {
         cook_id: booking.cookId,
         cook_name: booking.cookName,
         menu_selected: booking.menuSelected,
-        booking_date: booking.bookingDate,
+        booking_date: booking.bookingDates.join(", "),
         frequency: booking.frequency,
         party_size: booking.partySize,
         dietary: booking.dietary,
@@ -124,7 +124,10 @@ const BookingForm = () => {
             {booking.cookName} · {booking.cookCuisine}
           </p>
           <p className="font-body text-sm text-muted-foreground">
-            {booking.menuSelected} · {formatDate(booking.bookingDate)}
+            {booking.menuSelected}
+            {booking.menuSelectedDinner ? ` + ${booking.menuSelectedDinner} (Dinner)` : ""}
+            {" · "}
+            {booking.bookingDates.map((d) => formatDate(d)).join(", ")}
           </p>
           <p className="font-body text-sm text-muted-foreground">
             {booking.frequency} · {booking.selectedDays.join(", ")}

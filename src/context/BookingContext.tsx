@@ -21,8 +21,9 @@ export interface BookingState {
   cookId: string;
   cookName: string;
   cookCuisine: string;
-  // Menu
+  // Menu — one per meal type (lunch menu, dinner menu)
   menuSelected: string;
+  menuSelectedDinner: string; // second menu if both lunch & dinner
   menuPrice: number;
   // Swap credits (max 2 dish swaps)
   swappedDishes: { original: string; replacement: string }[];
@@ -30,8 +31,8 @@ export interface BookingState {
   addOns: string[];
   // Booking type
   bookingType: "one-time" | "subscribe";
-  // Selected date
-  bookingDate: string;
+  // Selected booking dates (multiple based on frequency)
+  bookingDates: string[];
   // Booking form
   customerName: string;
   email: string;
@@ -56,11 +57,12 @@ const defaultState: BookingState = {
   cookName: "",
   cookCuisine: "",
   menuSelected: "",
+  menuSelectedDinner: "",
   menuPrice: 350,
   swappedDishes: [],
   addOns: [],
   bookingType: "one-time",
-  bookingDate: "",
+  bookingDates: [],
   customerName: "",
   email: "",
   phone: "",
