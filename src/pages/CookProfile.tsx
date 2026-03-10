@@ -2,7 +2,8 @@ import { useState, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useBooking } from "@/context/BookingContext";
 import { getCookById } from "@/data/cooks";
-import { ArrowLeft, Star, Check, ShieldCheck, RefreshCw } from "lucide-react";
+import { getGroceryListForMenu, getPantryListForMenu, categoryIcons } from "@/data/groceryData";
+import { ArrowLeft, Star, Check, ShieldCheck, RefreshCw, ShoppingCart, ChevronDown, ChevronUp } from "lucide-react";
 import cooqLogo from "@/assets/cooq-logo.png";
 
 const addOnOptions = ["Soups", "Snacks", "Desserts", "Sides"];
