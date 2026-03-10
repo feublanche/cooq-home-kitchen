@@ -124,7 +124,10 @@ const BookingForm = () => {
             {booking.cookName} · {booking.cookCuisine}
           </p>
           <p className="font-body text-sm text-muted-foreground">
-            {booking.menuSelected} · {formatDate(booking.bookingDate)}
+            {booking.menuSelected}
+            {booking.menuSelectedDinner ? ` + ${booking.menuSelectedDinner} (Dinner)` : ""}
+            {" · "}
+            {booking.bookingDates.map((d) => formatDate(d)).join(", ")}
           </p>
           <p className="font-body text-sm text-muted-foreground">
             {booking.frequency} · {booking.selectedDays.join(", ")}

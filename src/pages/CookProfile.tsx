@@ -7,6 +7,12 @@ import cooqLogo from "@/assets/cooq-logo.png";
 
 const addOnOptions = ["Soups", "Snacks", "Desserts", "Sides"];
 
+const frequencyToCount: Record<string, number> = {
+  "Once a week": 1,
+  "Twice a week": 2,
+  "Three times a week": 3,
+};
+
 const CookProfile = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -14,11 +20,12 @@ const CookProfile = () => {
   const cook = getCookById(id || "");
 
   const [selectedMenu, setSelectedMenu] = useState<string>("");
+  const [selectedMenuDinner, setSelectedMenuDinner] = useState<string>("");
   const [bookingType, setBookingType] = useState<"one-time" | "subscribe">("one-time");
-  const [selectedDate, setSelectedDate] = useState<string>("");
+  const [selectedDates, setSelectedDates] = useState<string[]>([]);
   const [selectedAddOns, setSelectedAddOns] = useState<string[]>([]);
-  
-  // Swap credits: max 2 swaps
+
+  // Swap credits
   const [swapMode, setSwapMode] = useState(false);
   const [swaps, setSwaps] = useState<{ original: string; replacement: string }[]>([]);
   const [swapOriginal, setSwapOriginal] = useState("");
@@ -37,9 +44,22 @@ const CookProfile = () => {
 
   const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   const currentMenu = cook.menus.find((m) => m.id === selectedMenu);
+  const hasBothMeals = booking.meals.includes("Lunch") && booking.meals.includes("Dinner");
+  const maxDates = frequencyToCount[booking.frequency] || 1;
+  const mealMultiplier = hasBothMeals ? 2 : 1;
 
-  const price = bookingType === "subscribe" ? 297 : 350;
-  const canBook = selectedMenu && selectedDate;
+  const basePrice = bookingType === "subscribe" ? 297 : 350;
+  const perVisitPrice = basePrice * mealMultiplier;
+  const needsBothMenus = hasBothMeals;
+  const canBook = selectedMenu && selectedDates.length === maxDates && (!needsBothMenus || selectedMenuDinner);
+
+  const toggleDate = (key: string) => {
+    if (selectedDates.includes(key)) {
+      setSelectedDates(selectedDates.filter((d) => d !== key));
+    } else if (selectedDates.length < maxDates) {
+      setSelectedDates([...selectedDates, key]);
+    }
+  };
 
   const toggleAddOn = (a: string) => {
     setSelectedAddOns((prev) =>
@@ -62,15 +82,17 @@ const CookProfile = () => {
 
   const handleBook = () => {
     const menu = cook.menus.find((m) => m.id === selectedMenu);
+    const menuD = cook.menus.find((m) => m.id === selectedMenuDinner);
     updateBooking({
       cookId: cook.id,
       cookName: `${cook.firstName} ${cook.lastInitial}.`,
       cookCuisine: cook.cuisine,
       menuSelected: menu?.name || "",
-      menuPrice: price,
+      menuSelectedDinner: menuD?.name || "",
+      menuPrice: perVisitPrice,
       bookingType,
-      bookingDate: selectedDate,
-      totalAed: price,
+      bookingDates: selectedDates,
+      totalAed: perVisitPrice,
       addOns: selectedAddOns,
       swappedDishes: swaps,
     });
@@ -114,14 +136,17 @@ const CookProfile = () => {
           <p className="font-body text-sm text-muted-foreground mt-4 leading-relaxed max-w-sm">{cook.bio}</p>
         </div>
 
-        {/* Signature Menus */}
-        <p className="font-body text-xs font-semibold tracking-[0.15em] uppercase text-copper mb-4">Signature Menus</p>
+        {/* Signature Menus — Lunch (or single meal) */}
+        <p className="font-body text-xs font-semibold tracking-[0.15em] uppercase text-copper mb-4">
+          {needsBothMenus ? "Lunch Menu" : "Signature Menus"}
+        </p>
         <div className="space-y-3 mb-4">
           {cook.menus.map((menu) => {
             const isSelected = selectedMenu === menu.id;
             return (
               <button
                 key={menu.id}
+                type="button"
                 onClick={() => {
                   setSelectedMenu(menu.id);
                   setSwaps([]);
@@ -147,15 +172,49 @@ const CookProfile = () => {
           })}
         </div>
 
+        {/* Dinner Menu — only if both Lunch & Dinner selected */}
+        {needsBothMenus && (
+          <>
+            <p className="font-body text-xs font-semibold tracking-[0.15em] uppercase text-copper mb-4 mt-6">
+              Dinner Menu
+            </p>
+            <div className="space-y-3 mb-4">
+              {cook.menus.map((menu) => {
+                const isSelected = selectedMenuDinner === menu.id;
+                return (
+                  <button
+                    key={`dinner-${menu.id}`}
+                    type="button"
+                    onClick={() => setSelectedMenuDinner(menu.id)}
+                    className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
+                      isSelected ? "border-primary bg-primary/5" : "border-border bg-card"
+                    }`}
+                    style={!isSelected ? { boxShadow: "var(--shadow-card)" } : {}}
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <h3 className="font-display text-base text-foreground">{menu.name}</h3>
+                      {isSelected && <Check className="w-5 h-5 text-primary flex-shrink-0" />}
+                    </div>
+                    <p className="font-body text-xs text-muted-foreground mb-2">5 meals per visit</p>
+                    <p className="font-body text-sm text-foreground">{menu.meals.join(", ")}</p>
+                    <p className="font-body text-base font-semibold text-copper mt-3">AED {menu.pricePerVisit} per visit</p>
+                  </button>
+                );
+              })}
+            </div>
+            <p className="font-body text-xs text-primary font-medium mb-4">
+              💡 Lunch + Dinner = 2× per visit pricing
+            </p>
+          </>
+        )}
+
         {/* Swap Credits */}
         {selectedMenu && currentMenu && (
           <div className="mb-6">
-            <div className="flex items-center justify-between mb-2">
-              <p className="font-body text-xs text-muted-foreground italic">
-                Auto grocery shopping list will be generated
-              </p>
-            </div>
-            
+            <p className="font-body text-xs text-muted-foreground italic mb-3">
+              Auto grocery shopping list will be generated
+            </p>
+
             <div className="bg-card rounded-xl p-4 border border-border" style={{ boxShadow: "var(--shadow-card)" }}>
               <div className="flex items-center gap-2 mb-2">
                 <RefreshCw className="w-4 h-4 text-primary" />
@@ -180,6 +239,7 @@ const CookProfile = () => {
                 <>
                   {!swapMode ? (
                     <button
+                      type="button"
                       onClick={() => setSwapMode(true)}
                       className="font-body text-xs text-copper font-medium"
                     >
@@ -207,6 +267,7 @@ const CookProfile = () => {
                       />
                       <div className="flex gap-2">
                         <button
+                          type="button"
                           onClick={addSwap}
                           disabled={!swapOriginal || !swapReplacement}
                           className="px-3 py-1.5 rounded-lg bg-primary text-primary-foreground font-body text-xs font-medium disabled:opacity-40"
@@ -214,6 +275,7 @@ const CookProfile = () => {
                           Confirm Swap
                         </button>
                         <button
+                          type="button"
                           onClick={() => { setSwapMode(false); setSwapOriginal(""); setSwapReplacement(""); }}
                           className="px-3 py-1.5 rounded-lg bg-muted text-foreground font-body text-xs"
                         >
@@ -238,6 +300,7 @@ const CookProfile = () => {
                 return (
                   <button
                     key={a}
+                    type="button"
                     onClick={() => toggleAddOn(a)}
                     className={`px-4 py-3 rounded-lg font-body text-sm font-medium transition-all border ${
                       isSelected
@@ -259,6 +322,7 @@ const CookProfile = () => {
         <p className="font-body text-xs font-semibold tracking-[0.15em] uppercase text-copper mb-3">Booking Type</p>
         <div className="grid grid-cols-2 gap-3 mb-8">
           <button
+            type="button"
             onClick={() => setBookingType("one-time")}
             className={`p-3 rounded-lg border-2 font-body text-sm text-center transition-all ${
               bookingType === "one-time" ? "border-primary bg-primary/5" : "border-border bg-card"
@@ -266,9 +330,10 @@ const CookProfile = () => {
           >
             <span className="font-semibold">One-Time Trial</span>
             <br />
-            <span className="text-copper font-semibold">AED 350</span>
+            <span className="text-copper font-semibold">AED {350 * mealMultiplier}</span>
           </button>
           <button
+            type="button"
             onClick={() => setBookingType("subscribe")}
             className={`p-3 rounded-lg border-2 font-body text-sm text-center transition-all ${
               bookingType === "subscribe" ? "border-primary bg-primary/5" : "border-border bg-card"
@@ -276,29 +341,34 @@ const CookProfile = () => {
           >
             <span className="font-semibold">Subscribe Weekly</span>
             <br />
-            <span className="text-copper font-semibold">AED 297/visit</span>
+            <span className="text-copper font-semibold">AED {297 * mealMultiplier}/visit</span>
             <br />
             <span className="text-xs text-primary font-medium">save 15%</span>
           </button>
         </div>
 
-        {/* Availability */}
-        <p className="font-body text-xs font-semibold tracking-[0.15em] uppercase text-copper mb-3">Available Dates</p>
+        {/* Availability — multi-date selection */}
+        <p className="font-body text-xs font-semibold tracking-[0.15em] uppercase text-copper mb-2">Available Dates</p>
+        <p className="font-body text-xs text-muted-foreground mb-3">
+          Select {maxDates} date{maxDates > 1 ? "s" : ""} · {selectedDates.length} of {maxDates} chosen
+        </p>
         <div className="grid grid-cols-7 gap-1.5 mb-8">
           {next14Days.map((d) => {
             const key = d.toISOString().split("T")[0];
             const dayOfWeek = d.getDay();
             const available = cook.availableDays.includes(dayOfWeek);
-            const isSelected = selectedDate === key;
+            const isSelected = selectedDates.includes(key);
+            const isDisabled = !available || (!isSelected && selectedDates.length >= maxDates);
             return (
               <button
                 key={key}
-                disabled={!available}
-                onClick={() => setSelectedDate(key)}
+                type="button"
+                disabled={isDisabled}
+                onClick={() => toggleDate(key)}
                 className={`flex flex-col items-center py-2 rounded-lg font-body text-xs transition-all ${
                   isSelected
                     ? "bg-primary text-primary-foreground"
-                    : available
+                    : available && !isDisabled
                     ? "bg-card text-foreground border border-border hover:border-primary"
                     : "bg-muted text-muted-foreground/40 cursor-not-allowed"
                 }`}
@@ -310,8 +380,30 @@ const CookProfile = () => {
           })}
         </div>
 
+        {/* Price summary */}
+        <div className="bg-card rounded-xl p-4 mb-4 border border-border" style={{ boxShadow: "var(--shadow-card)" }}>
+          <div className="space-y-1 font-body text-sm">
+            <div className="flex justify-between text-muted-foreground">
+              <span>Base price per visit</span>
+              <span>AED {basePrice}</span>
+            </div>
+            {hasBothMeals && (
+              <div className="flex justify-between text-muted-foreground">
+                <span>× 2 meals (Lunch + Dinner)</span>
+                <span>AED {basePrice * 2}</span>
+              </div>
+            )}
+            <div className="h-px bg-border my-1" />
+            <div className="flex justify-between font-semibold text-foreground">
+              <span>Per visit total</span>
+              <span className="text-copper">AED {perVisitPrice}</span>
+            </div>
+          </div>
+        </div>
+
         {/* Book button */}
         <button
+          type="button"
           disabled={!canBook}
           onClick={handleBook}
           className="w-full py-4 rounded-lg bg-copper text-accent-foreground font-body font-semibold text-base disabled:opacity-40 transition-opacity"

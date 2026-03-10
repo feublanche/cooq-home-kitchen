@@ -45,11 +45,14 @@ const Confirmation = () => {
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Menu</span>
-              <span className="font-medium text-foreground">{booking.menuSelected}</span>
+              <span className="font-medium text-foreground">
+                {booking.menuSelected}
+                {booking.menuSelectedDinner ? ` + ${booking.menuSelectedDinner}` : ""}
+              </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Date</span>
-              <span className="font-medium text-foreground">{formatDate(booking.bookingDate)}</span>
+              <span className="text-muted-foreground">Date(s)</span>
+              <span className="font-medium text-foreground">{booking.bookingDates.map((d) => formatDate(d)).join(", ")}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Location</span>
