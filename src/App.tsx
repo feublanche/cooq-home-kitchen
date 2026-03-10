@@ -11,6 +11,8 @@ import CookProfile from "./pages/CookProfile";
 import BookingForm from "./pages/BookingForm";
 import Confirmation from "./pages/Confirmation";
 import Admin from "./pages/Admin";
+import Login from "./pages/Login";
+import MyBookings from "./pages/MyBookings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
