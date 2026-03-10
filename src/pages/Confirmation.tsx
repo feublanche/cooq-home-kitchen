@@ -33,7 +33,7 @@ const Confirmation = () => {
 
         <h1 className="font-display italic text-3xl text-foreground mb-2 text-center">You're booked.</h1>
         <p className="font-body text-muted-foreground text-center mb-8">
-          Your cook is confirmed for {formatDate(booking.bookingDate)}.
+          Your cook is confirmed for {booking.bookingDates.map((d) => formatDate(d)).join(" & ")}.
         </p>
 
         {/* Summary card */}
