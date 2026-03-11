@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useBooking } from "@/context/BookingContext";
 import { getCookById } from "@/data/cooks";
+import { supabase } from "@/integrations/supabase/client";
 import { getGroceryListForMenu, getPantryListForMenu, categoryIcons } from "@/data/groceryData";
 import { ArrowLeft, Star, Check, ShieldCheck, RefreshCw, ShoppingCart, ChevronDown, ChevronUp } from "lucide-react";
 import cooqLogo from "@/assets/cooq-logo.png";
