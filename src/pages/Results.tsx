@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { useBooking } from "@/context/BookingContext";
 import { cooks } from "@/data/cooks";
-import { ArrowLeft, Star, Check } from "lucide-react";
+import { ArrowLeft, Star, ShieldCheck, ChefHat, MapPin, Clock } from "lucide-react";
 import cooqLogo from "@/assets/cooq-logo.png";
 
 const Results = () => {
@@ -41,37 +41,68 @@ const Results = () => {
 
       <div className="flex-1 px-6 pb-6 space-y-4">
         {cooks.map((cook) => (
-          <div key={cook.id} className="bg-card rounded-xl p-5" style={{ boxShadow: "var(--shadow-card)" }}>
+          <div key={cook.id} className="bg-card rounded-xl p-5 border border-border" style={{ boxShadow: "var(--shadow-card)" }}>
             <div className="flex gap-4">
-              {/* Blurred photo placeholder */}
-              <div className="w-16 h-16 rounded-full bg-primary/20 flex-shrink-0 overflow-hidden" style={{ filter: "blur(8px)" }}>
-                <div className="w-full h-full bg-primary/40" />
+              {/* Avatar */}
+              <div className="w-16 h-16 rounded-full bg-primary/20 flex-shrink-0 flex items-center justify-center">
+                <span className="font-display text-2xl text-primary">{cook.firstName[0]}</span>
               </div>
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 <h3 className="font-display text-lg text-foreground">
                   {cook.firstName} {cook.lastInitial}.
                 </h3>
-                <p className="font-body text-sm text-muted-foreground">{cook.cuisine}</p>
-                <p className="font-body text-xs text-muted-foreground">
-                  Serves {cook.areas.join(" & ")} · {cook.yearsExperience} years
-                </p>
-                <div className="flex items-center gap-2 mt-2">
-                  {cook.isNew ? (
-                    <span className="px-2 py-0.5 rounded-full bg-copper/10 text-copper font-body text-xs font-semibold">NEW</span>
-                  ) : (
-                    <span className="flex items-center gap-1 font-body text-sm text-foreground">
-                      <Star className="w-3.5 h-3.5 text-copper fill-copper" />
-                      {cook.rating}
-                    </span>
-                  )}
-                  {cook.certified && (
-                    <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary font-body text-xs font-medium">
-                      <Check className="w-3 h-3" /> Cooq Certified
-                    </span>
-                  )}
+
+                {/* Cuisine specialties */}
+                <div className="flex items-center gap-1.5 mt-1">
+                  <ChefHat className="w-3.5 h-3.5 text-copper flex-shrink-0" />
+                  <p className="font-body text-sm text-foreground font-medium">{cook.cuisine}</p>
+                </div>
+
+                {/* Areas */}
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  <MapPin className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+                  <p className="font-body text-xs text-muted-foreground">{cook.areas.join(" & ")}</p>
+                </div>
+
+                {/* Experience */}
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  <Clock className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+                  <p className="font-body text-xs text-muted-foreground">{cook.yearsExperience} years experience</p>
                 </div>
               </div>
             </div>
+
+            {/* Badges row */}
+            <div className="flex flex-wrap items-center gap-2 mt-3">
+              {/* Cooq Certified shield */}
+              {cook.certified && (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 border border-primary/20 font-body text-xs font-semibold text-primary">
+                  <ShieldCheck className="w-4 h-4" />
+                  Cooq Certified
+                </span>
+              )}
+
+              {/* Star rating */}
+              {cook.rating ? (
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-copper/10 font-body text-sm font-semibold text-copper">
+                  <Star className="w-3.5 h-3.5 fill-copper" />
+                  {cook.rating}
+                </span>
+              ) : cook.isNew ? (
+                <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-copper/10 text-copper font-body text-xs font-semibold">
+                  NEW
+                </span>
+              ) : null}
+            </div>
+
+            {/* Certified tooltip */}
+            {cook.certified && (
+              <p className="font-body text-[10px] text-muted-foreground mt-2 leading-snug">
+                <ShieldCheck className="w-3 h-3 inline text-primary mr-0.5 -mt-0.5" />
+                Visa verified · Health certificate · Taste-test vetted
+              </p>
+            )}
+
             <button
               onClick={() => {
                 updateBooking({

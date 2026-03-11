@@ -1,7 +1,8 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useBooking } from "@/context/BookingContext";
 import { getCookById } from "@/data/cooks";
+import { supabase } from "@/integrations/supabase/client";
 import { getGroceryListForMenu, getPantryListForMenu, categoryIcons } from "@/data/groceryData";
 import { ArrowLeft, Star, Check, ShieldCheck, RefreshCw, ShoppingCart, ChevronDown, ChevronUp } from "lucide-react";
 import cooqLogo from "@/assets/cooq-logo.png";
@@ -81,7 +82,30 @@ const CookProfile = () => {
     setSwaps(swaps.filter((_, idx) => idx !== i));
   };
 
-  const handleBook = () => {
+  const handleBook = async () => {
+    // Check if user is authenticated — if not, redirect to login
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      // Save cook selection before redirecting
+      const menu = cook.menus.find((m) => m.id === selectedMenu);
+      const menuD = cook.menus.find((m) => m.id === selectedMenuDinner);
+      updateBooking({
+        cookId: cook.id,
+        cookName: `${cook.firstName} ${cook.lastInitial}.`,
+        cookCuisine: cook.cuisine,
+        menuSelected: menu?.name || "",
+        menuSelectedDinner: menuD?.name || "",
+        menuPrice: perVisitPrice,
+        bookingType,
+        bookingDates: selectedDates,
+        totalAed: perVisitPrice,
+        addOns: selectedAddOns,
+        swappedDishes: swaps,
+      });
+      navigate("/login", { state: { returnTo: "/book" } });
+      return;
+    }
+
     const menu = cook.menus.find((m) => m.id === selectedMenu);
     const menuD = cook.menus.find((m) => m.id === selectedMenuDinner);
     updateBooking({
