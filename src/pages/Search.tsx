@@ -103,10 +103,19 @@ const Search = () => {
         {step === 1 && (
           <div>
             <SectionLabel>Where are you based?</SectionLabel>
-            <div className="grid grid-cols-2 gap-3">
-              {locations.map((loc) => (
-                <Tile key={loc} label={loc} selected={booking.location === loc} onClick={() => updateBooking({ location: loc })} />
-              ))}
+            <div className="relative">
+              <select
+                value={booking.location}
+                onChange={(e) => updateBooking({ location: e.target.value })}
+                className="w-full p-4 pr-10 rounded-lg border border-border bg-card font-body text-sm text-foreground appearance-none focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer"
+                style={{ boxShadow: "var(--shadow-card)" }}
+              >
+                <option value="">Select your neighborhood...</option>
+                {dubaiNeighborhoods.map((loc) => (
+                  <option key={loc} value={loc}>{loc}</option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground pointer-events-none" />
             </div>
           </div>
         )}
