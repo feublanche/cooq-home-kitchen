@@ -8,8 +8,8 @@ const locations = ["JBR", "Downtown", "Marina", "Arabian Ranches", "Palm Jumeira
 const frequencies = ["Once a week", "Twice a week", "Three times a week"];
 const mealOptions = ["Lunch", "Dinner"];
 const weekDays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
-const cuisineOptions = ["Lebanese", "Mediterranean", "Emirati", "Indian", "Pan-Asian", "Moroccan", "Healthy/Fitness", "International"];
-const dietaryOptions = ["None", "Halal", "Gluten Free", "Keto", "Vegetarian", "Dairy Free", "Nut Allergy"];
+const cuisineOptions = ["Arabic", "Mediterranean", "Indian", "Asian", "Italian", "Lebanese", "Emirati", "Moroccan"];
+const dietaryOptions = ["Kid-Friendly", "Family Favorites", "High Protein", "Comfort Food", "Healthy", "Vegetarian", "Vegan", "Keto", "Gluten-Free"];
 const languageOptions = ["English", "Arabic", "Hindi", "Filipino", "French"];
 const genderOptions = ["No preference", "Female cook", "Male cook"];
 
