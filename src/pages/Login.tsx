@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
-import { ArrowLeft, Mail, Smartphone } from "lucide-react";
+import { ArrowLeft, Smartphone } from "lucide-react";
 import cooqLogo from "@/assets/cooq-logo.png";
 
 const Login = () => {
@@ -10,12 +10,22 @@ const Login = () => {
   const location = useLocation();
   const returnTo = (location.state as any)?.returnTo || "/my-bookings";
 
-  const [mode, setMode] = useState<"choose" | "otp-email" | "otp-verify">("choose");
-  const [email, setEmail] = useState("");
+  const [mode, setMode] = useState<"choose" | "otp-phone" | "otp-verify">("choose");
+  const [phone, setPhone] = useState("+971");
   const [otpCode, setOtpCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+
+  // Listen for auth state changes (e.g. after Google OAuth redirect)
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_IN" && session) {
+        navigate(returnTo);
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [navigate, returnTo]);
 
   const handleGoogleLogin = async () => {
     setError("");
@@ -25,40 +35,38 @@ const Login = () => {
     if (error) setError(error.message || "Google sign-in failed");
   };
 
-  const handleSendOtp = async () => {
-    if (!email.trim() || !/\S+@\S+\.\S+/.test(email)) {
-      setError("Please enter a valid email");
+  const handleSendPhoneOtp = async () => {
+    const cleaned = phone.replace(/\s/g, "");
+    if (!cleaned || cleaned.length < 10) {
+      setError("Please enter a valid phone number with country code");
       return;
     }
     setError("");
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithOtp({
-        email,
-        options: { emailRedirectTo: window.location.origin },
-      });
+      const { error } = await supabase.auth.signInWithOtp({ phone: cleaned });
       if (error) throw error;
-      setSuccess("Check your email for the verification code.");
+      setSuccess("An SMS with a verification code has been sent to your phone.");
       setMode("otp-verify");
     } catch (err: any) {
-      setError(err.message || "Failed to send OTP");
+      setError(err.message || "Failed to send OTP. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleVerifyOtp = async () => {
-    if (!otpCode.trim()) {
-      setError("Enter the code from your email");
+  const handleVerifyPhoneOtp = async () => {
+    if (!otpCode.trim() || otpCode.length < 6) {
+      setError("Enter the 6-digit code from your SMS");
       return;
     }
     setError("");
     setLoading(true);
     try {
       const { error } = await supabase.auth.verifyOtp({
-        email,
+        phone: phone.replace(/\s/g, ""),
         token: otpCode,
-        type: "email",
+        type: "sms",
       });
       if (error) throw error;
       navigate(returnTo);
@@ -80,14 +88,14 @@ const Login = () => {
 
       <div className="flex-1 px-6 pb-6 flex flex-col items-center justify-center">
         <h1 className="font-display italic text-3xl text-foreground mb-2">
-          {mode === "choose" ? "Sign In" : mode === "otp-email" ? "Email OTP" : "Verify Code"}
+          {mode === "choose" ? "Sign In" : mode === "otp-phone" ? "Phone Verification" : "Verify Code"}
         </h1>
         <p className="font-body text-sm text-muted-foreground mb-8 text-center max-w-xs">
           {mode === "choose"
             ? "Sign in to track your bookings and manage your cook schedule."
-            : mode === "otp-email"
-            ? "We'll send a one-time code to your email."
-            : `Enter the code sent to ${email}`}
+            : mode === "otp-phone"
+            ? "We'll send a one-time code to your phone via SMS."
+            : `Enter the code sent to ${phone}`}
         </p>
 
         {error && (
@@ -118,44 +126,36 @@ const Login = () => {
               Continue with Google
             </button>
 
-            {/* Email OTP */}
+            {/* Phone OTP */}
             <button
-              onClick={() => { setMode("otp-email"); setError(""); setSuccess(""); }}
+              onClick={() => { setMode("otp-phone"); setError(""); setSuccess(""); }}
               className="w-full py-4 rounded-lg border border-border bg-card font-body font-semibold text-base text-foreground hover:border-primary/50 transition-colors flex items-center justify-center gap-3"
               style={{ boxShadow: "var(--shadow-card)" }}
             >
-              <Mail className="w-5 h-5" />
-              Continue with Email OTP
-            </button>
-
-            {/* Facebook placeholder - not supported */}
-            <button
-              disabled
-              className="w-full py-4 rounded-lg border border-border bg-muted font-body font-medium text-sm text-muted-foreground flex items-center justify-center gap-3 cursor-not-allowed"
-            >
-              <svg className="w-5 h-5 opacity-40" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-              </svg>
-              Facebook (coming soon)
+              <Smartphone className="w-5 h-5" />
+              Continue with Phone OTP
             </button>
           </div>
         )}
 
-        {mode === "otp-email" && (
+        {mode === "otp-phone" && (
           <div className="w-full max-w-sm space-y-4">
             <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@email.com"
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="+971 50 123 4567"
               className="w-full p-3 rounded-lg border border-border bg-card font-body text-sm focus:outline-none focus:ring-2 focus:ring-primary"
             />
+            <p className="font-body text-xs text-muted-foreground">
+              Enter your UAE mobile number with country code (+971)
+            </p>
             <button
-              onClick={handleSendOtp}
+              onClick={handleSendPhoneOtp}
               disabled={loading}
               className="w-full py-4 rounded-lg bg-copper text-accent-foreground font-body font-semibold text-base disabled:opacity-40 transition-opacity"
             >
-              {loading ? "Sending..." : "Send Code →"}
+              {loading ? "Sending..." : "Send SMS Code →"}
             </button>
             <button
               onClick={() => { setMode("choose"); setError(""); setSuccess(""); }}
@@ -171,30 +171,30 @@ const Login = () => {
             <input
               type="text"
               value={otpCode}
-              onChange={(e) => setOtpCode(e.target.value)}
+              onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ""))}
               placeholder="Enter 6-digit code"
               maxLength={6}
               className="w-full p-3 rounded-lg border border-border bg-card font-body text-sm text-center tracking-[0.5em] focus:outline-none focus:ring-2 focus:ring-primary"
             />
             <button
-              onClick={handleVerifyOtp}
+              onClick={handleVerifyPhoneOtp}
               disabled={loading}
               className="w-full py-4 rounded-lg bg-copper text-accent-foreground font-body font-semibold text-base disabled:opacity-40 transition-opacity"
             >
               {loading ? "Verifying..." : "Verify & Sign In →"}
             </button>
             <button
-              onClick={handleSendOtp}
+              onClick={handleSendPhoneOtp}
               disabled={loading}
               className="w-full font-body text-sm text-copper font-medium"
             >
               Resend code
             </button>
             <button
-              onClick={() => { setMode("otp-email"); setError(""); setSuccess(""); setOtpCode(""); }}
+              onClick={() => { setMode("otp-phone"); setError(""); setSuccess(""); setOtpCode(""); }}
               className="w-full font-body text-sm text-muted-foreground"
             >
-              ← Change email
+              ← Change number
             </button>
           </div>
         )}

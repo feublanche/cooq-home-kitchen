@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useBooking } from "@/context/BookingContext";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ChevronDown } from "lucide-react";
+import { dubaiNeighborhoods } from "@/data/dubaiNeighborhoods";
 import cooqLogo from "@/assets/cooq-logo.png";
 
-const locations = ["JBR", "Downtown", "Marina", "Arabian Ranches", "Palm Jumeirah", "Business Bay", "Jumeirah", "Other"];
 const frequencies = ["Once a week", "Twice a week", "Three times a week"];
 const mealOptions = ["Lunch", "Dinner"];
 const weekDays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
@@ -103,10 +103,19 @@ const Search = () => {
         {step === 1 && (
           <div>
             <SectionLabel>Where are you based?</SectionLabel>
-            <div className="grid grid-cols-2 gap-3">
-              {locations.map((loc) => (
-                <Tile key={loc} label={loc} selected={booking.location === loc} onClick={() => updateBooking({ location: loc })} />
-              ))}
+            <div className="relative">
+              <select
+                value={booking.location}
+                onChange={(e) => updateBooking({ location: e.target.value })}
+                className="w-full p-4 pr-10 rounded-lg border border-border bg-card font-body text-sm text-foreground appearance-none focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer"
+                style={{ boxShadow: "var(--shadow-card)" }}
+              >
+                <option value="">Select your neighborhood...</option>
+                {dubaiNeighborhoods.map((loc) => (
+                  <option key={loc} value={loc}>{loc}</option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground pointer-events-none" />
             </div>
           </div>
         )}
