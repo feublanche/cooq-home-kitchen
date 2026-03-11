@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useBooking } from "@/context/BookingContext";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ChevronDown } from "lucide-react";
+import { dubaiNeighborhoods } from "@/data/dubaiNeighborhoods";
 import cooqLogo from "@/assets/cooq-logo.png";
 
-const locations = ["JBR", "Downtown", "Marina", "Arabian Ranches", "Palm Jumeirah", "Business Bay", "Jumeirah", "Other"];
 const frequencies = ["Once a week", "Twice a week", "Three times a week"];
 const mealOptions = ["Lunch", "Dinner"];
 const weekDays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
