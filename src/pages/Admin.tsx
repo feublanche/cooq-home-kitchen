@@ -385,12 +385,17 @@ const Admin = () => {
 };
 
 // ── Helpers ──
-const StatCard = ({ label, value }: { label: string; value: string | number }) => (
-  <div className="bg-card rounded-xl p-3 border border-border" style={{ boxShadow: "var(--shadow-card)" }}>
-    <p className="font-body text-[10px] text-muted-foreground uppercase tracking-wider">{label}</p>
-    <p className="font-display text-lg text-foreground">{value}</p>
-  </div>
+import { forwardRef } from "react";
+
+const StatCard = forwardRef<HTMLDivElement, { label: string; value: string | number }>(
+  ({ label, value }, ref) => (
+    <div ref={ref} className="bg-card rounded-xl p-3 border border-border" style={{ boxShadow: "var(--shadow-card)" }}>
+      <p className="font-body text-[10px] text-muted-foreground uppercase tracking-wider">{label}</p>
+      <p className="font-display text-lg text-foreground">{value}</p>
+    </div>
+  )
 );
+StatCard.displayName = "StatCard";
 
 const AlertItem = ({ icon, text }: { icon: React.ReactNode; text: string }) => (
   <div className="flex items-start gap-2 py-1.5">
