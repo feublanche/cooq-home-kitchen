@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, forwardRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import cooqLogo from "@/assets/cooq-logo.png";
+import { toast } from "@/hooks/use-toast";
 import {
   ShieldCheck,
   MapPin,
@@ -15,13 +16,17 @@ import {
   Clock,
   CheckCircle2,
   XCircle,
-  Eye,
+  Upload,
+  Image as ImageIcon,
+  Loader2,
+  Send,
 } from "lucide-react";
 
 interface Booking {
   id: string;
   customer_name: string;
   cook_name: string;
+  cook_id: string;
   booking_date: string;
   area: string;
   menu_selected: string;
@@ -29,9 +34,22 @@ interface Booking {
   grocery_addon: boolean;
   total_aed: number;
   status: string;
+  menu_status?: string;
   phone: string;
   email: string;
   created_at: string;
+}
+
+interface QualityPhoto {
+  id: string;
+  booking_id: string;
+  cook_id: string;
+  cook_name: string;
+  photo_type: string;
+  photo_url: string;
+  uploaded_at: string;
+  reviewed: boolean;
+  approved: boolean | null;
 }
 
 const tabs = [
@@ -53,11 +71,19 @@ const statusColors: Record<string, string> = {
   cancelled: "bg-destructive/10 text-destructive",
 };
 
+const menuStatusColors: Record<string, string> = {
+  pending_review: "bg-copper/10 text-copper",
+  approved: "bg-primary/10 text-primary",
+  rejected: "bg-destructive/10 text-destructive",
+};
+
 const Admin = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<TabId>("supply");
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [photos, setPhotos] = useState<QualityPhoto[]>([]);
   const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState<string | null>(null);
 
   const fetchBookings = async () => {
     const { data } = await supabase
@@ -68,13 +94,124 @@ const Admin = () => {
     setLoading(false);
   };
 
+  const fetchPhotos = async () => {
+    const { data } = await supabase
+      .from("quality_photos")
+      .select("*")
+      .order("uploaded_at", { ascending: false });
+    if (data) setPhotos(data as QualityPhoto[]);
+  };
+
   useEffect(() => {
     fetchBookings();
+    fetchPhotos();
   }, []);
 
   const updateStatus = async (id: string, status: string) => {
     await supabase.from("bookings").update({ status }).eq("id", id);
     setBookings((prev) => prev.map((b) => (b.id === id ? { ...b, status } : b)));
+  };
+
+  // ── Menu Vetting Actions ──
+  const handleMenuAction = async (booking: Booking, action: "approved" | "rejected") => {
+    const { error } = await supabase
+      .from("bookings")
+      .update({ menu_status: action } as any)
+      .eq("id", booking.id);
+
+    if (error) {
+      toast({ title: "Error", description: "Failed to update menu status", variant: "destructive" });
+      return;
+    }
+
+    setBookings((prev) =>
+      prev.map((b) => (b.id === booking.id ? { ...b, menu_status: action } : b))
+    );
+
+    // Send notification to cook
+    notifyCook(booking, action === "approved" ? "menu_approved" : "menu_rejected");
+
+    toast({
+      title: action === "approved" ? "Menu Approved ✓" : "Menu Rejected",
+      description: `${booking.cook_name}'s menu "${booking.menu_selected}" has been ${action}.`,
+    });
+  };
+
+  // ── Cook Notification ──
+  const notifyCook = async (booking: Booking, eventType: string) => {
+    try {
+      await supabase.functions.invoke("notify-cook", {
+        body: {
+          cook_name: booking.cook_name,
+          cook_email: booking.email,
+          cook_phone: booking.phone,
+          event_type: eventType,
+          booking_details: {
+            menu: booking.menu_selected,
+            date: booking.booking_date,
+            customer_name: booking.customer_name,
+            area: booking.area,
+          },
+        },
+      });
+    } catch (err) {
+      console.error("Notification failed:", err);
+    }
+  };
+
+  // ── Photo Upload ──
+  const handlePhotoUpload = async (
+    bookingId: string,
+    cookId: string,
+    cookName: string,
+    photoType: "container" | "kitchen",
+    file: File
+  ) => {
+    setUploading(`${bookingId}-${photoType}`);
+    const filePath = `${cookId}/${bookingId}/${photoType}-${Date.now()}.${file.name.split('.').pop()}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("proof-photos")
+      .upload(filePath, file);
+
+    if (uploadError) {
+      toast({ title: "Upload failed", description: uploadError.message, variant: "destructive" });
+      setUploading(null);
+      return;
+    }
+
+    const { data: urlData } = supabase.storage.from("proof-photos").getPublicUrl(filePath);
+
+    const { error: insertError } = await supabase.from("quality_photos").insert({
+      booking_id: bookingId,
+      cook_id: cookId,
+      cook_name: cookName,
+      photo_type: photoType,
+      photo_url: urlData.publicUrl,
+    } as any);
+
+    if (insertError) {
+      toast({ title: "Save failed", description: insertError.message, variant: "destructive" });
+    } else {
+      toast({ title: "Photo uploaded ✓", description: `${photoType} photo saved successfully.` });
+      fetchPhotos();
+    }
+    setUploading(null);
+  };
+
+  // ── Photo Review ──
+  const handlePhotoReview = async (photoId: string, approved: boolean) => {
+    await supabase
+      .from("quality_photos")
+      .update({ reviewed: true, approved } as any)
+      .eq("id", photoId);
+    setPhotos((prev) =>
+      prev.map((p) => (p.id === photoId ? { ...p, reviewed: true, approved } : p))
+    );
+    toast({
+      title: approved ? "Photo Approved ✓" : "Photo Rejected",
+      description: approved ? "Proof of quality verified." : "Photo did not meet standards.",
+    });
   };
 
   const totalRevenue = bookings.reduce((sum, b) => sum + (b.total_aed || 0), 0);
@@ -95,7 +232,7 @@ const Admin = () => {
         <span className="font-body text-xs text-background/70 uppercase tracking-wider">Operator Dashboard</span>
       </div>
 
-      {/* Tab bar — horizontal scroll */}
+      {/* Tab bar */}
       <div className="bg-card border-b border-border overflow-x-auto">
         <div className="flex min-w-max">
           {tabs.map((tab) => {
@@ -183,27 +320,43 @@ const Admin = () => {
               Review proposed menus for balance, appeal, and accurate ingredient lists
             </p>
             <div className="space-y-3">
-              {bookings.slice(0, 5).map((b) => (
-                <div key={b.id} className="bg-card rounded-xl p-4 border border-border" style={{ boxShadow: "var(--shadow-card)" }}>
-                  <div className="flex justify-between items-start mb-2">
-                    <div>
-                      <p className="font-body text-sm font-semibold text-foreground">{b.cook_name}</p>
-                      <p className="font-body text-xs text-muted-foreground">{b.menu_selected}</p>
+              {bookings.map((b) => {
+                const ms = (b as any).menu_status || "pending_review";
+                return (
+                  <div key={b.id} className="bg-card rounded-xl p-4 border border-border" style={{ boxShadow: "var(--shadow-card)" }}>
+                    <div className="flex justify-between items-start mb-2">
+                      <div>
+                        <p className="font-body text-sm font-semibold text-foreground">{b.cook_name}</p>
+                        <p className="font-body text-xs text-muted-foreground">{b.menu_selected}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className={`font-body text-[10px] font-semibold px-2 py-0.5 rounded-full ${menuStatusColors[ms] || ""}`}>
+                          {ms === "pending_review" ? "Pending" : ms === "approved" ? "Approved" : "Rejected"}
+                        </span>
+                        {ms === "pending_review" && (
+                          <>
+                            <button
+                              onClick={() => handleMenuAction(b, "approved")}
+                              className="p-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                            >
+                              <CheckCircle2 className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleMenuAction(b, "rejected")}
+                              className="p-1.5 rounded-lg bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors"
+                            >
+                              <XCircle className="w-4 h-4" />
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex gap-2">
-                      <button className="p-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20">
-                        <CheckCircle2 className="w-4 h-4" />
-                      </button>
-                      <button className="p-1.5 rounded-lg bg-destructive/10 text-destructive hover:bg-destructive/20">
-                        <XCircle className="w-4 h-4" />
-                      </button>
-                    </div>
+                    <p className="font-body text-xs text-muted-foreground">
+                      Dietary: {b.dietary?.join(", ") || "None"}
+                    </p>
                   </div>
-                  <p className="font-body text-xs text-muted-foreground">
-                    Dietary: {b.dietary?.join(", ") || "None"}
-                  </p>
-                </div>
-              ))}
+                );
+              })}
               {bookings.length === 0 && (
                 <p className="font-body text-sm text-muted-foreground text-center py-8">No menus to review</p>
               )}
@@ -246,7 +399,6 @@ const Admin = () => {
             <p className="font-body text-xs text-muted-foreground mb-4">
               Handle late check-ins, no-shows, and safety reports
             </p>
-
             <div className="space-y-4">
               <div className="bg-card rounded-xl p-4 border border-border" style={{ boxShadow: "var(--shadow-card)" }}>
                 <div className="flex items-center gap-2 mb-2">
@@ -257,7 +409,6 @@ const Admin = () => {
                   Late check-ins trigger auto-SMS/WhatsApp to cook. No-shows trigger auto-rebooking options for client.
                 </p>
               </div>
-
               <div className="bg-card rounded-xl p-4 border border-border" style={{ boxShadow: "var(--shadow-card)" }}>
                 <div className="flex items-center gap-2 mb-2">
                   <AlertTriangle className="w-4 h-4 text-destructive" />
@@ -267,7 +418,6 @@ const Admin = () => {
                   Client reports "Cook is unsafe/rude" during the session. This requires immediate human intervention.
                 </p>
               </div>
-
               <div className="bg-card rounded-xl p-4 border border-border" style={{ boxShadow: "var(--shadow-card)" }}>
                 <div className="flex items-center gap-2 mb-2">
                   <Users className="w-4 h-4 text-primary" />
@@ -289,23 +439,145 @@ const Admin = () => {
               Upload photo of prepped containers + photo of spotless kitchen
             </p>
 
-            <div className="bg-card rounded-xl p-6 border border-border text-center" style={{ boxShadow: "var(--shadow-card)" }}>
-              <Camera className="w-10 h-10 text-copper mx-auto mb-3" />
-              <p className="font-body text-sm font-semibold text-foreground mb-1">Photo Upload Queue</p>
-              <p className="font-body text-xs text-muted-foreground mb-4">
-                Cooks upload photos of prepped containers and clean kitchen after each session.
-              </p>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="bg-primary/5 rounded-lg p-3">
-                  <p className="font-body text-xs font-semibold text-foreground">Prepped Containers</p>
-                  <p className="font-body text-[10px] text-muted-foreground mt-1">Labelled, sealed, fridge-ready</p>
+            {/* Upload section per booking */}
+            <div className="space-y-4 mb-6">
+              {bookings
+                .filter((b) => b.status === "confirmed" || b.status === "completed")
+                .slice(0, 10)
+                .map((b) => {
+                  const bookingPhotos = photos.filter((p) => p.booking_id === b.id);
+                  const hasContainer = bookingPhotos.some((p) => p.photo_type === "container");
+                  const hasKitchen = bookingPhotos.some((p) => p.photo_type === "kitchen");
+
+                  return (
+                    <div key={b.id} className="bg-card rounded-xl p-4 border border-border" style={{ boxShadow: "var(--shadow-card)" }}>
+                      <div className="flex justify-between items-start mb-3">
+                        <div>
+                          <p className="font-body text-sm font-semibold text-foreground">{b.cook_name}</p>
+                          <p className="font-body text-xs text-muted-foreground">{b.booking_date || "No date"} · {b.area || "—"}</p>
+                        </div>
+                        <span className={`font-body text-[10px] font-semibold px-2 py-0.5 rounded-full ${statusColors[b.status] || ""}`}>
+                          {b.status}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        {/* Container photo */}
+                        <div className="relative">
+                          {hasContainer ? (
+                            <div className="relative rounded-lg overflow-hidden aspect-square bg-muted">
+                              <img
+                                src={bookingPhotos.find((p) => p.photo_type === "container")?.photo_url}
+                                alt="Container"
+                                className="w-full h-full object-cover"
+                              />
+                              <div className="absolute bottom-0 left-0 right-0 bg-foreground/70 px-2 py-1">
+                                <p className="font-body text-[10px] text-background">Containers ✓</p>
+                              </div>
+                            </div>
+                          ) : (
+                            <label className="flex flex-col items-center justify-center aspect-square rounded-lg border-2 border-dashed border-border bg-muted/30 cursor-pointer hover:bg-muted/50 transition-colors">
+                              {uploading === `${b.id}-container` ? (
+                                <Loader2 className="w-6 h-6 text-muted-foreground animate-spin" />
+                              ) : (
+                                <>
+                                  <Upload className="w-5 h-5 text-muted-foreground mb-1" />
+                                  <span className="font-body text-[10px] text-muted-foreground">Containers</span>
+                                </>
+                              )}
+                              <input
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) handlePhotoUpload(b.id, b.cook_id, b.cook_name, "container", file);
+                                }}
+                              />
+                            </label>
+                          )}
+                        </div>
+
+                        {/* Kitchen photo */}
+                        <div className="relative">
+                          {hasKitchen ? (
+                            <div className="relative rounded-lg overflow-hidden aspect-square bg-muted">
+                              <img
+                                src={bookingPhotos.find((p) => p.photo_type === "kitchen")?.photo_url}
+                                alt="Kitchen"
+                                className="w-full h-full object-cover"
+                              />
+                              <div className="absolute bottom-0 left-0 right-0 bg-foreground/70 px-2 py-1">
+                                <p className="font-body text-[10px] text-background">Kitchen ✓</p>
+                              </div>
+                            </div>
+                          ) : (
+                            <label className="flex flex-col items-center justify-center aspect-square rounded-lg border-2 border-dashed border-border bg-muted/30 cursor-pointer hover:bg-muted/50 transition-colors">
+                              {uploading === `${b.id}-kitchen` ? (
+                                <Loader2 className="w-6 h-6 text-muted-foreground animate-spin" />
+                              ) : (
+                                <>
+                                  <Upload className="w-5 h-5 text-muted-foreground mb-1" />
+                                  <span className="font-body text-[10px] text-muted-foreground">Kitchen</span>
+                                </>
+                              )}
+                              <input
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) handlePhotoUpload(b.id, b.cook_id, b.cook_name, "kitchen", file);
+                                }}
+                              />
+                            </label>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              {bookings.filter((b) => b.status === "confirmed" || b.status === "completed").length === 0 && (
+                <div className="bg-card rounded-xl p-6 border border-border text-center" style={{ boxShadow: "var(--shadow-card)" }}>
+                  <Camera className="w-10 h-10 text-copper mx-auto mb-3" />
+                  <p className="font-body text-sm text-muted-foreground">No sessions ready for photo upload</p>
                 </div>
-                <div className="bg-primary/5 rounded-lg p-3">
-                  <p className="font-body text-xs font-semibold text-foreground">Kitchen Photo</p>
-                  <p className="font-body text-[10px] text-muted-foreground mt-1">Spotless after cooking</p>
+              )}
+            </div>
+
+            {/* Review queue */}
+            {photos.filter((p) => !p.reviewed).length > 0 && (
+              <div>
+                <p className="font-body text-xs font-semibold tracking-[0.15em] uppercase text-copper mb-3">Pending Review</p>
+                <div className="space-y-3">
+                  {photos
+                    .filter((p) => !p.reviewed)
+                    .map((p) => (
+                      <div key={p.id} className="bg-card rounded-xl p-3 border border-border flex gap-3 items-center" style={{ boxShadow: "var(--shadow-card)" }}>
+                        <img src={p.photo_url} alt={p.photo_type} className="w-16 h-16 rounded-lg object-cover" />
+                        <div className="flex-1">
+                          <p className="font-body text-sm font-semibold text-foreground">{p.cook_name}</p>
+                          <p className="font-body text-xs text-muted-foreground capitalize">{p.photo_type} photo</p>
+                        </div>
+                        <div className="flex gap-1">
+                          <button
+                            onClick={() => handlePhotoReview(p.id, true)}
+                            className="p-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                          >
+                            <CheckCircle2 className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handlePhotoReview(p.id, false)}
+                            className="p-1.5 rounded-lg bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors"
+                          >
+                            <XCircle className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
                 </div>
               </div>
-            </div>
+            )}
           </div>
         )}
 
@@ -316,29 +588,24 @@ const Admin = () => {
             <p className="font-body text-xs text-muted-foreground mb-4">
               Escrow management, payout triggers, and revenue tracking
             </p>
-
             <div className="grid grid-cols-2 gap-3 mb-6">
               <StatCard label="Total Revenue" value={`AED ${totalRevenue}`} />
               <StatCard label="Completed" value={completedCount} />
               <StatCard label="Pending Payouts" value={confirmedCount} />
               <StatCard label="Bookings" value={bookings.length} />
             </div>
-
             <div className="bg-card rounded-xl p-4 border border-border mb-4" style={{ boxShadow: "var(--shadow-card)" }}>
               <p className="font-body text-sm font-semibold text-foreground mb-2">Escrow Management</p>
               <p className="font-body text-xs text-muted-foreground">
                 Check customer payments upon booking. Funds held in escrow until proof of quality is verified.
               </p>
             </div>
-
             <div className="bg-card rounded-xl p-4 border border-border" style={{ boxShadow: "var(--shadow-card)" }}>
               <p className="font-body text-sm font-semibold text-foreground mb-2">Payout Trigger</p>
               <p className="font-body text-xs text-muted-foreground">
                 Release funds to cook's wallet only after "Proof of Quality" photos are uploaded and 2 hours have passed without a major client complaint.
               </p>
             </div>
-
-            {/* Recent bookings */}
             <div className="mt-4">
               <p className="font-body text-xs font-semibold tracking-[0.15em] uppercase text-copper mb-3">Recent Bookings</p>
               {loading ? (
@@ -385,8 +652,6 @@ const Admin = () => {
 };
 
 // ── Helpers ──
-import { forwardRef } from "react";
-
 const StatCard = forwardRef<HTMLDivElement, { label: string; value: string | number }>(
   ({ label, value }, ref) => (
     <div ref={ref} className="bg-card rounded-xl p-3 border border-border" style={{ boxShadow: "var(--shadow-card)" }}>
