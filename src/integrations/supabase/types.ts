@@ -30,6 +30,7 @@ export type Database = {
           grocery_addon: boolean | null
           id: string
           menu_selected: string
+          menu_status: string | null
           party_size: number | null
           phone: string
           status: string | null
@@ -50,6 +51,7 @@ export type Database = {
           grocery_addon?: boolean | null
           id?: string
           menu_selected: string
+          menu_status?: string | null
           party_size?: number | null
           phone: string
           status?: string | null
@@ -70,12 +72,57 @@ export type Database = {
           grocery_addon?: boolean | null
           id?: string
           menu_selected?: string
+          menu_status?: string | null
           party_size?: number | null
           phone?: string
           status?: string | null
           total_aed?: number | null
         }
         Relationships: []
+      }
+      quality_photos: {
+        Row: {
+          approved: boolean | null
+          booking_id: string
+          cook_id: string
+          cook_name: string
+          id: string
+          photo_type: string
+          photo_url: string
+          reviewed: boolean | null
+          uploaded_at: string
+        }
+        Insert: {
+          approved?: boolean | null
+          booking_id: string
+          cook_id: string
+          cook_name: string
+          id?: string
+          photo_type: string
+          photo_url: string
+          reviewed?: boolean | null
+          uploaded_at?: string
+        }
+        Update: {
+          approved?: boolean | null
+          booking_id?: string
+          cook_id?: string
+          cook_name?: string
+          id?: string
+          photo_type?: string
+          photo_url?: string
+          reviewed?: boolean | null
+          uploaded_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quality_photos_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
