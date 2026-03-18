@@ -108,9 +108,7 @@ export default function Payment() {
     const createIntent = async () => {
       const { data, error: fnError } = await supabase.functions.invoke("create-payment-intent", {
         body: {
-          amount_aed: state.totalAed,
           booking_id: state.bookingId,
-          customer_email: state.customerEmail,
         },
       });
 
