@@ -24,6 +24,8 @@ import CookPhotoUpload from "./pages/cook/CookPhotoUpload";
 import CookEarnings from "./pages/cook/CookEarnings";
 import Payment from "./pages/Payment";
 import RateSession from "./pages/RateSession";
+import CustomerAuth from "./pages/CustomerAuth";
+import CustomerProtectedRoute from "@/components/CustomerProtectedRoute";
 
 const queryClient = new QueryClient();
 
