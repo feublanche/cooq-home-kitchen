@@ -275,7 +275,22 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_booking_for_rating: {
+        Args: { booking_uuid: string }
+        Returns: {
+          booking_date: string
+          cook_name: string
+          id: string
+          menu_selected: string
+          rated_at: string
+          rating: number
+          status: string
+        }[]
+      }
+      submit_booking_rating: {
+        Args: { booking_uuid: string; p_note?: string; p_rating: number }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
