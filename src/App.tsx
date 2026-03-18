@@ -26,6 +26,9 @@ import Payment from "./pages/Payment";
 import RateSession from "./pages/RateSession";
 import CustomerAuth from "./pages/CustomerAuth";
 import CustomerProtectedRoute from "@/components/CustomerProtectedRoute";
+import Terms from "./pages/Terms";
+import Privacy from "./pages/Privacy";
+import CookAgreement from "./pages/CookAgreement";
 
 const queryClient = new QueryClient();
 
