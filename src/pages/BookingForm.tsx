@@ -127,7 +127,7 @@ const BookingForm = () => {
         frequency,
         party_size: booking.partySize,
         dietary: booking.dietary,
-        allergies_notes: booking.allergyNotes,
+        allergies_notes: sanitisedAllergyNotes,
         grocery_addon: booking.groceryAddon,
         grocery_fee: booking.groceryAddon ? GROCERY_FEE : 0,
         tier,
