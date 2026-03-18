@@ -1,4 +1,4 @@
-import { useEffect, useState, ReactNode } from "react";
+import { useEffect, useState, useRef, ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { CookRow, CookContext } from "@/context/CookContext";
@@ -12,12 +12,20 @@ const CookProtectedRoute = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const [pendingApproval, setPendingApproval] = useState(false);
   const [pendingEmail, setPendingEmail] = useState("");
+  const hasRedirected = useRef(false);
 
   useEffect(() => {
+    let cancelled = false;
+
     const checkSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
+      if (cancelled) return;
+
       if (!session) {
-        navigate("/cook/login", { replace: true });
+        if (!hasRedirected.current) {
+          hasRedirected.current = true;
+          navigate("/cook/login", { replace: true });
+        }
         return;
       }
 
@@ -28,17 +36,21 @@ const CookProtectedRoute = ({ children }: { children: ReactNode }) => {
         .limit(1)
         .single();
 
+      if (cancelled) return;
+
       if (error || !data) {
-        navigate("/cook/login", {
-          replace: true,
-          state: { error: "Cook account not found. Contact hello@cooq.ae" },
-        });
+        if (!hasRedirected.current) {
+          hasRedirected.current = true;
+          navigate("/cook/login", {
+            replace: true,
+            state: { error: "Cook account not found. Contact hello@cooq.ae" },
+          });
+        }
         return;
       }
 
       const cookData = data as unknown as CookRow;
 
-      // Check if cook is approved/active
       if (cookData.status === "applied" || cookData.status === "reviewed") {
         setPendingApproval(true);
         setPendingEmail(cookData.email);
@@ -54,13 +66,17 @@ const CookProtectedRoute = ({ children }: { children: ReactNode }) => {
     checkSession();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!session) {
+      if (!session && !hasRedirected.current) {
+        hasRedirected.current = true;
         setCook(null);
         navigate("/cook/login", { replace: true });
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+    };
   }, [navigate]);
 
   if (checking) {
@@ -87,6 +103,7 @@ const CookProtectedRoute = ({ children }: { children: ReactNode }) => {
           <button
             onClick={async () => {
               await supabase.auth.signOut();
+              hasRedirected.current = false;
               navigate("/cook/login", { replace: true });
             }}
             className="flex items-center gap-2 mx-auto font-body text-sm"
