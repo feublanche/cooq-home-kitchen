@@ -1,9 +1,12 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
+
+const OPERATOR_EMAIL = 'cooqdubai@gmail.com';
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -11,6 +14,35 @@ serve(async (req) => {
   }
 
   try {
+    // Validate JWT
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const anonClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      { global: { headers: { Authorization: authHeader } } }
+    );
+
+    const { data: claimsData, error: claimsError } = await anonClient.auth.getClaims(authHeader.replace('Bearer ', ''));
+    if (claimsError || !claimsData?.claims) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Only operator can send notifications
+    const callerEmail = claimsData.claims.email as string;
+    if (callerEmail !== OPERATOR_EMAIL) {
+      return new Response(JSON.stringify({ error: 'Forbidden' }), {
+        status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const { cook_name, cook_email, cook_phone, event_type, booking_details } = await req.json();
 
     const results: Record<string, string> = {};
@@ -21,7 +53,6 @@ serve(async (req) => {
       if (!LOVABLE_API_KEY) {
         results.email = 'skipped - no API key';
       } else {
-        // For now, log the email intent — full email infra will be wired when domain is set up
         console.log(`[EMAIL] To: ${cook_email}, Event: ${event_type}, Cook: ${cook_name}`);
         console.log(`[EMAIL] Details:`, JSON.stringify(booking_details));
         results.email = 'logged';
@@ -29,12 +60,9 @@ serve(async (req) => {
     }
 
     // WhatsApp notification placeholder
-    // WhatsApp Business API requires Meta Business verification + approved message templates
-    // This will be activated once WhatsApp Business is configured
     if (cook_phone) {
       console.log(`[WHATSAPP] To: ${cook_phone}, Event: ${event_type}, Cook: ${cook_name}`);
       
-      // Build the message based on event type
       let message = '';
       switch (event_type) {
         case 'booking_confirmed':
@@ -63,8 +91,7 @@ serve(async (req) => {
     });
   } catch (error: unknown) {
     console.error('Error in notify-cook:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    return new Response(JSON.stringify({ success: false, error: errorMessage }), {
+    return new Response(JSON.stringify({ success: false, error: 'Internal error' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

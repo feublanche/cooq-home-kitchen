@@ -53,7 +53,7 @@ serve(async (req) => {
 
     const { data: booking, error: bookingError } = await supabase
       .from('bookings')
-      .select('total_aed, email, id')
+      .select('tier, session_type, grocery_addon, email, id')
       .eq('id', booking_id)
       .single()
 
@@ -72,8 +72,15 @@ serve(async (req) => {
       )
     }
 
-    const amount_aed = booking.total_aed ?? 350
+    // Server-side price recomputation — never trust client-stored total_aed
+    const PRICES: Record<string, number> = { duo: 350, family: 420, large: 550 }
+    const base = booking.session_type === 'discovery' ? 299 : (PRICES[booking.tier ?? 'duo'] ?? 350)
+    const groceryFee = booking.grocery_addon ? 75 : 0
+    const amount_aed = base + groceryFee
     const customer_email = booking.email
+
+    // Store the authoritative server-computed amount back on the booking
+    await supabase.from('bookings').update({ total_aed: amount_aed }).eq('id', booking_id)
 
     const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') ?? '', { apiVersion: '2023-10-16' })
     const pi = await stripe.paymentIntents.create({
