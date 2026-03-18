@@ -31,12 +31,16 @@ export type Database = {
           frequency: string | null
           grocery_addon: boolean | null
           id: string
+          menu_id: string | null
           menu_selected: string
           menu_status: string | null
           paid: boolean | null
           party_size: number | null
           payment_intent_id: string | null
           phone: string
+          rated_at: string | null
+          rating: number | null
+          rating_note: string | null
           session_notes: string | null
           status: string | null
           total_aed: number | null
@@ -57,12 +61,16 @@ export type Database = {
           frequency?: string | null
           grocery_addon?: boolean | null
           id?: string
+          menu_id?: string | null
           menu_selected: string
           menu_status?: string | null
           paid?: boolean | null
           party_size?: number | null
           payment_intent_id?: string | null
           phone: string
+          rated_at?: string | null
+          rating?: number | null
+          rating_note?: string | null
           session_notes?: string | null
           status?: string | null
           total_aed?: number | null
@@ -83,12 +91,16 @@ export type Database = {
           frequency?: string | null
           grocery_addon?: boolean | null
           id?: string
+          menu_id?: string | null
           menu_selected?: string
           menu_status?: string | null
           paid?: boolean | null
           party_size?: number | null
           payment_intent_id?: string | null
           phone?: string
+          rated_at?: string | null
+          rating?: number | null
+          rating_note?: string | null
           session_notes?: string | null
           status?: string | null
           total_aed?: number | null

@@ -5,11 +5,11 @@ import { lovable } from "@/integrations/lovable/index";
 import cooqLogo from "@/assets/cooq-logo.png";
 import { Loader2 } from "lucide-react";
 
-const Login = () => {
+const CookLogin = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const returnTo = (location.state as any)?.returnTo || "/admin";
-  const [error, setError] = useState("");
+  const stateError = (location.state as any)?.error || "";
+  const [error, setError] = useState(stateError);
   const [email, setEmail] = useState("");
   const [otpSent, setOtpSent] = useState(false);
   const [sending, setSending] = useState(false);
@@ -17,16 +17,16 @@ const Login = () => {
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_IN" && session) {
-        navigate(returnTo);
+        navigate("/cook/dashboard");
       }
     });
     return () => subscription.unsubscribe();
-  }, [navigate, returnTo]);
+  }, [navigate]);
 
   const handleGoogleLogin = async () => {
     setError("");
     const { error } = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin + "/admin",
+      redirect_uri: window.location.origin + "/cook/dashboard",
     });
     if (error) setError(error.message || "Google sign-in failed");
   };
@@ -37,7 +37,7 @@ const Login = () => {
     setError("");
     const { error } = await supabase.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: window.location.origin + "/admin" },
+      options: { emailRedirectTo: window.location.origin + "/cook/dashboard" },
     });
     setSending(false);
     if (error) {
@@ -52,9 +52,12 @@ const Login = () => {
       <img src={cooqLogo} alt="Cooq" className="h-8 mb-8 brightness-0 invert" />
 
       <div className="w-full max-w-sm rounded-2xl p-6" style={{ backgroundColor: "rgba(249,247,242,0.05)" }}>
-        <h1 className="font-display italic text-2xl text-center mb-6" style={{ color: "#F9F7F2", fontFamily: "'Playfair Display', serif" }}>
-          Operator Login
+        <h1 className="font-display italic text-2xl text-center mb-1" style={{ color: "#F9F7F2" }}>
+          Welcome back, Cooq
         </h1>
+        <p className="font-body text-sm text-center mb-6" style={{ color: "rgba(249,247,242,0.6)" }}>
+          Sign in to your cook dashboard
+        </p>
 
         {error && (
           <p className="font-body text-sm text-red-400 bg-red-400/10 rounded-lg p-3 mb-4">{error}</p>
@@ -107,15 +110,14 @@ const Login = () => {
         )}
       </div>
 
-      <button
-        onClick={() => navigate("/cook/login")}
-        className="font-body text-xs mt-6 underline"
-        style={{ color: "rgba(249,247,242,0.4)" }}
-      >
-        Are you a cook? Sign in at /cook/login
-      </button>
+      <p className="font-body text-xs mt-6" style={{ color: "rgba(249,247,242,0.4)" }}>
+        Need help? Email{" "}
+        <a href="mailto:hello@cooq.ae" className="underline" style={{ color: "rgba(249,247,242,0.6)" }}>
+          hello@cooq.ae
+        </a>
+      </p>
     </div>
   );
 };
 
-export default Login;
+export default CookLogin;
