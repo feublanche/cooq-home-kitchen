@@ -20,8 +20,10 @@ export type Database = {
           allergies_notes: string | null
           area: string | null
           booking_date: string | null
+          cook_email: string | null
           cook_id: string
           cook_name: string
+          cook_phone: string | null
           created_at: string
           customer_name: string
           dietary: string[] | null
@@ -31,8 +33,11 @@ export type Database = {
           id: string
           menu_selected: string
           menu_status: string | null
+          paid: boolean | null
           party_size: number | null
+          payment_intent_id: string | null
           phone: string
+          session_notes: string | null
           status: string | null
           total_aed: number | null
         }
@@ -41,8 +46,10 @@ export type Database = {
           allergies_notes?: string | null
           area?: string | null
           booking_date?: string | null
+          cook_email?: string | null
           cook_id: string
           cook_name: string
+          cook_phone?: string | null
           created_at?: string
           customer_name: string
           dietary?: string[] | null
@@ -52,8 +59,11 @@ export type Database = {
           id?: string
           menu_selected: string
           menu_status?: string | null
+          paid?: boolean | null
           party_size?: number | null
+          payment_intent_id?: string | null
           phone: string
+          session_notes?: string | null
           status?: string | null
           total_aed?: number | null
         }
@@ -62,8 +72,10 @@ export type Database = {
           allergies_notes?: string | null
           area?: string | null
           booking_date?: string | null
+          cook_email?: string | null
           cook_id?: string
           cook_name?: string
+          cook_phone?: string | null
           created_at?: string
           customer_name?: string
           dietary?: string[] | null
@@ -73,10 +85,123 @@ export type Database = {
           id?: string
           menu_selected?: string
           menu_status?: string | null
+          paid?: boolean | null
           party_size?: number | null
+          payment_intent_id?: string | null
           phone?: string
+          session_notes?: string | null
           status?: string | null
           total_aed?: number | null
+        }
+        Relationships: []
+      }
+      cook_menus: {
+        Row: {
+          cook_id: string | null
+          cook_name: string
+          created_at: string | null
+          cuisine: string | null
+          dietary: string[] | null
+          id: string
+          meals: string[] | null
+          menu_name: string
+          price_aed: number
+          rejection_reason: string | null
+          serves: number | null
+          status: string | null
+        }
+        Insert: {
+          cook_id?: string | null
+          cook_name: string
+          created_at?: string | null
+          cuisine?: string | null
+          dietary?: string[] | null
+          id?: string
+          meals?: string[] | null
+          menu_name: string
+          price_aed?: number
+          rejection_reason?: string | null
+          serves?: number | null
+          status?: string | null
+        }
+        Update: {
+          cook_id?: string | null
+          cook_name?: string
+          created_at?: string | null
+          cuisine?: string | null
+          dietary?: string[] | null
+          id?: string
+          meals?: string[] | null
+          menu_name?: string
+          price_aed?: number
+          rejection_reason?: string | null
+          serves?: number | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cook_menus_cook_id_fkey"
+            columns: ["cook_id"]
+            isOneToOne: false
+            referencedRelation: "cooks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cooks: {
+        Row: {
+          area: string | null
+          bio: string | null
+          created_at: string | null
+          cuisine: string[] | null
+          email: string
+          health_card: boolean | null
+          health_card_expiry: string | null
+          id: string
+          name: string
+          phone: string | null
+          photo_url: string | null
+          status: string | null
+          stripe_account_id: string | null
+          user_id: string | null
+          visa_type: string | null
+          years_experience: number | null
+        }
+        Insert: {
+          area?: string | null
+          bio?: string | null
+          created_at?: string | null
+          cuisine?: string[] | null
+          email: string
+          health_card?: boolean | null
+          health_card_expiry?: string | null
+          id?: string
+          name: string
+          phone?: string | null
+          photo_url?: string | null
+          status?: string | null
+          stripe_account_id?: string | null
+          user_id?: string | null
+          visa_type?: string | null
+          years_experience?: number | null
+        }
+        Update: {
+          area?: string | null
+          bio?: string | null
+          created_at?: string | null
+          cuisine?: string[] | null
+          email?: string
+          health_card?: boolean | null
+          health_card_expiry?: string | null
+          id?: string
+          name?: string
+          phone?: string | null
+          photo_url?: string | null
+          status?: string | null
+          stripe_account_id?: string | null
+          user_id?: string | null
+          visa_type?: string | null
+          years_experience?: number | null
         }
         Relationships: []
       }
