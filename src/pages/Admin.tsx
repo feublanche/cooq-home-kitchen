@@ -230,8 +230,15 @@ const Admin = () => {
           </button>
           <img src={cooqLogo} alt="Cooq" className="h-6 brightness-0 invert" />
         </div>
-        <span className="font-body text-xs text-background/70 uppercase tracking-wider">Operator Dashboard</span>
-      </div>
+        <div className="flex items-center gap-3">
+          <span className="font-body text-xs text-background/70 uppercase tracking-wider">Operator Dashboard</span>
+          <button
+            onClick={async () => { await supabase.auth.signOut(); navigate("/login"); }}
+            className="text-background/70 hover:text-background transition-colors"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
+        </div>
 
       {/* Tab bar */}
       <div className="bg-card border-b border-border overflow-x-auto">
