@@ -125,6 +125,7 @@ const Admin = () => {
   const [cooks, setCooks] = useState<CookRecord[]>([]);
   const [menus, setMenus] = useState<MenuRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [expiringCooks, setExpiringCooks] = useState<any[]>([]);
 
   // Supply Manager state
   const [supplyView, setSupplyView] = useState<"bookings" | "cooks">("bookings");
