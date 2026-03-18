@@ -22,6 +22,7 @@ import CookOrders from "./pages/cook/CookOrders";
 import CookMenuSubmit from "./pages/cook/CookMenuSubmit";
 import CookPhotoUpload from "./pages/cook/CookPhotoUpload";
 import CookEarnings from "./pages/cook/CookEarnings";
+import CookAvailability from "./pages/cook/CookAvailability";
 import Payment from "./pages/Payment";
 import RateSession from "./pages/RateSession";
 import CustomerAuth from "./pages/CustomerAuth";
