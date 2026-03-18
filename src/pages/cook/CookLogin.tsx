@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import cooqLogo from "@/assets/cooq-logo.png";
@@ -16,6 +16,7 @@ const CookLogin = () => {
   const [magicLinkLoading, setMagicLinkLoading] = useState(false);
   const [resetSent, setResetSent] = useState(false);
   const [checkingSession, setCheckingSession] = useState(true);
+  const hasRedirected = useRef(false);
 
   // On mount: check if already logged in as a cook
   useEffect(() => {
@@ -27,7 +28,8 @@ const CookLogin = () => {
           .select("id")
           .eq("user_id", session.user.id)
           .maybeSingle();
-        if (cook) {
+        if (cook && !hasRedirected.current) {
+          hasRedirected.current = true;
           navigate("/cook/dashboard", { replace: true });
           return;
         }
@@ -41,12 +43,14 @@ const CookLogin = () => {
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === "SIGNED_IN" && session) {
+        if (hasRedirected.current) return;
         const { data: cook } = await supabase
           .from("cooks")
           .select("id")
           .eq("user_id", session.user.id)
           .maybeSingle();
         if (cook) {
+          hasRedirected.current = true;
           navigate("/cook/dashboard", { replace: true });
         } else {
           setError("Cook account not found. Contact hello@cooq.ae");
@@ -66,7 +70,6 @@ const CookLogin = () => {
       setLoading(false);
       return;
     }
-    // Check if cook
     if (data.user) {
       const { data: cook } = await supabase
         .from("cooks")
@@ -74,7 +77,10 @@ const CookLogin = () => {
         .eq("user_id", data.user.id)
         .maybeSingle();
       if (cook) {
-        navigate("/cook/dashboard", { replace: true });
+        if (!hasRedirected.current) {
+          hasRedirected.current = true;
+          navigate("/cook/dashboard", { replace: true });
+        }
       } else {
         setError("Cook account not found. Contact hello@cooq.ae");
       }
@@ -136,33 +142,21 @@ const CookLogin = () => {
           </p>
         )}
 
-        {/* Email + Password */}
         <input
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)}
           className={inputStyle}
           style={{ backgroundColor: "rgba(249,247,242,0.06)", color: "#F9F7F2", borderColor: "rgba(134,163,131,0.25)", borderWidth: 1 }}
         />
         <input
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)}
           className={`${inputStyle} mt-3`}
           style={{ backgroundColor: "rgba(249,247,242,0.06)", color: "#F9F7F2", borderColor: "rgba(134,163,131,0.25)", borderWidth: 1 }}
         />
-        <button
-          onClick={handleForgotPassword}
-          className="font-body text-xs mt-2 mb-4 block"
-          style={{ color: "rgba(249,247,242,0.4)" }}
-        >
+        <button onClick={handleForgotPassword} className="font-body text-xs mt-2 mb-4 block" style={{ color: "rgba(249,247,242,0.4)" }}>
           Forgot password?
         </button>
         <button
-          onClick={handlePasswordLogin}
-          disabled={loading || !email || !password}
+          onClick={handlePasswordLogin} disabled={loading || !email || !password}
           className="w-full py-3 rounded-xl font-body font-semibold text-sm transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
           style={{ backgroundColor: "#B57E5D", color: "#F9F7F2" }}
         >
@@ -177,15 +171,13 @@ const CookLogin = () => {
           <div className="flex-1 h-px" style={{ backgroundColor: "rgba(249,247,242,0.15)" }} />
         </div>
 
-        {/* Magic Link */}
         {magicLinkSent ? (
           <p className="font-body text-sm text-center py-4" style={{ color: "#86A383" }}>
             Check your email for a sign-in link
           </p>
         ) : (
           <button
-            onClick={handleMagicLink}
-            disabled={magicLinkLoading || !email}
+            onClick={handleMagicLink} disabled={magicLinkLoading || !email}
             className="w-full py-3 rounded-xl font-body font-semibold text-sm transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
             style={{ backgroundColor: "transparent", color: "#86A383", border: "1px solid rgba(134,163,131,0.4)" }}
           >
@@ -200,15 +192,10 @@ const CookLogin = () => {
             New cook?
           </p>
           <p className="font-body text-xs leading-relaxed mb-2" style={{ color: "rgba(249,247,242,0.5)" }}>
-            Cook accounts are created by Cooq after vetting. If you've been approved, check your email for your login link.
+            Accounts are set up after your vetting is complete. Email{" "}
+            <a href="mailto:hello@cooq.ae" className="underline" style={{ color: "#86A383" }}>hello@cooq.ae</a>{" "}
+            to apply.
           </p>
-          <a
-            href="mailto:hello@cooq.ae?subject=Cook Application"
-            className="font-body text-xs font-medium inline-block"
-            style={{ color: "#86A383" }}
-          >
-            Apply to become a Cooq →
-          </a>
         </div>
       </div>
 

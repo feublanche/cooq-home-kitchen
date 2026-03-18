@@ -7,18 +7,16 @@ export async function routeAfterAuth(navigate: NavigateFunction) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return;
 
-  // Operator always goes to admin regardless of cooks table
   if (user.email === OPERATOR_EMAIL) {
     navigate("/admin", { replace: true });
     return;
   }
 
-  // Everyone else: check if they are a cook
   const { data: cook } = await supabase
     .from("cooks")
-    .select("id, status")
+    .select("id")
     .eq("user_id", user.id)
-    .maybeSingle();
+    .single();
 
   if (cook) {
     navigate("/cook/dashboard", { replace: true });
