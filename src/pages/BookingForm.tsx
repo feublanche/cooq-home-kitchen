@@ -40,13 +40,30 @@ const FormInput = ({
 
 const BookingForm = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const routerState = (location.state as any) || {};
   const { booking, updateBooking } = useBooking();
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [tier, setTier] = useState<string>("duo");
+  const [tier, setTier] = useState<string>(routerState.tier || "duo");
   const [frequency, setFrequency] = useState<string>("one-time");
   const [isFirstSession, setIsFirstSession] = useState(false);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
 
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user: u } }) => {
+      if (u) {
+        setUser(u);
+        if (u.user_metadata?.full_name && !booking.customerName) {
+          updateBooking({ customerName: u.user_metadata.full_name });
+        }
+        if (u.email && !booking.email) {
+          updateBooking({ email: u.email });
+        }
+      }
+    });
+  }, []);
   const selectedTier = TIERS.find((t) => t.key === tier)!;
   const selectedFreq = FREQUENCIES.find((f) => f.key === frequency)!;
 
