@@ -16,19 +16,6 @@ const ProtectedRoute = ({ children }: { children: ReactNode }) => {
         setChecking(false);
         return;
       }
-
-      // Verify this user is NOT a cook (cooks should use /cook/dashboard)
-      const { data: cook } = await supabase
-        .from("cooks")
-        .select("id")
-        .eq("user_id", session.user.id)
-        .maybeSingle();
-
-      if (cook) {
-        navigate("/cook/dashboard", { replace: true });
-        return;
-      }
-
       setAuthenticated(true);
       setChecking(false);
     };

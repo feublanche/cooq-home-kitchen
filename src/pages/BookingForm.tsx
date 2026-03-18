@@ -7,29 +7,30 @@ import cooqLogo from "@/assets/cooq-logo.png";
 
 const steps = ["Preferences", "Match", "Profile", "Details", "Confirm"];
 
-// IMPORTANT: Defined OUTSIDE the component so React doesn't remount on every render
+const TIERS = [
+  { key: "duo", label: "Cooq Duo", people: "1–2 people", detail: "3 hours · 2 mains + 2 sides", price: 350, discoveryPrice: 299 },
+  { key: "family", label: "Cooq Family", people: "3–4 people", detail: "3 hours · 2 mains + 3 sides", price: 420, discoveryPrice: null },
+  { key: "large", label: "Cooq Large", people: "5–6 people", detail: "4 hours · 3 mains + 3 sides", price: 550, discoveryPrice: null },
+] as const;
+
+const FREQUENCIES = [
+  { key: "one-time", label: "One-time", discount: 0 },
+  { key: "weekly", label: "Weekly · Save 15%", discount: 0.15, sessions: 4 },
+  { key: "twice-weekly", label: "Twice a week", discount: 0.15, sessions: 8 },
+  { key: "three-weekly", label: "3× a week", discount: 0.15, sessions: 12 },
+] as const;
+
+const GROCERY_FEE = 75;
+
 const FormInput = ({
-  label,
-  value,
-  onChange,
-  placeholder,
-  error,
-  type = "text",
+  label, value, onChange, placeholder, error, type = "text",
 }: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  placeholder?: string;
-  error?: string;
-  type?: string;
+  label: string; value: string; onChange: (v: string) => void; placeholder?: string; error?: string; type?: string;
 }) => (
   <div className="mb-4">
     <label className="font-body text-sm font-medium text-foreground mb-1 block">{label}</label>
     <input
-      type={type}
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      placeholder={placeholder}
+      type={type} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder}
       className="w-full p-3 rounded-lg border border-border bg-card font-body text-sm focus:outline-none focus:ring-2 focus:ring-primary"
     />
     {error && <p className="font-body text-xs text-destructive mt-1">{error}</p>}
@@ -41,10 +42,25 @@ const BookingForm = () => {
   const { booking, updateBooking } = useBooking();
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [tier, setTier] = useState<string>("duo");
+  const [frequency, setFrequency] = useState<string>("one-time");
+  const [isFirstSession, setIsFirstSession] = useState(false);
 
-  const groceryFee = booking.groceryAddon ? Math.round(booking.menuPrice * 0.1) : 0;
-  const addOnFee = booking.addOns.length * 25; // AED 25 per add-on category
-  const total = booking.menuPrice + groceryFee + addOnFee;
+  const selectedTier = TIERS.find((t) => t.key === tier)!;
+  const selectedFreq = FREQUENCIES.find((f) => f.key === frequency)!;
+
+  const isDiscovery = isFirstSession && tier === "duo";
+  const basePrice = isDiscovery ? 299 : selectedTier.price;
+
+  const getMonthlyPrice = () => {
+    if (selectedFreq.key === "one-time") return basePrice;
+    const sessions = (selectedFreq as any).sessions as number;
+    return Math.round(basePrice * sessions * (1 - selectedFreq.discount));
+  };
+
+  const sessionPrice = selectedFreq.key === "one-time" ? basePrice : getMonthlyPrice();
+  const groceryFee = booking.groceryAddon ? GROCERY_FEE : 0;
+  const total = sessionPrice + groceryFee;
 
   const validate = () => {
     const e: Record<string, string> = {};
@@ -59,6 +75,7 @@ const BookingForm = () => {
     if (!validate()) return;
     setLoading(true);
     try {
+      const sessionType = isDiscovery ? "discovery" : "standard";
       const { data: newBooking, error } = await supabase.from("bookings").insert({
         customer_name: booking.customerName,
         email: booking.email,
@@ -69,11 +86,14 @@ const BookingForm = () => {
         cook_name: booking.cookName,
         menu_selected: booking.menuSelected,
         booking_date: booking.bookingDates.join(", "),
-        frequency: booking.frequency,
+        frequency,
         party_size: booking.partySize,
         dietary: booking.dietary,
         allergies_notes: booking.allergyNotes,
         grocery_addon: booking.groceryAddon,
+        grocery_fee: booking.groceryAddon ? GROCERY_FEE : 0,
+        tier,
+        session_type: sessionType,
         total_aed: total,
         status: "pending",
       }).select().single();
@@ -82,7 +102,7 @@ const BookingForm = () => {
       navigate("/payment", {
         state: {
           bookingId: newBooking.id,
-          totalAed: newBooking.total_aed || 350,
+          totalAed: newBooking.total_aed || total,
           customerName: newBooking.customer_name,
           customerEmail: newBooking.email,
           area: newBooking.area,
@@ -106,9 +126,7 @@ const BookingForm = () => {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <nav className="flex items-center gap-3 px-6 py-4">
-        <button onClick={() => navigate(-1)} className="text-foreground">
-          <ArrowLeft className="w-5 h-5" />
-        </button>
+        <button onClick={() => navigate(-1)} className="text-foreground"><ArrowLeft className="w-5 h-5" /></button>
         <img src={cooqLogo} alt="Cooq" className="h-7" />
       </nav>
 
@@ -121,89 +139,127 @@ const BookingForm = () => {
         </div>
         <div className="flex justify-between mt-1">
           {steps.map((s, i) => (
-            <span key={s} className={`font-body text-[10px] ${i <= 3 ? "text-primary" : "text-muted-foreground"}`}>
-              {s}
-            </span>
+            <span key={s} className={`font-body text-[10px] ${i <= 3 ? "text-primary" : "text-muted-foreground"}`}>{s}</span>
           ))}
         </div>
       </div>
 
       <div className="px-6 pb-6 flex-1">
-        {/* Order summary */}
-        <div className="bg-primary/10 rounded-xl p-4 mb-6">
-          <p className="font-body text-sm font-semibold text-foreground">
-            {booking.cookName} · {booking.cookCuisine}
-          </p>
-          <p className="font-body text-sm text-muted-foreground">
-            {booking.menuSelected}
-            {booking.menuSelectedDinner ? ` + ${booking.menuSelectedDinner} (Dinner)` : ""}
-            {" · "}
-            {booking.bookingDates.map((d) => formatDate(d)).join(", ")}
-          </p>
-          <p className="font-body text-sm text-muted-foreground">
-            {booking.frequency} · {booking.selectedDays.join(", ")}
-          </p>
-          {booking.addOns.length > 0 && (
-            <p className="font-body text-xs text-muted-foreground">
-              Add-ons: {booking.addOns.join(", ")}
-            </p>
-          )}
-          {booking.swappedDishes.length > 0 && (
-            <p className="font-body text-xs text-primary">
-              {booking.swappedDishes.length} dish swap{booking.swappedDishes.length > 1 ? "s" : ""} applied
-            </p>
-          )}
-          <p className="font-body text-base font-semibold text-copper mt-1">AED {booking.menuPrice}</p>
+        {/* ── TIER SELECTION ── */}
+        <p className="font-body text-sm font-bold text-foreground mb-3">Choose your session tier</p>
+        <div className="grid grid-cols-1 gap-3 mb-4">
+          {TIERS.map((t) => {
+            const selected = tier === t.key;
+            const showDiscovery = isFirstSession && t.key === "duo";
+            return (
+              <button
+                key={t.key}
+                type="button"
+                onClick={() => setTier(t.key)}
+                className={`text-left rounded-xl p-4 border-2 transition cursor-pointer ${
+                  selected ? "border-primary bg-primary/5" : "border-border bg-card"
+                }`}
+              >
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="font-body text-sm font-bold text-foreground">{t.label} <span className="font-normal text-muted-foreground">· {t.people}</span></p>
+                    <p className="font-body text-xs text-muted-foreground">{t.detail}</p>
+                  </div>
+                  <div className="text-right">
+                    {showDiscovery ? (
+                      <>
+                        <p className="font-body text-sm font-bold" style={{ color: "#B57E5D" }}>AED 299</p>
+                        <span className="font-body text-[10px] px-1.5 py-0.5 rounded-full" style={{ backgroundColor: "rgba(181,126,93,0.15)", color: "#B57E5D" }}>First Cook trial</span>
+                      </>
+                    ) : (
+                      <p className="font-body text-sm font-bold text-foreground">AED {t.price}</p>
+                    )}
+                  </div>
+                </div>
+              </button>
+            );
+          })}
         </div>
 
-        {/* Form */}
-        <FormInput
-          label="Full name *"
-          value={booking.customerName}
-          onChange={(v) => updateBooking({ customerName: v })}
-          error={errors.customerName}
-        />
-        <FormInput
-          label="Email address *"
-          type="email"
-          value={booking.email}
-          onChange={(v) => updateBooking({ email: v })}
-          error={errors.email}
-        />
-        <FormInput
-          label="Phone number *"
-          value={booking.phone}
-          onChange={(v) => updateBooking({ phone: v })}
-          placeholder="+971"
-          error={errors.phone}
-        />
-        <FormInput
-          label="Dubai area / community"
-          value={booking.location}
-          onChange={(v) => updateBooking({ location: v })}
-        />
-        <FormInput
-          label="Full address / building name"
-          value={booking.address}
-          onChange={(v) => updateBooking({ address: v })}
-        />
+        {/* First session checkbox */}
+        <label className="flex items-center gap-2 mb-6 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={isFirstSession}
+            onChange={(e) => setIsFirstSession(e.target.checked)}
+            className="w-4 h-4 rounded border-border accent-primary"
+          />
+          <span className="font-body text-xs text-muted-foreground">This is my first Cooq session</span>
+        </label>
+
+        {/* ── FREQUENCY ── */}
+        <p className="font-body text-sm font-bold text-foreground mb-3">How often?</p>
+        <div className="flex flex-wrap gap-2 mb-2">
+          {FREQUENCIES.map((f) => {
+            const selected = frequency === f.key;
+            return (
+              <button
+                key={f.key}
+                type="button"
+                onClick={() => setFrequency(f.key)}
+                className={`font-body text-xs px-4 py-2 rounded-full border transition ${
+                  selected ? "border-primary bg-primary/10 text-primary font-semibold" : "border-border text-muted-foreground"
+                }`}
+              >
+                {f.label}
+              </button>
+            );
+          })}
+        </div>
+        {frequency !== "one-time" && (
+          <p className="font-body text-xs mb-4 px-1 py-1 rounded inline-block" style={{ color: "#86A383", backgroundColor: "rgba(134,163,131,0.1)" }}>
+            Save 15% vs one-time bookings · AED {getMonthlyPrice()}/mo
+          </p>
+        )}
+        <div className="mb-6" />
+
+        {/* ── ORDER SUMMARY ── */}
+        <div className="bg-primary/10 rounded-xl p-4 mb-6">
+          <p className="font-body text-sm font-semibold text-foreground">
+            {selectedTier.label} · {booking.cookName || "We'll match you"}
+          </p>
+          <p className="font-body text-xs text-muted-foreground">
+            {isDiscovery ? "First Cook trial" : "Standard session"} · {FREQUENCIES.find((f) => f.key === frequency)?.label}
+          </p>
+          {booking.menuSelected && (
+            <p className="font-body text-xs text-muted-foreground mt-1">{booking.menuSelected}</p>
+          )}
+          {booking.bookingDates.length > 0 && (
+            <p className="font-body text-xs text-muted-foreground">{booking.bookingDates.map(formatDate).join(", ")}</p>
+          )}
+          <div className="mt-2 pt-2 border-t border-primary/20">
+            <div className="flex justify-between font-body text-xs text-muted-foreground">
+              <span>Session</span><span>AED {sessionPrice}</span>
+            </div>
+            {booking.groceryAddon && (
+              <div className="flex justify-between font-body text-xs text-muted-foreground">
+                <span>Grocery shopping</span><span>AED {GROCERY_FEE}</span>
+              </div>
+            )}
+            <div className="flex justify-between font-body text-sm font-bold mt-1" style={{ color: "#B57E5D" }}>
+              <span>Total</span><span>AED {total}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* ── FORM FIELDS ── */}
+        <FormInput label="Full name *" value={booking.customerName} onChange={(v) => updateBooking({ customerName: v })} error={errors.customerName} />
+        <FormInput label="Email address *" type="email" value={booking.email} onChange={(v) => updateBooking({ email: v })} error={errors.email} />
+        <FormInput label="Phone number *" value={booking.phone} onChange={(v) => updateBooking({ phone: v })} placeholder="+971" error={errors.phone} />
+        <FormInput label="Dubai area / community" value={booking.location} onChange={(v) => updateBooking({ location: v })} />
+        <FormInput label="Full address / building name" value={booking.address} onChange={(v) => updateBooking({ address: v })} />
 
         <div className="mb-4">
           <label className="font-body text-sm font-medium text-foreground mb-1 block">Party size</label>
           <div className="flex items-center gap-3">
-            <button
-              onClick={() => updateBooking({ partySize: Math.max(1, booking.partySize - 1) })}
-              className="w-9 h-9 rounded-full bg-card border border-border flex items-center justify-center font-body font-bold"
-            >
-              −
-            </button>
+            <button onClick={() => updateBooking({ partySize: Math.max(1, booking.partySize - 1) })} className="w-9 h-9 rounded-full bg-card border border-border flex items-center justify-center font-body font-bold">−</button>
             <span className="font-body text-lg font-semibold">{booking.partySize}</span>
-            <button
-              onClick={() => updateBooking({ partySize: Math.min(20, booking.partySize + 1) })}
-              className="w-9 h-9 rounded-full bg-card border border-border flex items-center justify-center font-body font-bold"
-            >
-              +
-            </button>
+            <button onClick={() => updateBooking({ partySize: Math.min(20, booking.partySize + 1) })} className="w-9 h-9 rounded-full bg-card border border-border flex items-center justify-center font-body font-bold">+</button>
           </div>
         </div>
 
@@ -221,7 +277,7 @@ const BookingForm = () => {
           />
         </div>
 
-        {/* Grocery toggle */}
+        {/* ── GROCERY TOGGLE ── */}
         <div className="flex items-center justify-between p-4 rounded-xl bg-card border border-border mb-2" style={{ boxShadow: "var(--shadow-card)" }}>
           <div>
             <div className="flex items-center gap-1.5">
@@ -234,52 +290,43 @@ const BookingForm = () => {
                 </div>
               </div>
             </div>
-            <p className="font-body text-xs text-muted-foreground">+10% = AED {Math.round(booking.menuPrice * 0.1)}</p>
+            <p className="font-body text-xs text-muted-foreground">Grocery shopping service: AED {GROCERY_FEE}</p>
           </div>
           <button
             onClick={() => updateBooking({ groceryAddon: !booking.groceryAddon })}
             className={`w-12 h-7 rounded-full transition-colors relative ${booking.groceryAddon ? "bg-primary" : "bg-border"}`}
           >
-            <div
-              className={`w-5 h-5 rounded-full bg-card absolute top-1 transition-transform ${
-                booking.groceryAddon ? "translate-x-6" : "translate-x-1"
-              }`}
-            />
+            <div className={`w-5 h-5 rounded-full bg-card absolute top-1 transition-transform ${booking.groceryAddon ? "translate-x-6" : "translate-x-1"}`} />
           </button>
         </div>
         <p className="font-body text-xs text-muted-foreground mb-6">
           Your Cooq handles the shopping. They'll submit the grocery receipt for your reimbursement.
         </p>
 
-        {/* Total */}
+        {/* ── TOTAL ── */}
         <div className="space-y-1 mb-6">
           <div className="flex justify-between font-body text-sm text-muted-foreground">
-            <span>Menu base</span>
-            <span>AED {booking.menuPrice}</span>
+            <span>{selectedTier.label} {isDiscovery ? "(First Cook)" : ""} {frequency !== "one-time" ? "/mo" : ""}</span>
+            <span>AED {sessionPrice}</span>
           </div>
           {booking.groceryAddon && (
             <div className="flex justify-between font-body text-sm text-muted-foreground">
-              <span>Grocery concierge</span>
-              <span>AED {groceryFee}</span>
-            </div>
-          )}
-          {addOnFee > 0 && (
-            <div className="flex justify-between font-body text-sm text-muted-foreground">
-              <span>Add-ons ({booking.addOns.length})</span>
-              <span>AED {addOnFee}</span>
+              <span>Grocery shopping service</span>
+              <span>AED {GROCERY_FEE}</span>
             </div>
           )}
           <div className="h-px bg-border my-2" />
           <div className="flex justify-between items-center">
             <span className="font-body text-base font-semibold text-foreground">Total</span>
-            <span className="font-display text-xl font-bold text-copper">AED {total}</span>
+            <span className="font-display text-xl font-bold" style={{ color: "#B57E5D" }}>AED {total}</span>
           </div>
         </div>
 
         <button
           disabled={loading}
           onClick={handleSubmit}
-          className="w-full py-4 rounded-lg bg-copper text-accent-foreground font-body font-semibold text-base disabled:opacity-40 transition-opacity"
+          className="w-full py-4 rounded-lg font-body font-semibold text-base disabled:opacity-40 transition-opacity"
+          style={{ backgroundColor: "#B57E5D", color: "#F9F7F2" }}
         >
           {loading ? "Saving..." : "Confirm Booking →"}
         </button>
