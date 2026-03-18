@@ -16,18 +16,19 @@ import {
   Clock,
   CheckCircle2,
   XCircle,
-  Upload,
-  Image as ImageIcon,
   Loader2,
-  Send,
   LogOut,
+  Search,
 } from "lucide-react";
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 
 interface Booking {
   id: string;
   customer_name: string;
   cook_name: string;
   cook_id: string;
+  cook_email: string | null;
+  cook_phone: string | null;
   booking_date: string;
   area: string;
   menu_selected: string;
@@ -39,6 +40,7 @@ interface Booking {
   phone: string;
   email: string;
   created_at: string;
+  paid: boolean;
 }
 
 interface QualityPhoto {
@@ -51,6 +53,35 @@ interface QualityPhoto {
   uploaded_at: string;
   reviewed: boolean;
   approved: boolean | null;
+}
+
+interface CookRecord {
+  id: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  cuisine: string[] | null;
+  area: string | null;
+  years_experience: number | null;
+  health_card: boolean | null;
+  visa_type: string | null;
+  status: string | null;
+  created_at: string | null;
+}
+
+interface MenuRecord {
+  id: string;
+  cook_id: string | null;
+  cook_name: string;
+  menu_name: string;
+  cuisine: string | null;
+  meals: string[] | null;
+  dietary: string[] | null;
+  price_aed: number;
+  serves: number | null;
+  status: string | null;
+  rejection_reason: string | null;
+  created_at: string | null;
 }
 
 const tabs = [
@@ -78,13 +109,38 @@ const menuStatusColors: Record<string, string> = {
   rejected: "bg-destructive/10 text-destructive",
 };
 
+const cookStatusColors: Record<string, string> = {
+  applied: "bg-copper/10 text-copper",
+  reviewed: "bg-amber-500/10 text-amber-500",
+  approved: "bg-primary/10 text-primary",
+  active: "bg-primary/20 text-primary font-bold",
+  rejected: "bg-destructive/10 text-destructive/50",
+};
+
 const Admin = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<TabId>("supply");
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [photos, setPhotos] = useState<QualityPhoto[]>([]);
+  const [cooks, setCooks] = useState<CookRecord[]>([]);
+  const [menus, setMenus] = useState<MenuRecord[]>([]);
   const [loading, setLoading] = useState(true);
-  const [uploading, setUploading] = useState<string | null>(null);
+
+  // Supply Manager state
+  const [supplyView, setSupplyView] = useState<"bookings" | "cooks">("bookings");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [assignDrawerOpen, setAssignDrawerOpen] = useState(false);
+  const [assignBooking, setAssignBooking] = useState<Booking | null>(null);
+  const [availableCooks, setAvailableCooks] = useState<CookRecord[]>([]);
+  const [selectedCookId, setSelectedCookId] = useState<string | null>(null);
+  const [assigning, setAssigning] = useState(false);
+
+  // Financial state
+  const [showPendingPayouts, setShowPendingPayouts] = useState(false);
+
+  // Menu vetting state
+  const [rejectMenuId, setRejectMenuId] = useState<string | null>(null);
+  const [rejectReason, setRejectReason] = useState("");
 
   const fetchBookings = async () => {
     const { data } = await supabase
@@ -103,9 +159,27 @@ const Admin = () => {
     if (data) setPhotos(data as QualityPhoto[]);
   };
 
+  const fetchCooks = async () => {
+    const { data } = await supabase
+      .from("cooks")
+      .select("id, name, email, phone, cuisine, area, years_experience, health_card, visa_type, status, created_at")
+      .order("created_at", { ascending: false });
+    if (data) setCooks(data as CookRecord[]);
+  };
+
+  const fetchMenus = async () => {
+    const { data } = await supabase
+      .from("cook_menus")
+      .select("*")
+      .order("created_at", { ascending: false });
+    if (data) setMenus(data as MenuRecord[]);
+  };
+
   useEffect(() => {
     fetchBookings();
     fetchPhotos();
+    fetchCooks();
+    fetchMenus();
   }, []);
 
   const updateStatus = async (id: string, status: string) => {
@@ -113,46 +187,16 @@ const Admin = () => {
     setBookings((prev) => prev.map((b) => (b.id === id ? { ...b, status } : b)));
   };
 
-  // ── Menu Vetting Actions ──
-  const handleMenuAction = async (booking: Booking, action: "approved" | "rejected") => {
-    const { error } = await supabase
-      .from("bookings")
-      .update({ menu_status: action } as any)
-      .eq("id", booking.id);
-
-    if (error) {
-      toast({ title: "Error", description: "Failed to update menu status", variant: "destructive" });
-      return;
-    }
-
-    setBookings((prev) =>
-      prev.map((b) => (b.id === booking.id ? { ...b, menu_status: action } : b))
-    );
-
-    // Send notification to cook
-    notifyCook(booking, action === "approved" ? "menu_approved" : "menu_rejected");
-
-    toast({
-      title: action === "approved" ? "Menu Approved ✓" : "Menu Rejected",
-      description: `${booking.cook_name}'s menu "${booking.menu_selected}" has been ${action}.`,
-    });
-  };
-
   // ── Cook Notification ──
-  const notifyCook = async (booking: Booking, eventType: string) => {
+  const notifyCookGeneric = async (cookName: string, cookEmail: string, cookPhone: string | null, eventType: string, details: Record<string, any>) => {
     try {
       await supabase.functions.invoke("notify-cook", {
         body: {
-          cook_name: booking.cook_name,
-          cook_email: booking.email,
-          cook_phone: booking.phone,
+          cook_name: cookName,
+          cook_email: cookEmail,
+          cook_phone: cookPhone,
           event_type: eventType,
-          booking_details: {
-            menu: booking.menu_selected,
-            date: booking.booking_date,
-            customer_name: booking.customer_name,
-            area: booking.area,
-          },
+          booking_details: details,
         },
       });
     } catch (err) {
@@ -160,44 +204,87 @@ const Admin = () => {
     }
   };
 
-  // ── Photo Upload ──
-  const handlePhotoUpload = async (
-    bookingId: string,
-    cookId: string,
-    cookName: string,
-    photoType: "container" | "kitchen",
-    file: File
-  ) => {
-    setUploading(`${bookingId}-${photoType}`);
-    const filePath = `${cookId}/${bookingId}/${photoType}-${Date.now()}.${file.name.split('.').pop()}`;
+  // ── Assign Cook ──
+  const openAssignDrawer = async (booking: Booking) => {
+    setAssignBooking(booking);
+    setSelectedCookId(null);
+    setAssignDrawerOpen(true);
+    const { data } = await supabase
+      .from("cooks")
+      .select("id, name, email, phone, cuisine, area, years_experience, health_card, visa_type, status, created_at")
+      .in("status", ["approved", "active"]);
+    setAvailableCooks((data ?? []) as CookRecord[]);
+  };
 
-    const { error: uploadError } = await supabase.storage
-      .from("proof-photos")
-      .upload(filePath, file);
+  const confirmAssignment = async () => {
+    if (!assignBooking || !selectedCookId) return;
+    const cook = availableCooks.find((c) => c.id === selectedCookId);
+    if (!cook) return;
+    setAssigning(true);
+    await supabase
+      .from("bookings")
+      .update({
+        cook_id: cook.id,
+        cook_name: cook.name,
+        cook_email: cook.email,
+        cook_phone: cook.phone,
+      })
+      .eq("id", assignBooking.id);
 
-    if (uploadError) {
-      toast({ title: "Upload failed", description: uploadError.message, variant: "destructive" });
-      setUploading(null);
-      return;
+    await notifyCookGeneric(cook.name, cook.email, cook.phone, "new_booking", {
+      menu: assignBooking.menu_selected,
+      date: assignBooking.booking_date,
+      customer_name: assignBooking.customer_name,
+      area: assignBooking.area,
+    });
+
+    toast({ title: "Cook assigned and notified ✓" });
+    setAssignDrawerOpen(false);
+    setAssigning(false);
+    fetchBookings();
+  };
+
+  // ── Cook Status Update ──
+  const updateCookStatus = async (cookId: string, newStatus: string) => {
+    setCooks((prev) => prev.map((c) => (c.id === cookId ? { ...c, status: newStatus } : c)));
+    await supabase.from("cooks").update({ status: newStatus }).eq("id", cookId);
+    toast({ title: `Cook status updated to "${newStatus}" ✓` });
+  };
+
+  // ── Menu Vetting Actions (cook_menus) ──
+  const handleMenuApprove = async (menu: MenuRecord) => {
+    setMenus((prev) => prev.map((m) => (m.id === menu.id ? { ...m, status: "approved" } : m)));
+    await supabase.from("cook_menus").update({ status: "approved" }).eq("id", menu.id);
+
+    // Fetch cook email for notification
+    if (menu.cook_id) {
+      const cook = cooks.find((c) => c.id === menu.cook_id);
+      if (cook) {
+        await notifyCookGeneric(cook.name, cook.email, cook.phone, "menu_approved", { menu: menu.menu_name });
+      }
     }
+    toast({ title: "Menu Approved ✓", description: `${menu.cook_name}'s menu "${menu.menu_name}" approved.` });
+  };
 
-    const { data: urlData } = supabase.storage.from("proof-photos").getPublicUrl(filePath);
+  const handleMenuReject = async (menu: MenuRecord) => {
+    if (!rejectReason.trim()) return;
+    setMenus((prev) =>
+      prev.map((m) => (m.id === menu.id ? { ...m, status: "rejected", rejection_reason: rejectReason } : m))
+    );
+    await supabase
+      .from("cook_menus")
+      .update({ status: "rejected", rejection_reason: rejectReason })
+      .eq("id", menu.id);
 
-    const { error: insertError } = await supabase.from("quality_photos").insert({
-      booking_id: bookingId,
-      cook_id: cookId,
-      cook_name: cookName,
-      photo_type: photoType,
-      photo_url: urlData.publicUrl,
-    } as any);
-
-    if (insertError) {
-      toast({ title: "Save failed", description: insertError.message, variant: "destructive" });
-    } else {
-      toast({ title: "Photo uploaded ✓", description: `${photoType} photo saved successfully.` });
-      fetchPhotos();
+    if (menu.cook_id) {
+      const cook = cooks.find((c) => c.id === menu.cook_id);
+      if (cook) {
+        await notifyCookGeneric(cook.name, cook.email, cook.phone, "menu_rejected", { menu: menu.menu_name });
+      }
     }
-    setUploading(null);
+    toast({ title: "Menu Rejected", description: `${menu.cook_name}'s menu rejected.` });
+    setRejectMenuId(null);
+    setRejectReason("");
   };
 
   // ── Photo Review ──
@@ -215,10 +302,39 @@ const Admin = () => {
     });
   };
 
+  // ── Mark as Paid ──
+  const markAsPaid = async (id: string) => {
+    setBookings((prev) => prev.map((b) => (b.id === id ? { ...b, paid: true } : b)));
+    await supabase.from("bookings").update({ paid: true }).eq("id", id);
+    toast({ title: "Marked ✓" });
+  };
+
   const totalRevenue = bookings.reduce((sum, b) => sum + (b.total_aed || 0), 0);
   const pendingCount = bookings.filter((b) => b.status === "pending").length;
   const confirmedCount = bookings.filter((b) => b.status === "confirmed").length;
   const completedCount = bookings.filter((b) => b.status === "completed").length;
+
+  // Supply search filter
+  const filteredBookings = bookings.filter((b) => {
+    if (!searchQuery) return true;
+    const q = searchQuery.toLowerCase();
+    return (
+      b.customer_name?.toLowerCase().includes(q) ||
+      b.cook_name?.toLowerCase().includes(q) ||
+      b.area?.toLowerCase().includes(q)
+    );
+  });
+
+  // Financial pending payouts
+  const pendingPayouts = bookings.filter((b) => b.status === "completed" && !b.paid);
+  const pendingPayoutTotal = pendingPayouts.reduce((s, b) => s + Math.round((b.total_aed || 0) * 0.75), 0);
+
+  // Proof of Quality: group photos by booking_id
+  const photosByBooking = photos.reduce<Record<string, QualityPhoto[]>>((acc, p) => {
+    if (!acc[p.booking_id]) acc[p.booking_id] = [];
+    acc[p.booking_id].push(p);
+    return acc;
+  }, {});
 
   return (
     <div className="min-h-screen bg-background">
@@ -275,16 +391,168 @@ const Admin = () => {
             </p>
             <div className="grid grid-cols-3 gap-3 mb-6">
               <StatCard label="Pending" value={pendingCount} />
-              <StatCard label="Active Cooks" value={confirmedCount} />
+              <StatCard label="Active Cooks" value={cooks.filter((c) => c.status === "active").length} />
               <StatCard label="Total" value={bookings.length} />
             </div>
-            <div className="bg-card rounded-xl p-4 border border-border" style={{ boxShadow: "var(--shadow-card)" }}>
+            <div className="bg-card rounded-xl p-4 border border-border mb-4" style={{ boxShadow: "var(--shadow-card)" }}>
               <p className="font-body text-sm font-semibold text-foreground mb-2">Alerts</p>
               <div className="space-y-2">
                 <AlertItem icon={<AlertTriangle className="w-4 h-4 text-copper" />} text='Late check-ins or missing "Proof Photos"' />
                 <AlertItem icon={<ShieldCheck className="w-4 h-4 text-primary" />} text="All visa/health certificates up to date" />
               </div>
             </div>
+
+            {/* Toggle */}
+            <div className="flex gap-2 mb-4">
+              {(["bookings", "cooks"] as const).map((v) => (
+                <button
+                  key={v}
+                  onClick={() => setSupplyView(v)}
+                  className={`px-4 py-2 rounded-lg font-body text-xs font-semibold transition-colors ${
+                    supplyView === v ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"
+                  }`}
+                >
+                  {v === "bookings" ? "Bookings" : "Cooks"}
+                </button>
+              ))}
+            </div>
+
+            {supplyView === "bookings" && (
+              <>
+                {/* Search */}
+                <div className="relative mb-4">
+                  <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                  <input
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search customer, cook, area..."
+                    className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-border bg-card font-body text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-primary"
+                  />
+                </div>
+
+                <div className="space-y-3">
+                  {filteredBookings.map((b) => {
+                    const hasCook = b.cook_name && b.cook_id;
+                    return (
+                      <div key={b.id} className="bg-card rounded-xl p-4 border border-border" style={{ boxShadow: "var(--shadow-card)" }}>
+                        <div className="flex items-start justify-between mb-2">
+                          <div>
+                            <p className="font-body text-sm font-semibold text-foreground">{b.customer_name}</p>
+                            <p className="font-body text-xs text-muted-foreground">
+                              {b.area || "—"} · {b.booking_date || "No date"}
+                            </p>
+                          </div>
+                          <select
+                            value={b.status}
+                            onChange={(e) => updateStatus(b.id, e.target.value)}
+                            className={`font-body text-xs font-semibold px-2 py-1 rounded-lg border-0 ${statusColors[b.status] || ""}`}
+                          >
+                            <option value="pending">Pending</option>
+                            <option value="confirmed">Confirmed</option>
+                            <option value="completed">Completed</option>
+                            <option value="cancelled">Cancelled</option>
+                          </select>
+                        </div>
+                        {hasCook ? (
+                          <p className="font-body text-xs text-primary">Cook: {b.cook_name}</p>
+                        ) : (
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="font-body text-xs text-copper">Unassigned</span>
+                            <button
+                              onClick={() => openAssignDrawer(b)}
+                              className="font-body text-[10px] font-semibold px-2 py-1 rounded-lg bg-copper/10 text-copper hover:bg-copper/20 transition-colors"
+                            >
+                              Assign Cook
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                  {filteredBookings.length === 0 && (
+                    <p className="font-body text-sm text-muted-foreground text-center py-8">No bookings found</p>
+                  )}
+                </div>
+              </>
+            )}
+
+            {supplyView === "cooks" && (
+              <div className="space-y-3">
+                {cooks.map((c) => (
+                  <div key={c.id} className="bg-card rounded-xl p-4 border border-border" style={{ boxShadow: "var(--shadow-card)" }}>
+                    <div className="flex justify-between items-start mb-2">
+                      <div>
+                        <p className="font-body text-sm font-semibold text-foreground">{c.name}</p>
+                        <p className="font-body text-xs text-muted-foreground">{c.email} · {c.phone || "—"}</p>
+                      </div>
+                      <span className={`font-body text-[10px] font-semibold px-2 py-0.5 rounded-full ${cookStatusColors[c.status || "applied"] || ""}`}>
+                        {c.status || "applied"}
+                      </span>
+                    </div>
+                    <p className="font-body text-xs text-foreground mb-1">
+                      {c.cuisine?.join(" · ") || "—"} · {c.area || "—"}
+                    </p>
+                    <div className="flex items-center gap-3 font-body text-xs text-muted-foreground mb-2">
+                      <span>{c.years_experience ?? 0}y exp</span>
+                      <span className="flex items-center gap-1">
+                        {c.health_card ? (
+                          <CheckCircle2 className="w-3 h-3 text-primary" />
+                        ) : (
+                          <XCircle className="w-3 h-3 text-muted-foreground" />
+                        )}
+                        Health Card
+                      </span>
+                      <span>Visa: {c.visa_type || "—"}</span>
+                    </div>
+                    <div className="flex gap-2">
+                      {c.status === "applied" && (
+                        <button
+                          onClick={() => updateCookStatus(c.id, "reviewed")}
+                          className="font-body text-xs px-3 py-1.5 rounded-lg bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 transition-colors"
+                        >
+                          Mark Reviewed
+                        </button>
+                      )}
+                      {c.status === "reviewed" && (
+                        <>
+                          <button
+                            onClick={() => updateCookStatus(c.id, "approved")}
+                            className="font-body text-xs px-3 py-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                          >
+                            Approve ✓
+                          </button>
+                          <button
+                            onClick={() => updateCookStatus(c.id, "rejected")}
+                            className="font-body text-xs px-3 py-1.5 rounded-lg bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors"
+                          >
+                            Reject ✗
+                          </button>
+                        </>
+                      )}
+                      {c.status === "approved" && (
+                        <button
+                          onClick={() => updateCookStatus(c.id, "active")}
+                          className="font-body text-xs px-3 py-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                        >
+                          Set Active
+                        </button>
+                      )}
+                      {c.status === "active" && (
+                        <button
+                          onClick={() => updateCookStatus(c.id, "rejected")}
+                          className="font-body text-xs px-3 py-1.5 rounded-lg bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors"
+                        >
+                          Suspend
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+                {cooks.length === 0 && (
+                  <p className="font-body text-sm text-muted-foreground text-center py-8">No cooks registered</p>
+                )}
+              </div>
+            )}
           </div>
         )}
 
@@ -321,7 +589,7 @@ const Admin = () => {
           </div>
         )}
 
-        {/* ── Menu Vetting Queue ── */}
+        {/* ── Menu Vetting Queue (reads from cook_menus) ── */}
         {activeTab === "vetting" && (
           <div>
             <h2 className="font-display text-xl text-foreground mb-1">Menu Vetting Queue</h2>
@@ -329,14 +597,15 @@ const Admin = () => {
               Review proposed menus for balance, appeal, and accurate ingredient lists
             </p>
             <div className="space-y-3">
-              {bookings.map((b) => {
-                const ms = (b as any).menu_status || "pending_review";
+              {menus.map((m) => {
+                const ms = m.status || "pending_review";
                 return (
-                  <div key={b.id} className="bg-card rounded-xl p-4 border border-border" style={{ boxShadow: "var(--shadow-card)" }}>
+                  <div key={m.id} className="bg-card rounded-xl p-4 border border-border" style={{ boxShadow: "var(--shadow-card)" }}>
                     <div className="flex justify-between items-start mb-2">
                       <div>
-                        <p className="font-body text-sm font-semibold text-foreground">{b.cook_name}</p>
-                        <p className="font-body text-xs text-muted-foreground">{b.menu_selected}</p>
+                        <p className="font-body text-sm font-semibold text-foreground">{m.cook_name}</p>
+                        <p className="font-body text-xs text-foreground">{m.menu_name}</p>
+                        <p className="font-body text-xs text-copper mt-0.5">{m.cuisine || "—"}</p>
                       </div>
                       <div className="flex items-center gap-2">
                         <span className={`font-body text-[10px] font-semibold px-2 py-0.5 rounded-full ${menuStatusColors[ms] || ""}`}>
@@ -345,13 +614,13 @@ const Admin = () => {
                         {ms === "pending_review" && (
                           <>
                             <button
-                              onClick={() => handleMenuAction(b, "approved")}
+                              onClick={() => handleMenuApprove(m)}
                               className="p-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
                             >
                               <CheckCircle2 className="w-4 h-4" />
                             </button>
                             <button
-                              onClick={() => handleMenuAction(b, "rejected")}
+                              onClick={() => setRejectMenuId(rejectMenuId === m.id ? null : m.id)}
                               className="p-1.5 rounded-lg bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors"
                             >
                               <XCircle className="w-4 h-4" />
@@ -360,14 +629,61 @@ const Admin = () => {
                         )}
                       </div>
                     </div>
+
+                    {/* Meals */}
+                    {m.meals && m.meals.length > 0 && (
+                      <div className="mb-2">
+                        {m.meals.map((meal, i) => (
+                          <p key={i} className="font-body text-xs text-foreground">
+                            {i + 1}. {meal}
+                          </p>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Dietary pills */}
+                    {m.dietary && m.dietary.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mb-2">
+                        {m.dietary.map((d) => (
+                          <span key={d} className="font-body text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+                            {d}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
                     <p className="font-body text-xs text-muted-foreground">
-                      Dietary: {b.dietary?.join(", ") || "None"}
+                      AED {m.price_aed} · serves {m.serves || "—"}
                     </p>
+
+                    {ms === "rejected" && m.rejection_reason && (
+                      <p className="font-body text-xs text-destructive/70 italic mt-1">{m.rejection_reason}</p>
+                    )}
+
+                    {/* Reject reason input */}
+                    {rejectMenuId === m.id && (
+                      <div className="mt-3 space-y-2">
+                        <textarea
+                          value={rejectReason}
+                          onChange={(e) => setRejectReason(e.target.value)}
+                          placeholder="Reason for rejection..."
+                          className="w-full p-2 rounded-lg border border-border bg-card font-body text-xs text-foreground resize-none outline-none focus:border-primary"
+                          rows={2}
+                        />
+                        <button
+                          onClick={() => handleMenuReject(m)}
+                          disabled={!rejectReason.trim()}
+                          className="font-body text-xs px-3 py-1.5 rounded-lg bg-destructive/10 text-destructive hover:bg-destructive/20 disabled:opacity-50 transition-colors"
+                        >
+                          Confirm Reject
+                        </button>
+                      </div>
+                    )}
                   </div>
                 );
               })}
-              {bookings.length === 0 && (
-                <p className="font-body text-sm text-muted-foreground text-center py-8">No menus to review</p>
+              {menus.length === 0 && (
+                <p className="font-body text-sm text-muted-foreground text-center py-8">No menus submitted yet.</p>
               )}
             </div>
           </div>
@@ -440,151 +756,68 @@ const Admin = () => {
           </div>
         )}
 
-        {/* ── Proof of Quality ── */}
+        {/* ── Proof of Quality (Review Only) ── */}
         {activeTab === "proof" && (
           <div>
             <h2 className="font-display text-xl text-foreground mb-1">Proof of Quality</h2>
             <p className="font-body text-xs text-muted-foreground mb-4">
-              Upload photo of prepped containers + photo of spotless kitchen
+              Review photos uploaded by Cooqs after each session
             </p>
 
-            {/* Upload section per booking */}
-            <div className="space-y-4 mb-6">
-              {bookings
-                .filter((b) => b.status === "confirmed" || b.status === "completed")
-                .slice(0, 10)
-                .map((b) => {
-                  const bookingPhotos = photos.filter((p) => p.booking_id === b.id);
-                  const hasContainer = bookingPhotos.some((p) => p.photo_type === "container");
-                  const hasKitchen = bookingPhotos.some((p) => p.photo_type === "kitchen");
-
+            {Object.keys(photosByBooking).length === 0 ? (
+              <div className="bg-card rounded-xl p-6 border border-border text-center" style={{ boxShadow: "var(--shadow-card)" }}>
+                <Camera className="w-10 h-10 text-copper mx-auto mb-3" />
+                <p className="font-body text-sm text-muted-foreground">No photos uploaded yet</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {Object.entries(photosByBooking).map(([bookingId, bPhotos]) => {
+                  const booking = bookings.find((b) => b.id === bookingId);
                   return (
-                    <div key={b.id} className="bg-card rounded-xl p-4 border border-border" style={{ boxShadow: "var(--shadow-card)" }}>
-                      <div className="flex justify-between items-start mb-3">
-                        <div>
-                          <p className="font-body text-sm font-semibold text-foreground">{b.cook_name}</p>
-                          <p className="font-body text-xs text-muted-foreground">{b.booking_date || "No date"} · {b.area || "—"}</p>
-                        </div>
-                        <span className={`font-body text-[10px] font-semibold px-2 py-0.5 rounded-full ${statusColors[b.status] || ""}`}>
-                          {b.status}
-                        </span>
+                    <div key={bookingId} className="bg-card rounded-xl p-4 border border-border" style={{ boxShadow: "var(--shadow-card)" }}>
+                      <div className="mb-3">
+                        <p className="font-body text-sm font-semibold text-foreground">
+                          {bPhotos[0].cook_name}
+                        </p>
+                        <p className="font-body text-xs text-muted-foreground">
+                          {booking ? `${booking.customer_name} · ${booking.booking_date || "—"} · ${booking.area || "—"}` : `Booking ${bookingId.slice(0, 8)}...`}
+                        </p>
                       </div>
-
                       <div className="grid grid-cols-2 gap-3">
-                        {/* Container photo */}
-                        <div className="relative">
-                          {hasContainer ? (
-                            <div className="relative rounded-lg overflow-hidden aspect-square bg-muted">
-                              <img
-                                src={bookingPhotos.find((p) => p.photo_type === "container")?.photo_url}
-                                alt="Container"
-                                className="w-full h-full object-cover"
-                              />
+                        {bPhotos.map((p) => (
+                          <div key={p.id} className="relative">
+                            <div className="rounded-lg overflow-hidden aspect-square bg-muted">
+                              <img src={p.photo_url} alt={p.photo_type} className="w-full h-full object-cover" />
                               <div className="absolute bottom-0 left-0 right-0 bg-foreground/70 px-2 py-1">
-                                <p className="font-body text-[10px] text-background">Containers ✓</p>
+                                <p className="font-body text-[10px] text-background capitalize">{p.photo_type}</p>
                               </div>
                             </div>
-                          ) : (
-                            <label className="flex flex-col items-center justify-center aspect-square rounded-lg border-2 border-dashed border-border bg-muted/30 cursor-pointer hover:bg-muted/50 transition-colors">
-                              {uploading === `${b.id}-container` ? (
-                                <Loader2 className="w-6 h-6 text-muted-foreground animate-spin" />
-                              ) : (
-                                <>
-                                  <Upload className="w-5 h-5 text-muted-foreground mb-1" />
-                                  <span className="font-body text-[10px] text-muted-foreground">Containers</span>
-                                </>
-                              )}
-                              <input
-                                type="file"
-                                accept="image/*"
-                                className="hidden"
-                                onChange={(e) => {
-                                  const file = e.target.files?.[0];
-                                  if (file) handlePhotoUpload(b.id, b.cook_id, b.cook_name, "container", file);
-                                }}
-                              />
-                            </label>
-                          )}
-                        </div>
-
-                        {/* Kitchen photo */}
-                        <div className="relative">
-                          {hasKitchen ? (
-                            <div className="relative rounded-lg overflow-hidden aspect-square bg-muted">
-                              <img
-                                src={bookingPhotos.find((p) => p.photo_type === "kitchen")?.photo_url}
-                                alt="Kitchen"
-                                className="w-full h-full object-cover"
-                              />
-                              <div className="absolute bottom-0 left-0 right-0 bg-foreground/70 px-2 py-1">
-                                <p className="font-body text-[10px] text-background">Kitchen ✓</p>
+                            {p.reviewed ? (
+                              <div className={`absolute top-1 right-1 px-1.5 py-0.5 rounded text-[9px] font-body font-semibold ${p.approved ? "bg-primary/90 text-background" : "bg-destructive/90 text-background"}`}>
+                                {p.approved ? "Approved ✓" : "Rejected"}
                               </div>
-                            </div>
-                          ) : (
-                            <label className="flex flex-col items-center justify-center aspect-square rounded-lg border-2 border-dashed border-border bg-muted/30 cursor-pointer hover:bg-muted/50 transition-colors">
-                              {uploading === `${b.id}-kitchen` ? (
-                                <Loader2 className="w-6 h-6 text-muted-foreground animate-spin" />
-                              ) : (
-                                <>
-                                  <Upload className="w-5 h-5 text-muted-foreground mb-1" />
-                                  <span className="font-body text-[10px] text-muted-foreground">Kitchen</span>
-                                </>
-                              )}
-                              <input
-                                type="file"
-                                accept="image/*"
-                                className="hidden"
-                                onChange={(e) => {
-                                  const file = e.target.files?.[0];
-                                  if (file) handlePhotoUpload(b.id, b.cook_id, b.cook_name, "kitchen", file);
-                                }}
-                              />
-                            </label>
-                          )}
-                        </div>
+                            ) : (
+                              <div className="flex gap-1 mt-1">
+                                <button
+                                  onClick={() => handlePhotoReview(p.id, true)}
+                                  className="flex-1 p-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors flex items-center justify-center"
+                                >
+                                  <CheckCircle2 className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => handlePhotoReview(p.id, false)}
+                                  className="flex-1 p-1.5 rounded-lg bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors flex items-center justify-center"
+                                >
+                                  <XCircle className="w-4 h-4" />
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        ))}
                       </div>
                     </div>
                   );
                 })}
-              {bookings.filter((b) => b.status === "confirmed" || b.status === "completed").length === 0 && (
-                <div className="bg-card rounded-xl p-6 border border-border text-center" style={{ boxShadow: "var(--shadow-card)" }}>
-                  <Camera className="w-10 h-10 text-copper mx-auto mb-3" />
-                  <p className="font-body text-sm text-muted-foreground">No sessions ready for photo upload</p>
-                </div>
-              )}
-            </div>
-
-            {/* Review queue */}
-            {photos.filter((p) => !p.reviewed).length > 0 && (
-              <div>
-                <p className="font-body text-xs font-semibold tracking-[0.15em] uppercase text-copper mb-3">Pending Review</p>
-                <div className="space-y-3">
-                  {photos
-                    .filter((p) => !p.reviewed)
-                    .map((p) => (
-                      <div key={p.id} className="bg-card rounded-xl p-3 border border-border flex gap-3 items-center" style={{ boxShadow: "var(--shadow-card)" }}>
-                        <img src={p.photo_url} alt={p.photo_type} className="w-16 h-16 rounded-lg object-cover" />
-                        <div className="flex-1">
-                          <p className="font-body text-sm font-semibold text-foreground">{p.cook_name}</p>
-                          <p className="font-body text-xs text-muted-foreground capitalize">{p.photo_type} photo</p>
-                        </div>
-                        <div className="flex gap-1">
-                          <button
-                            onClick={() => handlePhotoReview(p.id, true)}
-                            className="p-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
-                          >
-                            <CheckCircle2 className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => handlePhotoReview(p.id, false)}
-                            className="p-1.5 rounded-lg bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors"
-                          >
-                            <XCircle className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                </div>
               </div>
             )}
           </div>
@@ -597,65 +830,164 @@ const Admin = () => {
             <p className="font-body text-xs text-muted-foreground mb-4">
               Escrow management, payout triggers, and revenue tracking
             </p>
-            <div className="grid grid-cols-2 gap-3 mb-6">
-              <StatCard label="Total Revenue" value={`AED ${totalRevenue}`} />
-              <StatCard label="Completed" value={completedCount} />
-              <StatCard label="Pending Payouts" value={confirmedCount} />
-              <StatCard label="Bookings" value={bookings.length} />
+
+            {/* Pending Payouts toggle */}
+            <div className="flex items-center gap-3 mb-4">
+              <button
+                onClick={() => setShowPendingPayouts(!showPendingPayouts)}
+                className={`font-body text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors ${
+                  showPendingPayouts ? "bg-copper/20 text-copper" : "bg-muted text-muted-foreground"
+                }`}
+              >
+                Pending Payouts
+              </button>
             </div>
-            <div className="bg-card rounded-xl p-4 border border-border mb-4" style={{ boxShadow: "var(--shadow-card)" }}>
-              <p className="font-body text-sm font-semibold text-foreground mb-2">Escrow Management</p>
-              <p className="font-body text-xs text-muted-foreground">
-                Check customer payments upon booking. Funds held in escrow until proof of quality is verified.
-              </p>
-            </div>
-            <div className="bg-card rounded-xl p-4 border border-border" style={{ boxShadow: "var(--shadow-card)" }}>
-              <p className="font-body text-sm font-semibold text-foreground mb-2">Payout Trigger</p>
-              <p className="font-body text-xs text-muted-foreground">
-                Release funds to cook's wallet only after "Proof of Quality" photos are uploaded and 2 hours have passed without a major client complaint.
-              </p>
-            </div>
-            <div className="mt-4">
-              <p className="font-body text-xs font-semibold tracking-[0.15em] uppercase text-copper mb-3">Recent Bookings</p>
-              {loading ? (
-                <p className="font-body text-muted-foreground text-center py-4">Loading...</p>
-              ) : bookings.length === 0 ? (
-                <p className="font-body text-muted-foreground text-center py-4">No bookings yet.</p>
-              ) : (
+
+            {showPendingPayouts ? (
+              <div>
+                <p className="font-body text-sm font-semibold text-copper mb-3">
+                  Total pending: AED {pendingPayoutTotal}
+                </p>
                 <div className="space-y-3">
-                  {bookings.slice(0, 10).map((b) => (
+                  {pendingPayouts.map((b) => (
                     <div key={b.id} className="bg-card rounded-xl p-4 border border-border" style={{ boxShadow: "var(--shadow-card)" }}>
-                      <div className="flex items-start justify-between mb-2">
+                      <div className="flex justify-between items-start">
                         <div>
-                          <p className="font-body text-sm font-semibold text-foreground">{b.customer_name}</p>
-                          <p className="font-body text-xs text-muted-foreground">
-                            {b.cook_name} · {b.area || "—"}
-                          </p>
+                          <p className="font-body text-sm font-semibold text-foreground">{b.cook_name}</p>
+                          <p className="font-body text-xs text-muted-foreground">{b.customer_name} · {b.booking_date || "—"}</p>
                         </div>
-                        <select
-                          value={b.status}
-                          onChange={(e) => updateStatus(b.id, e.target.value)}
-                          className={`font-body text-xs font-semibold px-2 py-1 rounded-lg border-0 ${statusColors[b.status] || ""}`}
-                        >
-                          <option value="pending">Pending</option>
-                          <option value="confirmed">Confirmed</option>
-                          <option value="completed">Completed</option>
-                          <option value="cancelled">Cancelled</option>
-                        </select>
+                        <div className="text-right">
+                          <p className="font-body text-sm font-semibold text-primary">
+                            Cook share: AED {Math.round((b.total_aed || 0) * 0.75)}
+                          </p>
+                          <button
+                            onClick={() => markAsPaid(b.id)}
+                            className="font-body text-xs font-semibold px-3 py-1 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors mt-1"
+                          >
+                            Mark as Paid
+                          </button>
+                        </div>
                       </div>
-                      <div className="font-body text-xs text-muted-foreground">
-                        <p>Menu: {b.menu_selected}</p>
-                        <p>Grocery: {b.grocery_addon ? "Yes" : "No"}</p>
-                      </div>
-                      <p className="font-body text-sm font-semibold text-copper mt-1">AED {b.total_aed}</p>
                     </div>
                   ))}
+                  {pendingPayouts.length === 0 && (
+                    <p className="font-body text-sm text-muted-foreground text-center py-8">No pending payouts</p>
+                  )}
                 </div>
-              )}
-            </div>
+              </div>
+            ) : (
+              <>
+                <div className="grid grid-cols-2 gap-3 mb-6">
+                  <StatCard label="Total Revenue" value={`AED ${totalRevenue}`} />
+                  <StatCard label="Completed" value={completedCount} />
+                  <StatCard label="Pending Payouts" value={pendingPayouts.length} />
+                  <StatCard label="Bookings" value={bookings.length} />
+                </div>
+                <div className="bg-card rounded-xl p-4 border border-border mb-4" style={{ boxShadow: "var(--shadow-card)" }}>
+                  <p className="font-body text-sm font-semibold text-foreground mb-2">Escrow Management</p>
+                  <p className="font-body text-xs text-muted-foreground">
+                    Check customer payments upon booking. Funds held in escrow until proof of quality is verified.
+                  </p>
+                </div>
+                <div className="bg-card rounded-xl p-4 border border-border" style={{ boxShadow: "var(--shadow-card)" }}>
+                  <p className="font-body text-sm font-semibold text-foreground mb-2">Payout Trigger</p>
+                  <p className="font-body text-xs text-muted-foreground">
+                    Release funds to cook's wallet only after "Proof of Quality" photos are uploaded and 2 hours have passed without a major client complaint.
+                  </p>
+                </div>
+                <div className="mt-4">
+                  <p className="font-body text-xs font-semibold tracking-[0.15em] uppercase text-copper mb-3">Recent Bookings</p>
+                  {loading ? (
+                    <p className="font-body text-muted-foreground text-center py-4">Loading...</p>
+                  ) : bookings.length === 0 ? (
+                    <p className="font-body text-muted-foreground text-center py-4">No bookings yet.</p>
+                  ) : (
+                    <div className="space-y-3">
+                      {bookings.slice(0, 10).map((b) => (
+                        <div key={b.id} className="bg-card rounded-xl p-4 border border-border" style={{ boxShadow: "var(--shadow-card)" }}>
+                          <div className="flex items-start justify-between mb-2">
+                            <div>
+                              <p className="font-body text-sm font-semibold text-foreground">{b.customer_name}</p>
+                              <p className="font-body text-xs text-muted-foreground">
+                                {b.cook_name} · {b.area || "—"}
+                              </p>
+                            </div>
+                            <select
+                              value={b.status}
+                              onChange={(e) => updateStatus(b.id, e.target.value)}
+                              className={`font-body text-xs font-semibold px-2 py-1 rounded-lg border-0 ${statusColors[b.status] || ""}`}
+                            >
+                              <option value="pending">Pending</option>
+                              <option value="confirmed">Confirmed</option>
+                              <option value="completed">Completed</option>
+                              <option value="cancelled">Cancelled</option>
+                            </select>
+                          </div>
+                          <div className="font-body text-xs text-muted-foreground">
+                            <p>Menu: {b.menu_selected}</p>
+                            <p>Grocery: {b.grocery_addon ? "Yes" : "No"}</p>
+                          </div>
+                          <p className="font-body text-sm font-semibold text-copper mt-1">AED {b.total_aed}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
           </div>
         )}
       </div>
+
+      {/* Assign Cook Drawer */}
+      <Drawer open={assignDrawerOpen} onOpenChange={setAssignDrawerOpen}>
+        <DrawerContent>
+          <DrawerHeader>
+            <DrawerTitle className="font-display text-lg">
+              Assign a Cook — {assignBooking?.customer_name}
+            </DrawerTitle>
+          </DrawerHeader>
+          <div className="px-4 pb-6">
+            {assignBooking && (
+              <div className="font-body text-xs text-muted-foreground mb-4 space-y-0.5">
+                <p>Date: {assignBooking.booking_date || "—"}</p>
+                <p>Area: {assignBooking.area || "—"}</p>
+                <p>Dietary: {assignBooking.dietary?.join(", ") || "None"}</p>
+                <p>Menu: {assignBooking.menu_selected}</p>
+              </div>
+            )}
+            <div className="space-y-2 max-h-64 overflow-y-auto">
+              {availableCooks.map((c) => (
+                <button
+                  key={c.id}
+                  onClick={() => setSelectedCookId(c.id)}
+                  className={`w-full text-left rounded-xl p-3 border transition-colors ${
+                    selectedCookId === c.id
+                      ? "border-primary bg-primary/5"
+                      : "border-border bg-card"
+                  }`}
+                >
+                  <p className="font-body text-sm font-semibold text-foreground">{c.name}</p>
+                  <p className="font-body text-xs text-muted-foreground">
+                    {c.cuisine?.join(" · ") || "—"} · {c.area || "—"} · {c.years_experience ?? 0}y
+                  </p>
+                </button>
+              ))}
+              {availableCooks.length === 0 && (
+                <p className="font-body text-sm text-muted-foreground text-center py-4">No approved cooks available</p>
+              )}
+            </div>
+            <button
+              onClick={confirmAssignment}
+              disabled={!selectedCookId || assigning}
+              className="w-full mt-4 py-3 rounded-xl font-body font-semibold text-sm text-background bg-copper hover:bg-copper/90 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
+            >
+              {assigning && <Loader2 className="w-4 h-4 animate-spin" />}
+              Confirm Assignment
+            </button>
+          </div>
+        </DrawerContent>
+      </Drawer>
     </div>
   );
 };
