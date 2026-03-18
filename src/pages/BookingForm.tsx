@@ -100,9 +100,9 @@ const BookingForm = () => {
         phone: booking.phone,
         area: booking.location,
         address: booking.address,
-        cook_id: booking.cookId,
+        cook_id: routerState.cookId || booking.cookId,
         cook_name: booking.cookName,
-        menu_selected: booking.menuSelected,
+        menu_selected: routerState.selectedMenuName || booking.menuSelected,
         booking_date: booking.bookingDates.join(", "),
         frequency,
         party_size: booking.partySize,
@@ -114,6 +114,8 @@ const BookingForm = () => {
         session_type: sessionType,
         total_aed: total,
         status: "pending",
+        customer_user_id: user?.id || null,
+        selected_menu_id: routerState.selectedMenuId || null,
       }).select().single();
       if (error || !newBooking) throw error || new Error("Booking creation failed");
       updateBooking({ totalAed: total });
