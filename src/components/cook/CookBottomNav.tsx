@@ -1,5 +1,5 @@
 import { useLocation, useNavigate } from "react-router-dom";
-import { LayoutDashboard, ClipboardList, UtensilsCrossed, Camera, DollarSign } from "lucide-react";
+import { LayoutDashboard, ClipboardList, UtensilsCrossed, Camera, DollarSign, CalendarDays } from "lucide-react";
 
 interface CookBottomNavProps {
   pendingCount?: number;
