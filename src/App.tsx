@@ -47,8 +47,8 @@ const App = () => (
               <Route path="/account" element={<CustomerAuth />} />
               <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
               <Route path="/login" element={<Login />} />
-              <Route path="/my-bookings" element={<MyBookings />} />
-              <Route path="/payment" element={<Payment />} />
+              <Route path="/my-bookings" element={<CustomerProtectedRoute><MyBookings /></CustomerProtectedRoute>} />
+              <Route path="/payment" element={<CustomerProtectedRoute><Payment /></CustomerProtectedRoute>} />
               <Route path="/rate/:bookingId" element={<RateSession />} />
               <Route path="/cook/login" element={<CookLogin />} />
               <Route path="/cook/dashboard" element={<CookProtectedRoute><CookDashboard /></CookProtectedRoute>} />
