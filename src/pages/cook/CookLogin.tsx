@@ -193,6 +193,23 @@ const CookLogin = () => {
             Send magic link
           </button>
         )}
+
+        {/* New cook info */}
+        <div className="mt-5 pt-5" style={{ borderTop: "1px solid rgba(249,247,242,0.1)" }}>
+          <p className="font-body text-[13px] font-semibold mb-1" style={{ color: "#F9F7F2" }}>
+            New cook?
+          </p>
+          <p className="font-body text-xs leading-relaxed mb-2" style={{ color: "rgba(249,247,242,0.5)" }}>
+            Cook accounts are created by Cooq after vetting. If you've been approved, check your email for your login link.
+          </p>
+          <a
+            href="mailto:hello@cooq.ae?subject=Cook Application"
+            className="font-body text-xs font-medium inline-block"
+            style={{ color: "#86A383" }}
+          >
+            Apply to become a Cooq →
+          </a>
+        </div>
       </div>
 
       <p className="font-body text-xs mt-6" style={{ color: "rgba(249,247,242,0.4)" }}>
