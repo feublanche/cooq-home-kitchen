@@ -92,8 +92,27 @@ const BookingForm = () => {
 
   const handleSubmit = async () => {
     if (!validate()) return;
+
+    // Security: rate limit
+    const lastSubmit = sessionStorage.getItem("cooq_last_submit");
+    if (lastSubmit && Date.now() - Number(lastSubmit) < 300000) {
+      toast({ title: "Please wait 5 minutes before submitting again.", variant: "destructive" });
+      return;
+    }
+
+    // Security: validate amount
+    if (!total || total < 299 || total > 700) {
+      toast({ title: "Invalid booking amount.", variant: "destructive" });
+      return;
+    }
+
     setLoading(true);
     try {
+      // Security: sanitise text
+      const sanitisedAllergyNotes = booking.allergyNotes?.replace(/<[^>]*>/g, "").trim() || "";
+
+      sessionStorage.setItem("cooq_last_submit", String(Date.now()));
+
       const sessionType = isDiscovery ? "discovery" : "standard";
       const { data: newBooking, error } = await supabase.from("bookings").insert({
         customer_name: booking.customerName,
