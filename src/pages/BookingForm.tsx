@@ -1,9 +1,10 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useBooking } from "@/context/BookingContext";
-import { ArrowLeft, Info } from "lucide-react";
+import { ArrowLeft, Info, Lock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import cooqLogo from "@/assets/cooq-logo.png";
+import type { User } from "@supabase/supabase-js";
 
 const steps = ["Preferences", "Match", "Profile", "Details", "Confirm"];
 
