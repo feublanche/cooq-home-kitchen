@@ -239,6 +239,7 @@ const Admin = () => {
             <LogOut className="w-4 h-4" />
           </button>
         </div>
+      </div>
 
       {/* Tab bar */}
       <div className="bg-card border-b border-border overflow-x-auto">
