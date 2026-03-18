@@ -7,7 +7,6 @@ import {
   ChevronDown,
   ChevronUp,
   MapPin,
-  Calendar,
   Phone,
   Mail,
   ClipboardList,
@@ -21,6 +20,7 @@ interface Order {
   email: string;
   phone: string;
   area: string | null;
+  address: string | null;
   booking_date: string | null;
   menu_selected: string;
   dietary: string[] | null;
@@ -122,11 +122,7 @@ const CookOrders = () => {
         {loading ? (
           <div className="space-y-2">
             {[1, 2, 3].map((i) => (
-              <div
-                key={i}
-                className="rounded-xl animate-pulse"
-                style={{ backgroundColor: "rgba(249,247,242,0.05)", height: "80px" }}
-              />
+              <div key={i} className="rounded-xl animate-pulse" style={{ backgroundColor: "rgba(249,247,242,0.05)", height: "80px" }} />
             ))}
           </div>
         ) : filtered.length === 0 ? (
@@ -140,7 +136,13 @@ const CookOrders = () => {
           filtered.map((o) => {
             const isExpanded = expanded === o.id;
             const badge = statusBadge[o.status || "pending"];
-            const showContact = o.status === "confirmed" || o.status === "completed";
+            const customerFirstName = o.customer_name?.split(" ")[0] || "Customer";
+
+            // Contact reveal logic
+            const isSessionDay = o.booking_date
+              ? new Date().toDateString() === new Date(o.booking_date).toDateString()
+              : false;
+            const showContact = isSessionDay && o.status === "confirmed";
 
             return (
               <div
@@ -152,12 +154,9 @@ const CookOrders = () => {
                 }}
               >
                 {/* Collapsed header */}
-                <div
-                  className="flex items-center p-4 cursor-pointer"
-                  onClick={() => setExpanded(isExpanded ? null : o.id)}
-                >
+                <div className="flex items-center p-4 cursor-pointer" onClick={() => setExpanded(isExpanded ? null : o.id)}>
                   <span className="flex-1 font-body font-bold" style={{ fontSize: "13px", color: "#F9F7F2" }}>
-                    {o.customer_name?.split(" ")[0]}
+                    {customerFirstName}
                   </span>
                   <span
                     className="font-body rounded-full px-2.5 py-0.5 mr-2"
@@ -175,9 +174,7 @@ const CookOrders = () => {
                 {/* Always visible */}
                 <div className="px-4 pb-3 flex justify-between items-center">
                   <div className="flex items-center gap-3">
-                    <span
-                      style={{ fontSize: "11px", fontFamily: "'DM Mono', monospace", color: "#86A383" }}
-                    >
+                    <span style={{ fontSize: "11px", fontFamily: "'DM Mono', monospace", color: "#86A383" }}>
                       {formatDate(o.booking_date)}
                     </span>
                     <span className="font-body" style={{ fontSize: "11px", color: "rgba(249,247,242,0.5)" }}>
@@ -202,18 +199,34 @@ const CookOrders = () => {
                     <DetailRow label="Party size" value={`${o.party_size ?? 2} people`} />
                     <DetailRow label="Frequency" value={o.frequency || "One-time"} />
 
-                    {showContact && (
-                      <div className="flex gap-3 pt-1">
-                        <a href={`tel:${o.phone}`}>
+                    {/* Contact reveal */}
+                    {showContact ? (
+                      <div className="space-y-1 pt-1">
+                        <a href={`tel:${o.phone}`} className="flex items-center gap-2">
                           <Phone className="w-4 h-4" style={{ color: "#86A383" }} />
+                          <span className="font-body" style={{ fontSize: "12px", color: "#F9F7F2" }}>{o.phone}</span>
                         </a>
+                        {o.address && (
+                          <div className="flex items-center gap-2">
+                            <MapPin className="w-4 h-4" style={{ color: "#86A383" }} />
+                            <span className="font-body" style={{ fontSize: "12px", color: "#F9F7F2" }}>{o.address}</span>
+                          </div>
+                        )}
                         <a href={`mailto:${o.email}`}>
-                          <Mail className="w-4 h-4" style={{ color: "#86A383" }} />
+                          <Mail className="w-4 h-4 inline" style={{ color: "#86A383" }} />
                         </a>
                       </div>
-                    )}
+                    ) : o.status === "confirmed" ? (
+                      <p className="font-body italic rounded-lg p-2 mt-1" style={{ fontSize: "11px", color: "#86A383", backgroundColor: "rgba(134,163,131,0.1)" }}>
+                        📍 Full address and contact revealed on your session day
+                      </p>
+                    ) : o.status === "pending" ? (
+                      <p className="font-body italic rounded-lg p-2 mt-1" style={{ fontSize: "11px", color: "#B57E5D", backgroundColor: "rgba(181,126,93,0.1)" }}>
+                        ⏳ Awaiting confirmation from Cooq
+                      </p>
+                    ) : null}
 
-                    {showContact && o.session_notes && (
+                    {o.session_notes && (
                       <p className="font-body italic" style={{ fontSize: "11px", color: "rgba(249,247,242,0.5)" }}>
                         {o.session_notes}
                       </p>
@@ -245,26 +258,12 @@ const CookOrders = () => {
   );
 };
 
-const DetailRow = ({
-  label,
-  value,
-  italic,
-}: {
-  label: string;
-  value: string;
-  italic?: boolean;
-}) => (
+const DetailRow = ({ label, value, italic }: { label: string; value: string; italic?: boolean }) => (
   <div>
-    <p
-      className="uppercase tracking-wider"
-      style={{ fontSize: "9px", fontFamily: "'DM Mono', monospace", color: "rgba(249,247,242,0.4)" }}
-    >
+    <p className="uppercase tracking-wider" style={{ fontSize: "9px", fontFamily: "'DM Mono', monospace", color: "rgba(249,247,242,0.4)" }}>
       {label}
     </p>
-    <p
-      className={`font-body ${italic ? "italic" : ""}`}
-      style={{ fontSize: "12px", color: "#F9F7F2" }}
-    >
+    <p className={`font-body ${italic ? "italic" : ""}`} style={{ fontSize: "12px", color: "#F9F7F2" }}>
       {value}
     </p>
   </div>
