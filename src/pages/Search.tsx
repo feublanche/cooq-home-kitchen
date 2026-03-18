@@ -27,41 +27,56 @@ const SAVINGS = {
 const cuisineOptions = ["Arabic", "Lebanese", "Emirati", "Moroccan", "Indian", "Pakistani", "Filipino", "Mediterranean", "Asian", "Italian"];
 const dietaryOptions = ["Halal", "Vegetarian", "Vegan", "Gluten-Free", "Dairy-Free", "Nut-Free", "Kid-Friendly"];
 
-const frequencyCards = [
+const freqOptions = [
   {
-    key: "one-time",
-    title: "One-time",
+    key: 'one-time',
+    label: 'One-time',
+    subtitle: 'Single session, no commitment',
     badge: null,
-    line2: "Single session, no commitment",
-    line3: "AED 350 · 420 · 550 per session",
-    savings: null,
+    rows: [
+      { tier: 'Duo', people: '1–2 people', price: 'AED 350 / session' },
+      { tier: 'Family', people: '3–4 people', price: 'AED 420 / session' },
+      { tier: 'Large', people: '5–6 people', price: 'AED 550 / session' },
+    ],
+    savings: null
   },
   {
-    key: "weekly",
-    title: "Weekly",
-    badge: "Save 15%",
-    line2: "4 sessions per month",
-    line3: "AED 1,190 · 1,430 · 1,870 / month",
-    savings: "Save AED 210 · 250 · 330 per month",
+    key: 'weekly',
+    label: 'Weekly',
+    subtitle: '4 sessions per month',
+    badge: 'Save 15%',
+    rows: [
+      { tier: 'Duo', people: '1–2 people', price: 'AED 1,190 / mo' },
+      { tier: 'Family', people: '3–4 people', price: 'AED 1,430 / mo' },
+      { tier: 'Large', people: '5–6 people', price: 'AED 1,870 / mo' },
+    ],
+    savings: 'You save AED 210 · 250 · 330 per month vs one-time'
   },
   {
-    key: "twice",
-    title: "Twice a week",
-    badge: "Save 15%",
-    line2: "8 sessions per month",
-    line3: "AED 2,380 · 2,860 · 3,740 / month",
-    savings: "Save AED 420 · 500 · 660 per month",
+    key: 'twice',
+    label: 'Twice a week',
+    subtitle: '8 sessions per month',
+    badge: 'Save 15%',
+    rows: [
+      { tier: 'Duo', people: '1–2 people', price: 'AED 2,380 / mo' },
+      { tier: 'Family', people: '3–4 people', price: 'AED 2,860 / mo' },
+      { tier: 'Large', people: '5–6 people', price: 'AED 3,740 / mo' },
+    ],
+    savings: 'You save AED 420 · 500 · 660 per month vs one-time'
   },
   {
-    key: "three",
-    title: "3× a week",
-    badge: "Save 15%",
-    line2: "12 sessions / month · Full week coverage",
-    line3: "AED 3,570 · 4,280 · 5,610 / month",
-    savings: "Save AED 630 · 760 · 990 per month",
-  },
+    key: 'three',
+    label: '3× a week',
+    subtitle: '12 sessions per month · Full week coverage',
+    badge: 'Save 15%',
+    rows: [
+      { tier: 'Duo', people: '1–2 people', price: 'AED 3,570 / mo' },
+      { tier: 'Family', people: '3–4 people', price: 'AED 4,280 / mo' },
+      { tier: 'Large', people: '5–6 people', price: 'AED 5,610 / mo' },
+    ],
+    savings: 'You save AED 630 · 760 · 990 per month vs one-time'
+  }
 ];
-
 const tierOptions = [
   { key: "duo", label: "Cooq Duo", desc: "1–2 people", price: "AED 350" },
   { key: "family", label: "Cooq Family", desc: "3–4 people", price: "AED 420" },
@@ -202,42 +217,56 @@ const Search = () => {
           <div>
             <SectionLabel>How often?</SectionLabel>
             <div className="space-y-3">
-              {frequencyCards.map((f) => {
-                const selected = frequency === f.key;
+              {freqOptions.map((option) => {
+                const selected = frequency === option.key;
                 return (
                   <button
-                    key={f.key}
+                    key={option.key}
                     type="button"
-                    onClick={() => setFrequency(f.key)}
+                    onClick={() => setFrequency(option.key)}
                     className={`w-full text-left rounded-xl p-4 border-2 cursor-pointer transition-all ${
                       selected
                         ? "border-[#86A383] bg-[#86A383]/5"
                         : "border-gray-100 bg-white"
                     }`}
                   >
-                    <div className="flex items-center gap-2">
-                      <span className="font-body text-[15px] font-semibold text-foreground">{f.title}</span>
-                      {f.badge && (
-                        <span className="font-body text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{ backgroundColor: "rgba(134,163,131,0.15)", color: "#86A383" }}>
-                          {f.badge}
-                        </span>
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="font-semibold text-[#2D312E] text-base">{option.label}</span>
+                      {option.badge && (
+                        <span className="bg-[#86A383]/10 text-[#86A383] text-xs px-2 py-0.5 rounded-full font-medium">{option.badge}</span>
                       )}
                     </div>
-                    <p className="font-body text-xs text-gray-400 mt-1">{f.line2}</p>
-                    <p className="font-body text-xs mt-1" style={{ color: "#B57E5D" }}>{f.line3}</p>
-                    {f.savings && (
-                      <p className="font-body text-xs mt-1" style={{ color: "#86A383" }}>{f.savings}</p>
+                    <p className="text-gray-400 text-xs mb-3">{option.subtitle}</p>
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-gray-100">
+                          <th className="text-left text-xs text-gray-400 font-normal pb-1">Tier</th>
+                          <th className="text-left text-xs text-gray-400 font-normal pb-1">Household</th>
+                          <th className="text-right text-xs text-gray-400 font-normal pb-1">Price</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {option.rows.map(row => (
+                          <tr key={row.tier} className="border-b border-gray-50 last:border-0">
+                            <td className="py-1.5 text-[#2D312E] font-medium text-xs">{row.tier}</td>
+                            <td className="py-1.5 text-gray-400 text-xs">{row.people}</td>
+                            <td className="py-1.5 text-[#B57E5D] font-semibold text-xs text-right">{row.price}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    {option.savings && (
+                      <p className="text-[#86A383] text-xs mt-2 font-medium">{option.savings}</p>
                     )}
                   </button>
                 );
               })}
             </div>
-            <p className="font-body text-[11px] text-gray-400 italic mt-3">
-              Prices shown as Duo · Family · Large. Your exact total confirmed on the booking page.
+            <p className="text-center text-gray-400 text-xs italic mt-2">
+              Your exact total is confirmed on the booking page after selecting your tier.
             </p>
           </div>
         )}
-
         {step === 5 && (
           <div>
             <SectionLabel>Session size?</SectionLabel>
