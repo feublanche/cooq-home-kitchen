@@ -124,6 +124,25 @@ const CookProtectedRoute = ({ children }: { children: ReactNode }) => {
     );
   }
 
+  if (rejected) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center px-6" style={{ backgroundColor: "#2D312E" }}>
+        <img src={cooqLogo} alt="Cooq" className="h-8 mb-8 brightness-0 invert" />
+        <div className="w-full max-w-sm rounded-2xl p-6 text-center" style={{ backgroundColor: "rgba(249,247,242,0.05)" }}>
+          <h2 className="font-display italic text-xl mb-3" style={{ color: "#F9F7F2" }}>
+            Account Suspended
+          </h2>
+          <p className="font-body text-sm mb-6" style={{ color: "rgba(249,247,242,0.6)" }}>
+            Your cook account has been suspended. Please contact us for more information.
+          </p>
+          <a href="mailto:hello@cooq.ae" className="font-body text-sm mt-5 underline" style={{ color: "#B57E5D" }}>
+            Contact hello@cooq.ae
+          </a>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <CookContext.Provider value={{ cook, setCook, loading }}>
       {children}
