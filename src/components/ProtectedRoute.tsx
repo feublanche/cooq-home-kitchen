@@ -3,10 +3,12 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
 
+const OPERATOR_EMAIL = "cooqdubai@gmail.com";
+
 const ProtectedRoute = ({ children }: { children: ReactNode }) => {
   const navigate = useNavigate();
   const [checking, setChecking] = useState(true);
-  const [authenticated, setAuthenticated] = useState(false);
+  const [authorized, setAuthorized] = useState(false);
 
   useEffect(() => {
     const checkSession = async () => {
@@ -16,7 +18,27 @@ const ProtectedRoute = ({ children }: { children: ReactNode }) => {
         setChecking(false);
         return;
       }
-      setAuthenticated(true);
+
+      // Only the operator email can access /admin
+      if (session.user.email !== OPERATOR_EMAIL) {
+        // Check if they're a cook — redirect accordingly
+        const { data: cook } = await supabase
+          .from("cooks")
+          .select("id")
+          .eq("user_id", session.user.id)
+          .maybeSingle();
+
+        if (cook) {
+          navigate("/cook/dashboard", { replace: true });
+        } else {
+          await supabase.auth.signOut();
+          navigate("/login", { replace: true });
+        }
+        setChecking(false);
+        return;
+      }
+
+      setAuthorized(true);
       setChecking(false);
     };
 
@@ -24,7 +46,7 @@ const ProtectedRoute = ({ children }: { children: ReactNode }) => {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!session) {
-        setAuthenticated(false);
+        setAuthorized(false);
         navigate("/login", { replace: true });
       }
     });
@@ -40,7 +62,7 @@ const ProtectedRoute = ({ children }: { children: ReactNode }) => {
     );
   }
 
-  return authenticated ? <>{children}</> : null;
+  return authorized ? <>{children}</> : null;
 };
 
 export default ProtectedRoute;
