@@ -371,8 +371,14 @@ const BookingForm = () => {
           </div>
         </div>
 
+        {/* ── T&C ── */}
+        <label className="flex items-start gap-2 text-sm text-gray-600 mt-4 mb-4">
+          <input type="checkbox" checked={agreedToTerms} onChange={(e) => setAgreedToTerms(e.target.checked)} className="mt-0.5" />
+          <span>I agree to Cooq's <a href="/terms" target="_blank" className="text-[#86A383] underline">Terms &amp; Conditions</a> and <a href="/privacy" target="_blank" className="text-[#86A383] underline">Privacy Policy</a></span>
+        </label>
+
         <button
-          disabled={loading}
+          disabled={loading || !agreedToTerms}
           onClick={handleSubmit}
           className="w-full py-4 rounded-lg font-body font-semibold text-base disabled:opacity-40 transition-opacity"
           style={{ backgroundColor: "#B57E5D", color: "#F9F7F2" }}
