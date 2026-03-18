@@ -1,2 +1,7 @@
-const RateSession = () => <div className="p-6 font-body text-foreground"><h1 className="font-display text-2xl">Rate Session</h1></div>;
-export default RateSession;
+export default function RateSession() {
+  return (
+    <div className="min-h-screen bg-[#F9F7F2] flex items-center justify-center font-display text-[#2D312E] text-xl">
+      Rate your session — coming in next build
+    </div>
+  );
+}
