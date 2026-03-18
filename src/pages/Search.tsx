@@ -27,41 +27,56 @@ const SAVINGS = {
 const cuisineOptions = ["Arabic", "Lebanese", "Emirati", "Moroccan", "Indian", "Pakistani", "Filipino", "Mediterranean", "Asian", "Italian"];
 const dietaryOptions = ["Halal", "Vegetarian", "Vegan", "Gluten-Free", "Dairy-Free", "Nut-Free", "Kid-Friendly"];
 
-const frequencyCards = [
+const freqOptions = [
   {
-    key: "one-time",
-    title: "One-time",
+    key: 'one-time',
+    label: 'One-time',
+    subtitle: 'Single session, no commitment',
     badge: null,
-    line2: "Single session, no commitment",
-    line3: "AED 350 · 420 · 550 per session",
-    savings: null,
+    rows: [
+      { tier: 'Duo', people: '1–2 people', price: 'AED 350 / session' },
+      { tier: 'Family', people: '3–4 people', price: 'AED 420 / session' },
+      { tier: 'Large', people: '5–6 people', price: 'AED 550 / session' },
+    ],
+    savings: null
   },
   {
-    key: "weekly",
-    title: "Weekly",
-    badge: "Save 15%",
-    line2: "4 sessions per month",
-    line3: "AED 1,190 · 1,430 · 1,870 / month",
-    savings: "Save AED 210 · 250 · 330 per month",
+    key: 'weekly',
+    label: 'Weekly',
+    subtitle: '4 sessions per month',
+    badge: 'Save 15%',
+    rows: [
+      { tier: 'Duo', people: '1–2 people', price: 'AED 1,190 / mo' },
+      { tier: 'Family', people: '3–4 people', price: 'AED 1,430 / mo' },
+      { tier: 'Large', people: '5–6 people', price: 'AED 1,870 / mo' },
+    ],
+    savings: 'You save AED 210 · 250 · 330 per month vs one-time'
   },
   {
-    key: "twice",
-    title: "Twice a week",
-    badge: "Save 15%",
-    line2: "8 sessions per month",
-    line3: "AED 2,380 · 2,860 · 3,740 / month",
-    savings: "Save AED 420 · 500 · 660 per month",
+    key: 'twice',
+    label: 'Twice a week',
+    subtitle: '8 sessions per month',
+    badge: 'Save 15%',
+    rows: [
+      { tier: 'Duo', people: '1–2 people', price: 'AED 2,380 / mo' },
+      { tier: 'Family', people: '3–4 people', price: 'AED 2,860 / mo' },
+      { tier: 'Large', people: '5–6 people', price: 'AED 3,740 / mo' },
+    ],
+    savings: 'You save AED 420 · 500 · 660 per month vs one-time'
   },
   {
-    key: "three",
-    title: "3× a week",
-    badge: "Save 15%",
-    line2: "12 sessions / month · Full week coverage",
-    line3: "AED 3,570 · 4,280 · 5,610 / month",
-    savings: "Save AED 630 · 760 · 990 per month",
-  },
+    key: 'three',
+    label: '3× a week',
+    subtitle: '12 sessions per month · Full week coverage',
+    badge: 'Save 15%',
+    rows: [
+      { tier: 'Duo', people: '1–2 people', price: 'AED 3,570 / mo' },
+      { tier: 'Family', people: '3–4 people', price: 'AED 4,280 / mo' },
+      { tier: 'Large', people: '5–6 people', price: 'AED 5,610 / mo' },
+    ],
+    savings: 'You save AED 630 · 760 · 990 per month vs one-time'
+  }
 ];
-
 const tierOptions = [
   { key: "duo", label: "Cooq Duo", desc: "1–2 people", price: "AED 350" },
   { key: "family", label: "Cooq Family", desc: "3–4 people", price: "AED 420" },
