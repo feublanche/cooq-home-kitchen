@@ -59,8 +59,17 @@ const Home = () => {
       </main>
 
       {/* Footer */}
-      <footer className="text-center py-6 font-body text-xs text-muted-foreground tracking-wide">
-        cooq.ae · Dubai · 2025
+      <footer className="text-center py-6 font-body text-xs text-muted-foreground tracking-wide space-y-2">
+        <p>cooq.ae · Dubai · 2026</p>
+        <div className="flex flex-wrap justify-center gap-3">
+          <a href="/terms" className="hover:text-foreground transition-colors">Terms &amp; Conditions</a>
+          <span>·</span>
+          <a href="/privacy" className="hover:text-foreground transition-colors">Privacy Policy</a>
+          <span>·</span>
+          <a href="/cook-agreement" className="hover:text-foreground transition-colors">Cook Agreement</a>
+          <span>·</span>
+          <a href="mailto:hello@cooq.ae" className="hover:text-foreground transition-colors">hello@cooq.ae</a>
+        </div>
       </footer>
     </div>
   );
