@@ -19,9 +19,19 @@ const CookLogin = () => {
   }, []);
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === "SIGNED_IN" && session) {
-        navigate("/cook/dashboard");
+        const { data } = await supabase
+          .from("cooks")
+          .select("id")
+          .eq("user_id", session.user.id)
+          .limit(1)
+          .maybeSingle();
+        if (data) {
+          navigate("/cook/dashboard");
+        } else {
+          navigate("/login");
+        }
       }
     });
     return () => subscription.unsubscribe();
