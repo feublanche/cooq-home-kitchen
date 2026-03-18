@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { Shield, Clock, Snowflake, User } from "lucide-react";
+import { Shield, Clock, Snowflake } from "lucide-react";
 import cooqLogo from "@/assets/cooq-logo.png";
 
 const Home = () => {
@@ -11,11 +11,10 @@ const Home = () => {
       <nav className="flex items-center justify-between px-6 py-4">
         <img src={cooqLogo} alt="Cooq" className="h-8" />
         <button
-          onClick={() => navigate("/login")}
-          className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border bg-card font-body text-sm text-foreground hover:border-primary/50 transition-colors"
+          onClick={() => navigate("/search")}
+          className="bg-copper text-accent-foreground font-body font-semibold px-4 py-2 rounded-lg text-sm hover:opacity-90 transition-opacity"
         >
-          <User className="w-4 h-4" />
-          Sign In
+          Find Your Cook
         </button>
       </nav>
 
