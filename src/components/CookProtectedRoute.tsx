@@ -11,6 +11,7 @@ const CookProtectedRoute = ({ children }: { children: ReactNode }) => {
   const [cook, setCook] = useState<CookRow | null>(null);
   const [loading, setLoading] = useState(true);
   const [pendingApproval, setPendingApproval] = useState(false);
+  const [rejected, setRejected] = useState(false);
   const [pendingEmail, setPendingEmail] = useState("");
   const hasRedirected = useRef(false);
 
