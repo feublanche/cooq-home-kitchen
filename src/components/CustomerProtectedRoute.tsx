@@ -1,0 +1,42 @@
+import { useEffect, useState } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+
+const OPERATOR_EMAIL = "cooqdubai@gmail.com";
+
+const CustomerProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    const check = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        navigate("/account", { state: { returnTo: location.pathname }, replace: true });
+        return;
+      }
+      if (session.user.email === OPERATOR_EMAIL) {
+        navigate("/admin", { replace: true });
+        return;
+      }
+      // Check if cook
+      const { data: cook } = await supabase
+        .from("cooks")
+        .select("id")
+        .eq("user_id", session.user.id)
+        .maybeSingle();
+      if (cook) {
+        navigate("/cook/dashboard", { replace: true });
+        return;
+      }
+      setReady(true);
+    };
+    check();
+  }, [navigate, location.pathname]);
+
+  if (!ready) return null;
+  return <>{children}</>;
+};
+
+export default CustomerProtectedRoute;
