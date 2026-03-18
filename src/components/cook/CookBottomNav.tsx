@@ -1,5 +1,5 @@
 import { useLocation, useNavigate } from "react-router-dom";
-import { LayoutDashboard, ClipboardList, UtensilsCrossed, Camera, DollarSign } from "lucide-react";
+import { LayoutDashboard, ClipboardList, UtensilsCrossed, Camera, DollarSign, CalendarDays } from "lucide-react";
 
 interface CookBottomNavProps {
   pendingCount?: number;
@@ -11,6 +11,7 @@ const tabs = [
   { icon: UtensilsCrossed, label: "Menu", path: "/cook/menu-submit" },
   { icon: Camera, label: "Upload", path: "/cook/photo-upload" },
   { icon: DollarSign, label: "Earnings", path: "/cook/earnings" },
+  { icon: CalendarDays, label: "Schedule", path: "/cook/availability" },
 ];
 
 const CookBottomNav = ({ pendingCount = 0 }: CookBottomNavProps) => {

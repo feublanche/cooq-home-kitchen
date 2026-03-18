@@ -91,8 +91,23 @@ const CookPhotoUpload = () => {
     }
   };
 
+  const validateFile = (file: File): boolean => {
+    const allowed = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!allowed.includes(file.type)) {
+      toast({ title: "Invalid file type", description: "Only JPG, PNG or WebP images allowed.", variant: "destructive" });
+      return false;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toast({ title: "File too large", description: "Image must be under 10MB.", variant: "destructive" });
+      return false;
+    }
+    return true;
+  };
+
   const handleSubmit = async () => {
     if (!cook || !selectedId || !containerFile || !kitchenFile) return;
+    if (!validateFile(containerFile)) return;
+    if (!validateFile(kitchenFile)) return;
     setUploading(true);
 
     // Upload container

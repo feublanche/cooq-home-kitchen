@@ -125,6 +125,7 @@ const Admin = () => {
   const [cooks, setCooks] = useState<CookRecord[]>([]);
   const [menus, setMenus] = useState<MenuRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [expiringCooks, setExpiringCooks] = useState<any[]>([]);
 
   // Supply Manager state
   const [supplyView, setSupplyView] = useState<"bookings" | "cooks">("bookings");
@@ -180,6 +181,18 @@ const Admin = () => {
     fetchPhotos();
     fetchCooks();
     fetchMenus();
+    // Fetch DHA expiry alerts
+    const fetchExpiring = async () => {
+      const { data } = await supabase
+        .from("cooks")
+        .select("id, name, email, health_card_expiry")
+        .in("status", ["active", "approved"])
+        .not("health_card_expiry", "is", null);
+      const cutoff = new Date();
+      cutoff.setDate(cutoff.getDate() + 30);
+      setExpiringCooks((data || []).filter((c: any) => new Date(c.health_card_expiry) <= cutoff));
+    };
+    fetchExpiring();
   }, []);
 
   const updateStatus = async (id: string, status: string) => {
@@ -385,6 +398,19 @@ const Admin = () => {
         {/* ── Supply Manager ── */}
         {activeTab === "supply" && (
           <div>
+            {/* DHA Health Card Expiry Alerts */}
+            {expiringCooks.length > 0 && (
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4">
+                <p className="font-body text-sm font-semibold text-amber-800 mb-2">⚠️ DHA Health Cards Expiring Within 30 Days</p>
+                {expiringCooks.map((c: any) => (
+                  <div key={c.id} className="flex items-center justify-between py-1.5" style={{ borderBottom: "1px solid rgba(217,169,56,0.15)" }}>
+                    <span className="font-body text-xs text-amber-700">{c.name} — expires {c.health_card_expiry}</span>
+                    <a href={`mailto:${c.email}`} className="font-body text-xs underline" style={{ color: "#B57E5D" }}>Contact</a>
+                  </div>
+                ))}
+              </div>
+            )}
+
             <h2 className="font-display text-xl text-foreground mb-1">Supply Manager</h2>
             <p className="font-body text-xs text-muted-foreground mb-4">
               Review/Approve new Cook applications (Visa/EID check)

@@ -9,6 +9,25 @@ import type { User } from "@supabase/supabase-js";
 
 const steps = ["Preferences", "Match", "Profile", "Details", "Confirm"];
 
+const PRICING = {
+  'one-time':   { duo: 350,  family: 420,  large: 550  },
+  'first-cook': { duo: 299,  family: 420,  large: 550  },
+  'weekly':     { duo: 1190, family: 1430, large: 1870 },
+  'twice':      { duo: 2380, family: 2860, large: 3740 },
+  'three':      { duo: 3570, family: 4280, large: 5610 }
+};
+
+const SESSIONS: Record<string, number> = {
+  'one-time': 1, 'first-cook': 1,
+  'weekly': 4, 'twice': 8, 'three': 12
+};
+
+const SAVINGS: Record<string, Record<string, number>> = {
+  'weekly': { duo: 210, family: 250, large: 330  },
+  'twice':  { duo: 420, family: 500, large: 660  },
+  'three':  { duo: 630, family: 760, large: 990  }
+};
+
 const TIERS = [
   { key: "duo", label: "Cooq Duo", people: "1–2 people", detail: "3 hours · 2 mains + 2 sides", price: 350, discoveryPrice: 299 },
   { key: "family", label: "Cooq Family", people: "3–4 people", detail: "3 hours · 2 mains + 3 sides", price: 420, discoveryPrice: null },
@@ -16,13 +35,18 @@ const TIERS = [
 ] as const;
 
 const FREQUENCIES = [
-  { key: "one-time", label: "One-time", discount: 0 },
-  { key: "weekly", label: "Weekly · Save 15%", discount: 0.15, sessions: 4 },
-  { key: "twice-weekly", label: "Twice a week", discount: 0.15, sessions: 8 },
-  { key: "three-weekly", label: "3× a week", discount: 0.15, sessions: 12 },
+  { key: "one-time", label: "One-time" },
+  { key: "weekly", label: "Weekly · Save 15%" },
+  { key: "twice", label: "Twice a week" },
+  { key: "three", label: "3× a week" },
 ] as const;
 
 const GROCERY_FEE = 75;
+
+const getTotal = (tier: string, frequency: string, isFirstCook: boolean): number => {
+  const key = (isFirstCook && tier === 'duo' && frequency === 'one-time') ? 'first-cook' : frequency;
+  return PRICING[key as keyof typeof PRICING]?.[tier as keyof typeof PRICING['one-time']] ?? 350;
+};
 
 const FormInput = ({
   label, value, onChange, placeholder, error, type = "text",
@@ -65,19 +89,11 @@ const BookingForm = () => {
       }
     });
   }, []);
+
   const selectedTier = TIERS.find((t) => t.key === tier)!;
-  const selectedFreq = FREQUENCIES.find((f) => f.key === frequency)!;
-
   const isDiscovery = isFirstSession && tier === "duo";
-  const basePrice = isDiscovery ? 299 : selectedTier.price;
 
-  const getMonthlyPrice = () => {
-    if (selectedFreq.key === "one-time") return basePrice;
-    const sessions = (selectedFreq as any).sessions as number;
-    return Math.round(basePrice * sessions * (1 - selectedFreq.discount));
-  };
-
-  const sessionPrice = selectedFreq.key === "one-time" ? basePrice : getMonthlyPrice();
+  const sessionPrice = getTotal(tier, frequency, isFirstSession);
   const groceryFee = booking.groceryAddon ? GROCERY_FEE : 0;
   const total = sessionPrice + groceryFee;
 
@@ -101,7 +117,7 @@ const BookingForm = () => {
     }
 
     // Security: validate amount
-    if (!total || total < 299 || total > 700) {
+    if (!total || total < 299 || total > 6000) {
       toast({ title: "Invalid booking amount.", variant: "destructive" });
       return;
     }
@@ -260,9 +276,24 @@ const BookingForm = () => {
             );
           })}
         </div>
-        {frequency !== "one-time" && (
-          <p className="font-body text-xs mb-4 px-1 py-1 rounded inline-block" style={{ color: "#86A383", backgroundColor: "rgba(134,163,131,0.1)" }}>
-            Save 15% vs one-time bookings · AED {getMonthlyPrice()}/mo
+
+        {/* Savings badge */}
+        {isDiscovery ? (
+          <p className="font-body text-xs mb-4 px-2 py-1 rounded inline-block" style={{ color: "#B57E5D", backgroundColor: "rgba(181,126,93,0.1)" }}>
+            AED 299 · First Cook trial
+          </p>
+        ) : frequency !== "one-time" && SAVINGS[frequency] ? (
+          <div className="mb-4">
+            <p className="font-body text-xs px-2 py-1 rounded inline-block" style={{ color: "#86A383", backgroundColor: "rgba(134,163,131,0.1)" }}>
+              You save AED {SAVINGS[frequency]?.[tier]} per month vs booking one-time
+            </p>
+            <p className="font-body text-[11px] text-muted-foreground mt-1">
+              {SESSIONS[frequency]} sessions per month · 15% off
+            </p>
+          </div>
+        ) : (
+          <p className="font-body text-xs text-muted-foreground mb-4">
+            AED {sessionPrice} per session
           </p>
         )}
         <div className="mb-6" />
@@ -283,7 +314,7 @@ const BookingForm = () => {
           )}
           <div className="mt-2 pt-2 border-t border-primary/20">
             <div className="flex justify-between font-body text-xs text-muted-foreground">
-              <span>Session</span><span>AED {sessionPrice}</span>
+              <span>Session{frequency !== "one-time" ? ` (${SESSIONS[frequency]}×/mo)` : ""}</span><span>AED {sessionPrice}</span>
             </div>
             {booking.groceryAddon && (
               <div className="flex justify-between font-body text-xs text-muted-foreground">

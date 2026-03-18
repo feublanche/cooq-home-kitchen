@@ -22,6 +22,7 @@ import CookOrders from "./pages/cook/CookOrders";
 import CookMenuSubmit from "./pages/cook/CookMenuSubmit";
 import CookPhotoUpload from "./pages/cook/CookPhotoUpload";
 import CookEarnings from "./pages/cook/CookEarnings";
+import CookAvailability from "./pages/cook/CookAvailability";
 import Payment from "./pages/Payment";
 import RateSession from "./pages/RateSession";
 import CustomerAuth from "./pages/CustomerAuth";
@@ -62,6 +63,7 @@ const App = () => (
               <Route path="/cook/menu-submit" element={<CookProtectedRoute><CookMenuSubmit /></CookProtectedRoute>} />
               <Route path="/cook/photo-upload" element={<CookProtectedRoute><CookPhotoUpload /></CookProtectedRoute>} />
               <Route path="/cook/earnings" element={<CookProtectedRoute><CookEarnings /></CookProtectedRoute>} />
+              <Route path="/cook/availability" element={<CookProtectedRoute><CookAvailability /></CookProtectedRoute>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </div>

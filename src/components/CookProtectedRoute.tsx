@@ -11,6 +11,7 @@ const CookProtectedRoute = ({ children }: { children: ReactNode }) => {
   const [cook, setCook] = useState<CookRow | null>(null);
   const [loading, setLoading] = useState(true);
   const [pendingApproval, setPendingApproval] = useState(false);
+  const [rejected, setRejected] = useState(false);
   const [pendingEmail, setPendingEmail] = useState("");
   const hasRedirected = useRef(false);
 
@@ -54,6 +55,12 @@ const CookProtectedRoute = ({ children }: { children: ReactNode }) => {
       if (cookData.status === "applied" || cookData.status === "reviewed") {
         setPendingApproval(true);
         setPendingEmail(cookData.email);
+        setChecking(false);
+        return;
+      }
+
+      if (cookData.status === "rejected") {
+        setRejected(true);
         setChecking(false);
         return;
       }
@@ -112,6 +119,25 @@ const CookProtectedRoute = ({ children }: { children: ReactNode }) => {
             <LogOut className="w-4 h-4" />
             Sign out
           </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (rejected) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center px-6" style={{ backgroundColor: "#2D312E" }}>
+        <img src={cooqLogo} alt="Cooq" className="h-8 mb-8 brightness-0 invert" />
+        <div className="w-full max-w-sm rounded-2xl p-6 text-center" style={{ backgroundColor: "rgba(249,247,242,0.05)" }}>
+          <h2 className="font-display italic text-xl mb-3" style={{ color: "#F9F7F2" }}>
+            Account Suspended
+          </h2>
+          <p className="font-body text-sm mb-6" style={{ color: "rgba(249,247,242,0.6)" }}>
+            Your cook account has been suspended. Please contact us for more information.
+          </p>
+          <a href="mailto:hello@cooq.ae" className="font-body text-sm mt-5 underline" style={{ color: "#B57E5D" }}>
+            Contact hello@cooq.ae
+          </a>
         </div>
       </div>
     );

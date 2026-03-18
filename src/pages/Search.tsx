@@ -5,14 +5,63 @@ import { dubaiNeighborhoods } from "@/data/dubaiNeighborhoods";
 import cooqLogo from "@/assets/cooq-logo.png";
 import { ChevronDown } from "lucide-react";
 
+const PRICING = {
+  'one-time':   { duo: 350,  family: 420,  large: 550  },
+  'first-cook': { duo: 299,  family: 420,  large: 550  },
+  'weekly':     { duo: 1190, family: 1430, large: 1870 },
+  'twice':      { duo: 2380, family: 2860, large: 3740 },
+  'three':      { duo: 3570, family: 4280, large: 5610 }
+};
+
+const SESSIONS = {
+  'one-time': 1, 'first-cook': 1,
+  'weekly': 4, 'twice': 8, 'three': 12
+};
+
+const SAVINGS = {
+  'weekly': { duo: 210, family: 250, large: 330  },
+  'twice':  { duo: 420, family: 500, large: 660  },
+  'three':  { duo: 630, family: 760, large: 990  }
+};
+
 const cuisineOptions = ["Arabic", "Lebanese", "Emirati", "Moroccan", "Indian", "Pakistani", "Filipino", "Mediterranean", "Asian", "Italian"];
 const dietaryOptions = ["Halal", "Vegetarian", "Vegan", "Gluten-Free", "Dairy-Free", "Nut-Free", "Kid-Friendly"];
-const frequencyOptions = [
-  { key: "one-time", label: "One-time" },
-  { key: "weekly", label: "Weekly (save 15%)" },
-  { key: "twice-weekly", label: "Twice a week" },
-  { key: "three-weekly", label: "Three times a week" },
+
+const frequencyCards = [
+  {
+    key: "one-time",
+    title: "One-time",
+    badge: null,
+    line2: "Single session, no commitment",
+    line3: "AED 350 · 420 · 550 per session",
+    savings: null,
+  },
+  {
+    key: "weekly",
+    title: "Weekly",
+    badge: "Save 15%",
+    line2: "4 sessions per month",
+    line3: "AED 1,190 · 1,430 · 1,870 / month",
+    savings: "Save AED 210 · 250 · 330 per month",
+  },
+  {
+    key: "twice",
+    title: "Twice a week",
+    badge: "Save 15%",
+    line2: "8 sessions per month",
+    line3: "AED 2,380 · 2,860 · 3,740 / month",
+    savings: "Save AED 420 · 500 · 660 per month",
+  },
+  {
+    key: "three",
+    title: "3× a week",
+    badge: "Save 15%",
+    line2: "12 sessions / month · Full week coverage",
+    line3: "AED 3,570 · 4,280 · 5,610 / month",
+    savings: "Save AED 630 · 760 · 990 per month",
+  },
 ];
+
 const tierOptions = [
   { key: "duo", label: "Cooq Duo", desc: "1–2 people", price: "AED 350" },
   { key: "family", label: "Cooq Family", desc: "3–4 people", price: "AED 420" },
@@ -54,8 +103,8 @@ const Search = () => {
   const canNext = () => {
     switch (step) {
       case 1: return !!neighborhood;
-      case 2: return true; // any cuisine is optional
-      case 3: return true; // dietary optional
+      case 2: return true;
+      case 3: return true;
       case 4: return !!frequency;
       case 5: return !!tier;
       default: return false;
@@ -152,16 +201,40 @@ const Search = () => {
         {step === 4 && (
           <div>
             <SectionLabel>How often?</SectionLabel>
-            <div className="flex flex-wrap gap-2">
-              {frequencyOptions.map((f) => (
-                <Pill
-                  key={f.key}
-                  label={f.label}
-                  selected={frequency === f.key}
-                  onClick={() => setFrequency(f.key)}
-                />
-              ))}
+            <div className="space-y-3">
+              {frequencyCards.map((f) => {
+                const selected = frequency === f.key;
+                return (
+                  <button
+                    key={f.key}
+                    type="button"
+                    onClick={() => setFrequency(f.key)}
+                    className={`w-full text-left rounded-xl p-4 border-2 cursor-pointer transition-all ${
+                      selected
+                        ? "border-[#86A383] bg-[#86A383]/5"
+                        : "border-gray-100 bg-white"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="font-body text-[15px] font-semibold text-foreground">{f.title}</span>
+                      {f.badge && (
+                        <span className="font-body text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{ backgroundColor: "rgba(134,163,131,0.15)", color: "#86A383" }}>
+                          {f.badge}
+                        </span>
+                      )}
+                    </div>
+                    <p className="font-body text-xs text-gray-400 mt-1">{f.line2}</p>
+                    <p className="font-body text-xs mt-1" style={{ color: "#B57E5D" }}>{f.line3}</p>
+                    {f.savings && (
+                      <p className="font-body text-xs mt-1" style={{ color: "#86A383" }}>{f.savings}</p>
+                    )}
+                  </button>
+                );
+              })}
             </div>
+            <p className="font-body text-[11px] text-gray-400 italic mt-3">
+              Prices shown as Duo · Family · Large. Your exact total confirmed on the booking page.
+            </p>
           </div>
         )}
 
