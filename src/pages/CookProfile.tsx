@@ -1,127 +1,101 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { useBooking } from "@/context/BookingContext";
-import { getCookById } from "@/data/cooks";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { getGroceryListForMenu, getPantryListForMenu, categoryIcons } from "@/data/groceryData";
-import { ArrowLeft, Star, Check, ShieldCheck, RefreshCw, ShoppingCart, ChevronDown, ChevronUp } from "lucide-react";
+import { ArrowLeft, ShieldCheck } from "lucide-react";
 import cooqLogo from "@/assets/cooq-logo.png";
 
-const addOnOptions = ["Soups", "Snacks", "Desserts", "Sides"];
-
-const frequencyToCount: Record<string, number> = {
-  "Once a week": 1,
-  "Twice a week": 2,
-  "Three times a week": 3,
-};
+const dayNames = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 const CookProfile = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { booking, updateBooking } = useBooking();
-  const cook = getCookById(id || "");
+  const [selectedMenu, setSelectedMenu] = useState<any>(null);
 
-  const [selectedMenu, setSelectedMenu] = useState<string>("");
-  const [selectedMenuDinner, setSelectedMenuDinner] = useState<string>("");
-  const [bookingType, setBookingType] = useState<"one-time" | "subscribe">("one-time");
-  const [selectedDates, setSelectedDates] = useState<string[]>([]);
-  const [selectedAddOns, setSelectedAddOns] = useState<string[]>([]);
+  const { data: cook, isLoading } = useQuery({
+    queryKey: ["cook", id],
+    queryFn: async () => {
+      const { data } = await supabase.from("cooks").select("*").eq("id", id!).single();
+      return data;
+    },
+    enabled: !!id,
+  });
 
-  // Swap credits
-  const [swapMode, setSwapMode] = useState(false);
-  const [swaps, setSwaps] = useState<{ original: string; replacement: string }[]>([]);
-  const [swapOriginal, setSwapOriginal] = useState("");
-  const [swapReplacement, setSwapReplacement] = useState("");
+  const { data: menus = [] } = useQuery({
+    queryKey: ["cook-menus", id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("cook_menus")
+        .select("*")
+        .eq("cook_id", id!)
+        .eq("status", "approved");
+      return data || [];
+    },
+    enabled: !!id,
+  });
 
-  const next14Days = useMemo(() => {
-    const today = new Date();
-    return Array.from({ length: 14 }, (_, i) => {
-      const d = new Date(today);
-      d.setDate(today.getDate() + i);
-      return d;
-    });
-  }, []);
+  const { data: availability = [] } = useQuery({
+    queryKey: ["cook-avail", id],
+    queryFn: async () => {
+      try {
+        const { data } = await supabase
+          .from("cook_availability")
+          .select("*")
+          .eq("cook_id", id!)
+          .eq("available", true);
+        return data || [];
+      } catch {
+        return [];
+      }
+    },
+    enabled: !!id,
+  });
 
-  if (!cook) return <div className="p-6 font-body">Cook not found.</div>;
-
-  const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-  const currentMenu = cook.menus.find((m) => m.id === selectedMenu);
-  const hasBothMeals = booking.meals.includes("Lunch") && booking.meals.includes("Dinner");
-  const maxDates = frequencyToCount[booking.frequency] || 1;
-  const mealMultiplier = hasBothMeals ? 2 : 1;
-
-  const basePrice = bookingType === "subscribe" ? 297 : 350;
-  const perVisitPrice = basePrice * mealMultiplier;
-  const needsBothMenus = hasBothMeals;
-  const canBook = selectedMenu && selectedDates.length === maxDates && (!needsBothMenus || selectedMenuDinner);
-
-  const toggleDate = (key: string) => {
-    if (selectedDates.includes(key)) {
-      setSelectedDates(selectedDates.filter((d) => d !== key));
-    } else if (selectedDates.length < maxDates) {
-      setSelectedDates([...selectedDates, key]);
-    }
-  };
-
-  const toggleAddOn = (a: string) => {
-    setSelectedAddOns((prev) =>
-      prev.includes(a) ? prev.filter((x) => x !== a) : [...prev, a]
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col">
+        <nav className="flex items-center gap-3 px-6 py-4">
+          <button onClick={() => navigate("/results")} className="text-foreground"><ArrowLeft className="w-5 h-5" /></button>
+          <img src={cooqLogo} alt="Cooq" className="h-7" />
+        </nav>
+        <div className="px-6 animate-pulse space-y-4">
+          <div className="w-24 h-24 rounded-full bg-muted mx-auto" />
+          <div className="h-6 bg-muted rounded w-32 mx-auto" />
+          <div className="h-4 bg-muted rounded w-48 mx-auto" />
+          <div className="h-32 bg-muted rounded-xl" />
+        </div>
+      </div>
     );
-  };
+  }
 
-  const addSwap = () => {
-    if (swapOriginal && swapReplacement && swaps.length < 2) {
-      setSwaps([...swaps, { original: swapOriginal, replacement: swapReplacement }]);
-      setSwapOriginal("");
-      setSwapReplacement("");
-      if (swaps.length + 1 >= 2) setSwapMode(false);
-    }
-  };
+  if (!cook) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6">
+        <p className="font-body text-lg text-foreground mb-4">Cook not found</p>
+        <button onClick={() => navigate("/results")} className="font-body text-sm text-copper underline">← Back to cooks</button>
+      </div>
+    );
+  }
 
-  const removeSwap = (i: number) => {
-    setSwaps(swaps.filter((_, idx) => idx !== i));
-  };
+  const initials = cook.name.split(" ").map((n: string) => n[0]).join(".") + ".";
 
   const handleBook = async () => {
-    // Check if user is authenticated — if not, redirect to login
+    if (!selectedMenu) return;
     const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      // Save cook selection before redirecting
-      const menu = cook.menus.find((m) => m.id === selectedMenu);
-      const menuD = cook.menus.find((m) => m.id === selectedMenuDinner);
-      updateBooking({
-        cookId: cook.id,
-        cookName: `${cook.firstName} ${cook.lastInitial}.`,
-        cookCuisine: cook.cuisine,
-        menuSelected: menu?.name || "",
-        menuSelectedDinner: menuD?.name || "",
-        menuPrice: perVisitPrice,
-        bookingType,
-        bookingDates: selectedDates,
-        totalAed: perVisitPrice,
-        addOns: selectedAddOns,
-        swappedDishes: swaps,
+    if (session) {
+      navigate("/book", {
+        state: {
+          cookId: cook.id,
+          cookInitials: initials,
+          cookArea: cook.area,
+          selectedMenuId: selectedMenu.id,
+          selectedMenuName: selectedMenu.menu_name,
+          selectedMeals: selectedMenu.meals,
+        },
       });
-      navigate("/login", { state: { returnTo: "/book" } });
-      return;
+    } else {
+      navigate("/account", { state: { returnTo: "/cook/" + id } });
     }
-
-    const menu = cook.menus.find((m) => m.id === selectedMenu);
-    const menuD = cook.menus.find((m) => m.id === selectedMenuDinner);
-    updateBooking({
-      cookId: cook.id,
-      cookName: `${cook.firstName} ${cook.lastInitial}.`,
-      cookCuisine: cook.cuisine,
-      menuSelected: menu?.name || "",
-      menuSelectedDinner: menuD?.name || "",
-      menuPrice: perVisitPrice,
-      bookingType,
-      bookingDates: selectedDates,
-      totalAed: perVisitPrice,
-      addOns: selectedAddOns,
-      swappedDishes: swaps,
-    });
-    navigate("/book");
   };
 
   return (
@@ -136,417 +110,108 @@ const CookProfile = () => {
       <div className="px-6 pb-6">
         {/* Profile header */}
         <div className="flex flex-col items-center text-center mb-8">
-          <div className="w-24 h-24 rounded-full bg-primary/20 mb-4 flex items-center justify-center">
-            <span className="font-display text-3xl text-primary">{cook.firstName[0]}</span>
-          </div>
-          <h1 className="font-display italic text-2xl text-foreground">
-            {cook.firstName} {cook.lastInitial}.
-          </h1>
-          <p className="font-body text-sm text-muted-foreground mt-1">
-            {cook.cuisine} · {cook.areas.join(" & ")} · {cook.yearsExperience} years
+          {cook.photo_url ? (
+            <img
+              src={cook.photo_url}
+              alt=""
+              className="w-24 h-24 rounded-full object-cover mb-4"
+              style={{ filter: "blur(12px)" }}
+            />
+          ) : (
+            <div
+              className="w-24 h-24 rounded-full mb-4 flex items-center justify-center"
+              style={{ backgroundColor: "#B57E5D", filter: "blur(12px)" }}
+            >
+              <span className="font-display text-3xl text-white">{initials}</span>
+            </div>
+          )}
+          <h1 className="font-display italic text-2xl text-foreground">{initials}</h1>
+          <p className="italic text-[10px] text-gray-400 mt-1">Full name &amp; photo revealed after booking</p>
+          <p className="font-body text-sm text-muted-foreground mt-2">
+            {cook.cuisine?.join(" · ")} · {cook.area} · {cook.years_experience} years
           </p>
           <div className="flex items-center gap-2 mt-3">
-            <span className="flex items-center gap-1 px-3 py-1 rounded-full bg-primary/10 text-primary font-body text-xs font-medium">
-              <ShieldCheck className="w-3.5 h-3.5" /> Cooq Certified
-            </span>
-            {cook.rating && (
-              <span className="flex items-center gap-1 font-body text-sm">
-                <Star className="w-4 h-4 text-copper fill-copper" /> {cook.rating}
+            {cook.health_card && (
+              <span className="flex items-center gap-1 px-3 py-1 rounded-full bg-primary/10 text-primary font-body text-xs font-medium">
+                <ShieldCheck className="w-3.5 h-3.5" /> Cooq Certified
               </span>
             )}
-            {cook.isNew && (
-              <span className="px-2 py-0.5 rounded-full bg-copper/10 text-copper font-body text-xs font-semibold">NEW</span>
-            )}
           </div>
-          <p className="font-body text-sm text-muted-foreground mt-4 leading-relaxed max-w-sm">{cook.bio}</p>
+          {cook.bio && (
+            <p className="font-body text-sm text-muted-foreground mt-4 leading-relaxed max-w-sm">{cook.bio}</p>
+          )}
         </div>
 
-        {/* Signature Menus — Lunch (or single meal) */}
-        <p className="font-body text-xs font-semibold tracking-[0.15em] uppercase text-copper mb-4">
-          {needsBothMenus ? "Lunch Menu" : "Signature Menus"}
-        </p>
-        <div className="space-y-3 mb-4">
-          {cook.menus.map((menu) => {
-            const isSelected = selectedMenu === menu.id;
-            return (
-              <button
-                key={menu.id}
-                type="button"
-                onClick={() => {
-                  setSelectedMenu(menu.id);
-                  setSwaps([]);
-                  setSwapMode(false);
-                }}
-                className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
-                  isSelected ? "border-primary bg-primary/5" : "border-border bg-card"
-                }`}
-                style={!isSelected ? { boxShadow: "var(--shadow-card)" } : {}}
-              >
-                <div className="flex items-start justify-between mb-2">
-                  <h3 className="font-display text-base text-foreground">{menu.name}</h3>
-                  {isSelected && <Check className="w-5 h-5 text-primary flex-shrink-0" />}
-                </div>
-                <p className="font-body text-xs text-muted-foreground mb-2">5 meals per visit</p>
-                <p className="font-body text-sm text-foreground">{menu.meals.join(", ")}</p>
-                {menu.addOns && (
-                  <p className="font-body text-xs text-muted-foreground mt-1">+ Optional: {menu.addOns}</p>
-                )}
-                <p className="font-body text-base font-semibold text-copper mt-3">AED {menu.pricePerVisit} per visit</p>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Dinner Menu — only if both Lunch & Dinner selected */}
-        {needsBothMenus && (
-          <>
-            <p className="font-body text-xs font-semibold tracking-[0.15em] uppercase text-copper mb-4 mt-6">
-              Dinner Menu
-            </p>
-            <div className="space-y-3 mb-4">
-              {cook.menus.map((menu) => {
-                const isSelected = selectedMenuDinner === menu.id;
-                return (
-                  <button
-                    key={`dinner-${menu.id}`}
-                    type="button"
-                    onClick={() => setSelectedMenuDinner(menu.id)}
-                    className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
-                      isSelected ? "border-primary bg-primary/5" : "border-border bg-card"
-                    }`}
-                    style={!isSelected ? { boxShadow: "var(--shadow-card)" } : {}}
-                  >
-                    <div className="flex items-start justify-between mb-2">
-                      <h3 className="font-display text-base text-foreground">{menu.name}</h3>
-                      {isSelected && <Check className="w-5 h-5 text-primary flex-shrink-0" />}
-                    </div>
-                    <p className="font-body text-xs text-muted-foreground mb-2">5 meals per visit</p>
-                    <p className="font-body text-sm text-foreground">{menu.meals.join(", ")}</p>
-                    <p className="font-body text-base font-semibold text-copper mt-3">AED {menu.pricePerVisit} per visit</p>
-                  </button>
-                );
-              })}
-            </div>
-            <p className="font-body text-xs text-primary font-medium mb-4">
-              💡 Lunch + Dinner = 2× per visit pricing
-            </p>
-          </>
-        )}
-
-        {/* Grocery & Pantry Lists */}
-        {selectedMenu && currentMenu && (
-          <GroceryPantrySection meals={currentMenu.meals} />
-        )}
-
-        {/* Swap Credits */}
-        {selectedMenu && currentMenu && (
+        {/* Availability */}
+        {availability.length > 0 && (
           <div className="mb-6">
-
-            <div className="bg-card rounded-xl p-4 border border-border" style={{ boxShadow: "var(--shadow-card)" }}>
-              <div className="flex items-center gap-2 mb-2">
-                <RefreshCw className="w-4 h-4 text-primary" />
-                <p className="font-body text-sm font-semibold text-foreground">
-                  Swap Credits: {2 - swaps.length} remaining
-                </p>
-              </div>
-              <p className="font-body text-xs text-muted-foreground mb-3">
-                Personalise your menu — swap up to 2 dishes
-              </p>
-
-              {swaps.map((s, i) => (
-                <div key={i} className="flex items-center justify-between bg-primary/5 rounded-lg px-3 py-2 mb-2">
-                  <span className="font-body text-xs text-foreground">
-                    <span className="line-through text-muted-foreground">{s.original}</span> → {s.replacement}
-                  </span>
-                  <button onClick={() => removeSwap(i)} className="font-body text-xs text-destructive">✕</button>
-                </div>
+            <p className="font-body text-xs font-semibold tracking-[0.15em] uppercase text-copper mb-3">Availability</p>
+            <div className="flex flex-wrap gap-2">
+              {availability.map((a: any) => (
+                <span
+                  key={a.id}
+                  className="px-3 py-1.5 rounded-full bg-[#86A383]/10 text-[#86A383] font-body text-xs font-medium"
+                >
+                  {dayNames[a.day_of_week] || `Day ${a.day_of_week}`}
+                </span>
               ))}
-
-              {swaps.length < 2 && (
-                <>
-                  {!swapMode ? (
-                    <button
-                      type="button"
-                      onClick={() => setSwapMode(true)}
-                      className="font-body text-xs text-copper font-medium"
-                    >
-                      + Use a swap credit
-                    </button>
-                  ) : (
-                    <div className="space-y-2">
-                      <select
-                        value={swapOriginal}
-                        onChange={(e) => setSwapOriginal(e.target.value)}
-                        className="w-full p-2 rounded-lg border border-border bg-card font-body text-xs focus:outline-none focus:ring-2 focus:ring-primary"
-                      >
-                        <option value="">Dish to remove...</option>
-                        {currentMenu.meals
-                          .filter((m) => !swaps.some((s) => s.original === m))
-                          .map((m) => (
-                            <option key={m} value={m}>{m}</option>
-                          ))}
-                      </select>
-                      <input
-                        value={swapReplacement}
-                        onChange={(e) => setSwapReplacement(e.target.value)}
-                        placeholder="Replace with..."
-                        className="w-full p-2 rounded-lg border border-border bg-card font-body text-xs focus:outline-none focus:ring-2 focus:ring-primary"
-                      />
-                      <div className="flex gap-2">
-                        <button
-                          type="button"
-                          onClick={addSwap}
-                          disabled={!swapOriginal || !swapReplacement}
-                          className="px-3 py-1.5 rounded-lg bg-primary text-primary-foreground font-body text-xs font-medium disabled:opacity-40"
-                        >
-                          Confirm Swap
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => { setSwapMode(false); setSwapOriginal(""); setSwapReplacement(""); }}
-                          className="px-3 py-1.5 rounded-lg bg-muted text-foreground font-body text-xs"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </>
-              )}
             </div>
           </div>
         )}
 
-        {/* Add-ons */}
-        {selectedMenu && (
-          <>
-            <p className="font-body text-xs font-semibold tracking-[0.15em] uppercase text-copper mb-3">Add-ons</p>
-            <div className="grid grid-cols-2 gap-3 mb-8">
-              {addOnOptions.map((a) => {
-                const isSelected = selectedAddOns.includes(a);
+        {/* Menu selection */}
+        <div className="mb-6">
+          <p className="text-[14px] font-semibold text-[#2D312E] mb-2">Choose your menu</p>
+          {menus.length === 0 ? (
+            <p className="font-body text-xs text-muted-foreground italic">Menu coming soon</p>
+          ) : (
+            <div className="space-y-2">
+              {menus.map((menu: any) => {
+                const isSelected = selectedMenu?.id === menu.id;
                 return (
                   <button
-                    key={a}
+                    key={menu.id}
                     type="button"
-                    onClick={() => toggleAddOn(a)}
-                    className={`px-4 py-3 rounded-lg font-body text-sm font-medium transition-all border ${
-                      isSelected
-                        ? "bg-primary text-primary-foreground border-primary"
-                        : "bg-card text-foreground border-border hover:border-primary/50"
+                    onClick={() => setSelectedMenu(menu)}
+                    className={`w-full text-left p-4 rounded-xl border-2 transition-colors cursor-pointer ${
+                      isSelected ? "border-[#86A383] bg-[#86A383]/5" : "border-gray-100 bg-white"
                     }`}
-                    style={!isSelected ? { boxShadow: "var(--shadow-card)" } : {}}
                   >
-                    {a}
-                    <span className="block text-xs mt-0.5 opacity-75">+AED 25</span>
+                    <p className="font-body text-[13px] font-bold text-foreground">{menu.menu_name}</p>
+                    {menu.cuisine && (
+                      <p className="font-body text-[11px] text-copper mt-0.5">{menu.cuisine}</p>
+                    )}
+                    {menu.meals?.length > 0 && (
+                      <div className="mt-1 space-y-0.5">
+                        {menu.meals.map((meal: string, i: number) => (
+                          <p key={i} className="font-body text-[12px] text-gray-500">● {meal}</p>
+                        ))}
+                      </div>
+                    )}
+                    {menu.dietary?.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {menu.dietary.map((d: string, i: number) => (
+                          <span key={i} className="px-2 py-0.5 rounded-full bg-primary/10 font-body text-[9px] text-foreground">{d}</span>
+                        ))}
+                      </div>
+                    )}
+                    <p className="font-body text-sm font-semibold text-copper mt-2">AED {menu.price_aed}</p>
                   </button>
                 );
               })}
             </div>
-          </>
-        )}
-
-        {/* Booking type */}
-        <p className="font-body text-xs font-semibold tracking-[0.15em] uppercase text-copper mb-3">Booking Type</p>
-        <div className="grid grid-cols-2 gap-3 mb-8">
-          <button
-            type="button"
-            onClick={() => setBookingType("one-time")}
-            className={`p-3 rounded-lg border-2 font-body text-sm text-center transition-all ${
-              bookingType === "one-time" ? "border-primary bg-primary/5" : "border-border bg-card"
-            }`}
-          >
-            <span className="font-semibold">One-Time Trial</span>
-            <br />
-            <span className="text-copper font-semibold">AED {350 * mealMultiplier}</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setBookingType("subscribe")}
-            className={`p-3 rounded-lg border-2 font-body text-sm text-center transition-all ${
-              bookingType === "subscribe" ? "border-primary bg-primary/5" : "border-border bg-card"
-            }`}
-          >
-            <span className="font-semibold">Subscribe Weekly</span>
-            <br />
-            <span className="text-copper font-semibold">AED {297 * mealMultiplier}/visit</span>
-            <br />
-            <span className="text-xs text-primary font-medium">save 15%</span>
-          </button>
+          )}
         </div>
 
-        {/* Availability — multi-date selection */}
-        <p className="font-body text-xs font-semibold tracking-[0.15em] uppercase text-copper mb-2">Available Dates</p>
-        <p className="font-body text-xs text-muted-foreground mb-3">
-          Select {maxDates} date{maxDates > 1 ? "s" : ""} · {selectedDates.length} of {maxDates} chosen
-        </p>
-        <div className="grid grid-cols-7 gap-1.5 mb-8">
-          {next14Days.map((d) => {
-            const key = d.toISOString().split("T")[0];
-            const dayOfWeek = d.getDay();
-            const available = cook.availableDays.includes(dayOfWeek);
-            const isSelected = selectedDates.includes(key);
-            const isDisabled = !available || (!isSelected && selectedDates.length >= maxDates);
-            return (
-              <button
-                key={key}
-                type="button"
-                disabled={isDisabled}
-                onClick={() => toggleDate(key)}
-                className={`flex flex-col items-center py-2 rounded-lg font-body text-xs transition-all ${
-                  isSelected
-                    ? "bg-primary text-primary-foreground"
-                    : available && !isDisabled
-                    ? "bg-card text-foreground border border-border hover:border-primary"
-                    : "bg-muted text-muted-foreground/40 cursor-not-allowed"
-                }`}
-              >
-                <span>{dayNames[d.getDay()]}</span>
-                <span className="text-sm font-semibold">{d.getDate()}</span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Price summary */}
-        <div className="bg-card rounded-xl p-4 mb-4 border border-border" style={{ boxShadow: "var(--shadow-card)" }}>
-          <div className="space-y-1 font-body text-sm">
-            <div className="flex justify-between text-muted-foreground">
-              <span>Base price per visit</span>
-              <span>AED {basePrice}</span>
-            </div>
-            {hasBothMeals && (
-              <div className="flex justify-between text-muted-foreground">
-                <span>× 2 meals (Lunch + Dinner)</span>
-                <span>AED {basePrice * 2}</span>
-              </div>
-            )}
-            <div className="h-px bg-border my-1" />
-            <div className="flex justify-between font-semibold text-foreground">
-              <span>Per visit total</span>
-              <span className="text-copper">AED {perVisitPrice}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Book button */}
+        {/* Book CTA */}
         <button
           type="button"
-          disabled={!canBook}
+          disabled={!selectedMenu}
           onClick={handleBook}
           className="w-full py-4 rounded-lg bg-copper text-accent-foreground font-body font-semibold text-base disabled:opacity-40 transition-opacity"
         >
-          Book {cook.firstName} {cook.lastInitial}. →
+          {selectedMenu ? "Book this cook →" : "Select a menu above to continue"}
         </button>
-      </div>
-    </div>
-  );
-};
-
-// Grocery & Pantry collapsible section
-const GroceryPantrySection = ({ meals }: { meals: string[] }) => {
-  const [showGrocery, setShowGrocery] = useState(false);
-  const [showPantry, setShowPantry] = useState(false);
-
-  const groceryList = useMemo(() => getGroceryListForMenu(meals), [meals]);
-  const pantryList = useMemo(() => getPantryListForMenu(meals), [meals]);
-
-  // Group grocery by category
-  const groupedGrocery = useMemo(() => {
-    const groups: Record<string, typeof groceryList> = {};
-    for (const item of groceryList) {
-      if (!groups[item.category]) groups[item.category] = [];
-      groups[item.category].push(item);
-    }
-    return groups;
-  }, [groceryList]);
-
-  const groupedPantry = useMemo(() => {
-    const groups: Record<string, typeof pantryList> = {};
-    for (const item of pantryList) {
-      if (!groups[item.category]) groups[item.category] = [];
-      groups[item.category].push(item);
-    }
-    return groups;
-  }, [pantryList]);
-
-  return (
-    <div className="mb-6 space-y-3">
-      {/* Grocery Shopping List */}
-      <div className="bg-card rounded-xl border border-border overflow-hidden" style={{ boxShadow: "var(--shadow-card)" }}>
-        <button
-          type="button"
-          onClick={() => setShowGrocery(!showGrocery)}
-          className="w-full flex items-center justify-between p-4"
-        >
-          <div className="flex items-center gap-2">
-            <ShoppingCart className="w-4 h-4 text-copper" />
-            <span className="font-body text-sm font-semibold text-foreground">Grocery Shopping List</span>
-            <span className="font-body text-xs text-muted-foreground">({groceryList.length} items)</span>
-          </div>
-          {showGrocery ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
-        </button>
-        {showGrocery && (
-          <div className="px-4 pb-4 space-y-3">
-            <p className="font-body text-xs text-muted-foreground">
-              Fresh ingredients needed for your selected menu:
-            </p>
-            {Object.entries(groupedGrocery).map(([cat, items]) => (
-              <div key={cat}>
-                <p className="font-body text-xs font-semibold text-copper capitalize mb-1">
-                  {categoryIcons[cat] || "📦"} {cat}
-                </p>
-                <div className="space-y-1">
-                  {items.map((item, i) => (
-                    <div key={i} className="flex justify-between font-body text-sm text-foreground">
-                      <span>{item.name}</span>
-                      <span className="text-muted-foreground text-xs">{item.quantity}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Pantry Essentials */}
-      <div className="bg-card rounded-xl border border-border overflow-hidden" style={{ boxShadow: "var(--shadow-card)" }}>
-        <button
-          type="button"
-          onClick={() => setShowPantry(!showPantry)}
-          className="w-full flex items-center justify-between p-4"
-        >
-          <div className="flex items-center gap-2">
-            <span className="text-base">🏠</span>
-            <span className="font-body text-sm font-semibold text-foreground">Pantry Essentials</span>
-            <span className="font-body text-xs text-muted-foreground">({pantryList.length} items)</span>
-          </div>
-          {showPantry ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
-        </button>
-        {showPantry && (
-          <div className="px-4 pb-4 space-y-3">
-            <p className="font-body text-xs text-muted-foreground">
-              Make sure these staples are in your kitchen:
-            </p>
-            {Object.entries(groupedPantry).map(([cat, items]) => (
-              <div key={cat}>
-                <p className="font-body text-xs font-semibold text-copper capitalize mb-1">
-                  {categoryIcons[cat] || "📦"} {cat}
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {items.map((item, i) => (
-                    <span
-                      key={i}
-                      className="px-2.5 py-1 rounded-full bg-primary/10 font-body text-xs text-foreground"
-                    >
-                      {item.name}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
       </div>
     </div>
   );

@@ -1,9 +1,10 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useBooking } from "@/context/BookingContext";
-import { ArrowLeft, Info } from "lucide-react";
+import { ArrowLeft, Info, Lock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import cooqLogo from "@/assets/cooq-logo.png";
+import type { User } from "@supabase/supabase-js";
 
 const steps = ["Preferences", "Match", "Profile", "Details", "Confirm"];
 
@@ -39,13 +40,30 @@ const FormInput = ({
 
 const BookingForm = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const routerState = (location.state as any) || {};
   const { booking, updateBooking } = useBooking();
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [tier, setTier] = useState<string>("duo");
+  const [tier, setTier] = useState<string>(routerState.tier || "duo");
   const [frequency, setFrequency] = useState<string>("one-time");
   const [isFirstSession, setIsFirstSession] = useState(false);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
 
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user: u } }) => {
+      if (u) {
+        setUser(u);
+        if (u.user_metadata?.full_name && !booking.customerName) {
+          updateBooking({ customerName: u.user_metadata.full_name });
+        }
+        if (u.email && !booking.email) {
+          updateBooking({ email: u.email });
+        }
+      }
+    });
+  }, []);
   const selectedTier = TIERS.find((t) => t.key === tier)!;
   const selectedFreq = FREQUENCIES.find((f) => f.key === frequency)!;
 
@@ -82,9 +100,9 @@ const BookingForm = () => {
         phone: booking.phone,
         area: booking.location,
         address: booking.address,
-        cook_id: booking.cookId,
+        cook_id: routerState.cookId || booking.cookId,
         cook_name: booking.cookName,
-        menu_selected: booking.menuSelected,
+        menu_selected: routerState.selectedMenuName || booking.menuSelected,
         booking_date: booking.bookingDates.join(", "),
         frequency,
         party_size: booking.partySize,
@@ -96,6 +114,8 @@ const BookingForm = () => {
         session_type: sessionType,
         total_aed: total,
         status: "pending",
+        customer_user_id: user?.id || null,
+        selected_menu_id: routerState.selectedMenuId || null,
       }).select().single();
       if (error || !newBooking) throw error || new Error("Booking creation failed");
       updateBooking({ totalAed: total });
@@ -145,6 +165,15 @@ const BookingForm = () => {
       </div>
 
       <div className="px-6 pb-6 flex-1">
+        {/* ── BOOKING SUMMARY CARD ── */}
+        {routerState.cookInitials && (
+          <div className="bg-[#86A383]/10 rounded-xl p-4 mb-4">
+            <p className="font-body text-[14px] font-bold text-foreground">Booking with: {routerState.cookInitials}</p>
+            {routerState.selectedMenuName && <p className="font-body text-[12px] text-gray-500 italic">Menu: {routerState.selectedMenuName}</p>}
+            {routerState.cookArea && <p className="font-body text-[12px] text-gray-500">Area: {routerState.cookArea}</p>}
+          </div>
+        )}
+
         {/* ── TIER SELECTION ── */}
         <p className="font-body text-sm font-bold text-foreground mb-3">Choose your session tier</p>
         <div className="grid grid-cols-1 gap-3 mb-4">
@@ -248,8 +277,30 @@ const BookingForm = () => {
         </div>
 
         {/* ── FORM FIELDS ── */}
-        <FormInput label="Full name *" value={booking.customerName} onChange={(v) => updateBooking({ customerName: v })} error={errors.customerName} />
-        <FormInput label="Email address *" type="email" value={booking.email} onChange={(v) => updateBooking({ email: v })} error={errors.email} />
+        <div className="mb-4">
+          <label className="font-body text-sm font-medium text-foreground mb-1 block">Full name *</label>
+          <div className="relative">
+            <input
+              type="text" value={booking.customerName} readOnly={!!user?.user_metadata?.full_name}
+              onChange={(e) => updateBooking({ customerName: e.target.value })}
+              className="w-full p-3 rounded-lg border border-border bg-card font-body text-sm focus:outline-none focus:ring-2 focus:ring-primary pr-10"
+            />
+            {user?.user_metadata?.full_name && <Lock className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />}
+          </div>
+          {errors.customerName && <p className="font-body text-xs text-destructive mt-1">{errors.customerName}</p>}
+        </div>
+        <div className="mb-4">
+          <label className="font-body text-sm font-medium text-foreground mb-1 block">Email address *</label>
+          <div className="relative">
+            <input
+              type="email" value={booking.email} readOnly={!!user?.email}
+              onChange={(e) => updateBooking({ email: e.target.value })}
+              className="w-full p-3 rounded-lg border border-border bg-card font-body text-sm focus:outline-none focus:ring-2 focus:ring-primary pr-10"
+            />
+            {user?.email && <Lock className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />}
+          </div>
+          {errors.email && <p className="font-body text-xs text-destructive mt-1">{errors.email}</p>}
+        </div>
         <FormInput label="Phone number *" value={booking.phone} onChange={(v) => updateBooking({ phone: v })} placeholder="+971" error={errors.phone} />
         <FormInput label="Dubai area / community" value={booking.location} onChange={(v) => updateBooking({ location: v })} />
         <FormInput label="Full address / building name" value={booking.address} onChange={(v) => updateBooking({ address: v })} />
@@ -322,8 +373,14 @@ const BookingForm = () => {
           </div>
         </div>
 
+        {/* ── T&C ── */}
+        <label className="flex items-start gap-2 text-sm text-gray-600 mt-4 mb-4">
+          <input type="checkbox" checked={agreedToTerms} onChange={(e) => setAgreedToTerms(e.target.checked)} className="mt-0.5" />
+          <span>I agree to Cooq's <a href="/terms" target="_blank" className="text-[#86A383] underline">Terms &amp; Conditions</a> and <a href="/privacy" target="_blank" className="text-[#86A383] underline">Privacy Policy</a></span>
+        </label>
+
         <button
-          disabled={loading}
+          disabled={loading || !agreedToTerms}
           onClick={handleSubmit}
           className="w-full py-4 rounded-lg font-body font-semibold text-base disabled:opacity-40 transition-opacity"
           style={{ backgroundColor: "#B57E5D", color: "#F9F7F2" }}

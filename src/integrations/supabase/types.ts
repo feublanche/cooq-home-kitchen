@@ -20,12 +20,15 @@ export type Database = {
           allergies_notes: string | null
           area: string | null
           booking_date: string | null
+          cancellation_reason: string | null
+          cancelled_by: string | null
           cook_email: string | null
           cook_id: string
           cook_name: string
           cook_phone: string | null
           created_at: string
           customer_name: string
+          customer_user_id: string | null
           dietary: string[] | null
           email: string
           frequency: string | null
@@ -42,6 +45,8 @@ export type Database = {
           rated_at: string | null
           rating: number | null
           rating_note: string | null
+          refund_status: string | null
+          selected_menu_id: string | null
           session_notes: string | null
           session_type: string | null
           status: string | null
@@ -53,12 +58,15 @@ export type Database = {
           allergies_notes?: string | null
           area?: string | null
           booking_date?: string | null
+          cancellation_reason?: string | null
+          cancelled_by?: string | null
           cook_email?: string | null
           cook_id: string
           cook_name: string
           cook_phone?: string | null
           created_at?: string
           customer_name: string
+          customer_user_id?: string | null
           dietary?: string[] | null
           email: string
           frequency?: string | null
@@ -75,6 +83,8 @@ export type Database = {
           rated_at?: string | null
           rating?: number | null
           rating_note?: string | null
+          refund_status?: string | null
+          selected_menu_id?: string | null
           session_notes?: string | null
           session_type?: string | null
           status?: string | null
@@ -86,12 +96,15 @@ export type Database = {
           allergies_notes?: string | null
           area?: string | null
           booking_date?: string | null
+          cancellation_reason?: string | null
+          cancelled_by?: string | null
           cook_email?: string | null
           cook_id?: string
           cook_name?: string
           cook_phone?: string | null
           created_at?: string
           customer_name?: string
+          customer_user_id?: string | null
           dietary?: string[] | null
           email?: string
           frequency?: string | null
@@ -108,6 +121,8 @@ export type Database = {
           rated_at?: string | null
           rating?: number | null
           rating_note?: string | null
+          refund_status?: string | null
+          selected_menu_id?: string | null
           session_notes?: string | null
           session_type?: string | null
           status?: string | null
@@ -115,6 +130,41 @@ export type Database = {
           total_aed?: number | null
         }
         Relationships: []
+      }
+      cook_availability: {
+        Row: {
+          available: boolean | null
+          cook_id: string | null
+          day_of_week: number
+          id: string
+          time_slots: string[] | null
+          updated_at: string | null
+        }
+        Insert: {
+          available?: boolean | null
+          cook_id?: string | null
+          day_of_week: number
+          id?: string
+          time_slots?: string[] | null
+          updated_at?: string | null
+        }
+        Update: {
+          available?: boolean | null
+          cook_id?: string | null
+          day_of_week?: number
+          id?: string
+          time_slots?: string[] | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cook_availability_cook_id_fkey"
+            columns: ["cook_id"]
+            isOneToOne: false
+            referencedRelation: "cooks"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       cook_menus: {
         Row: {

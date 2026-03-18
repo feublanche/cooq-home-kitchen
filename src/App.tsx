@@ -24,6 +24,8 @@ import CookPhotoUpload from "./pages/cook/CookPhotoUpload";
 import CookEarnings from "./pages/cook/CookEarnings";
 import Payment from "./pages/Payment";
 import RateSession from "./pages/RateSession";
+import CustomerAuth from "./pages/CustomerAuth";
+import CustomerProtectedRoute from "@/components/CustomerProtectedRoute";
 
 const queryClient = new QueryClient();
 
@@ -40,12 +42,13 @@ const App = () => (
               <Route path="/search" element={<Search />} />
               <Route path="/results" element={<Results />} />
               <Route path="/cook/:id" element={<CookProfile />} />
-              <Route path="/book" element={<BookingForm />} />
+              <Route path="/book" element={<CustomerProtectedRoute><BookingForm /></CustomerProtectedRoute>} />
               <Route path="/confirmation" element={<Confirmation />} />
+              <Route path="/account" element={<CustomerAuth />} />
               <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
               <Route path="/login" element={<Login />} />
-              <Route path="/my-bookings" element={<MyBookings />} />
-              <Route path="/payment" element={<Payment />} />
+              <Route path="/my-bookings" element={<CustomerProtectedRoute><MyBookings /></CustomerProtectedRoute>} />
+              <Route path="/payment" element={<CustomerProtectedRoute><Payment /></CustomerProtectedRoute>} />
               <Route path="/rate/:bookingId" element={<RateSession />} />
               <Route path="/cook/login" element={<CookLogin />} />
               <Route path="/cook/dashboard" element={<CookProtectedRoute><CookDashboard /></CookProtectedRoute>} />
