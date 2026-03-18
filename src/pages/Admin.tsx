@@ -20,6 +20,7 @@ import {
   Image as ImageIcon,
   Loader2,
   Send,
+  LogOut,
 } from "lucide-react";
 
 interface Booking {
