@@ -53,6 +53,9 @@ const App = () => (
               <Route path="/my-bookings" element={<CustomerProtectedRoute><MyBookings /></CustomerProtectedRoute>} />
               <Route path="/payment" element={<CustomerProtectedRoute><Payment /></CustomerProtectedRoute>} />
               <Route path="/rate/:bookingId" element={<RateSession />} />
+              <Route path="/terms" element={<Terms />} />
+              <Route path="/privacy" element={<Privacy />} />
+              <Route path="/cook-agreement" element={<CookAgreement />} />
               <Route path="/cook/login" element={<CookLogin />} />
               <Route path="/cook/dashboard" element={<CookProtectedRoute><CookDashboard /></CookProtectedRoute>} />
               <Route path="/cook/orders" element={<CookProtectedRoute><CookOrders /></CookProtectedRoute>} />
