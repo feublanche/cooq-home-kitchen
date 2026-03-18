@@ -28,12 +28,12 @@ export default function RateSession() {
   useEffect(() => {
     if (!bookingId) return;
     const fetch = async () => {
-      const { data } = await supabase
-        .from("bookings")
-        .select("*")
-        .eq("id", bookingId)
-        .single();
-      setBooking(data);
+      const { data } = await supabase.rpc("get_booking_for_rating", {
+        booking_uuid: bookingId,
+      });
+      if (data && data.length > 0) {
+        setBooking(data[0]);
+      }
       setLoading(false);
     };
     fetch();
@@ -42,112 +42,101 @@ export default function RateSession() {
   const handleSubmit = async () => {
     if (selectedStar === 0 || !bookingId) return;
     setSubmitting(true);
-    await supabase
-      .from("bookings")
-      .update({ rating: selectedStar, rating_note: note || null, rated_at: new Date().toISOString() })
-      .eq("id", bookingId);
+    await supabase.rpc("submit_booking_rating", {
+      booking_uuid: bookingId,
+      p_rating: selectedStar,
+      p_note: note || null,
+    });
     setSubmitting(false);
     setSubmitted(true);
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: "#F9F7F2" }}>
-        <Loader2 className="w-10 h-10 animate-spin" style={{ color: "#86A383" }} />
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="w-8 h-8 animate-spin" style={{ color: "#86A383" }} />
       </div>
     );
   }
 
-  if (!booking || booking.status !== "completed") {
+  if (!booking) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-4 px-6" style={{ backgroundColor: "#F9F7F2" }}>
-        <p className="font-body text-sm text-slate-600 text-center">This session hasn't been completed yet.</p>
-        <button onClick={() => navigate(-1)} className="font-body text-sm underline" style={{ color: "#86A383" }}>
-          <ArrowLeft className="w-4 h-4 inline mr-1" />Go back
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background px-6">
+        <p className="font-body text-muted-foreground">Booking not found.</p>
+        <button onClick={() => navigate("/")} className="mt-4 font-body text-sm underline" style={{ color: "#86A383" }}>
+          Go home
         </button>
       </div>
     );
   }
 
-  if (booking.rating != null && !submitted) {
+  if (submitted || booking.rating) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-4 px-6" style={{ backgroundColor: "#F9F7F2" }}>
-        <p className="font-body text-base text-slate-700 text-center">Thank you! You've already rated this session.</p>
-        <div className="flex gap-2 mt-2">
-          {[1, 2, 3, 4, 5].map((i) => (
-            <Star
-              key={i}
-              className="w-8 h-8"
-              fill={i <= booking.rating ? "#B57E5D" : "none"}
-              stroke={i <= booking.rating ? "#B57E5D" : "#cbd5e1"}
-            />
-          ))}
-        </div>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background px-6">
+        <CheckCircle2 className="w-16 h-16 mb-4" style={{ color: "#86A383" }} />
+        <h1 className="font-display italic text-2xl text-foreground mb-2">Thank you!</h1>
+        <p className="font-body text-muted-foreground text-center">
+          Your feedback helps us improve the Cooq experience.
+        </p>
       </div>
     );
   }
-
-  if (submitted) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-3 px-6" style={{ backgroundColor: "#F9F7F2" }}>
-        <CheckCircle2 className="w-12 h-12" style={{ color: "#86A383" }} />
-        <h1 className="font-display text-2xl text-slate-800">Thank you! 🙏</h1>
-        <p className="font-body text-sm text-slate-500">Your feedback helps us improve.</p>
-      </div>
-    );
-  }
-
-  const formattedDate = booking.booking_date
-    ? (() => { try { return format(new Date(booking.booking_date), "EEE d MMM"); } catch { return booking.booking_date; } })()
-    : "";
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: "#F9F7F2" }}>
-      <div className="max-w-[430px] mx-auto flex flex-col items-center">
-        <img src={cooqLogo} alt="Cooq" className="h-7 mt-8" />
+    <div className="min-h-screen bg-background flex flex-col">
+      <nav className="flex items-center gap-3 px-6 py-4">
+        <button onClick={() => navigate(-1)}>
+          <ArrowLeft className="w-5 h-5 text-foreground" />
+        </button>
+        <img src={cooqLogo} alt="Cooq" className="h-7" />
+      </nav>
 
-        <h1 className="font-display text-2xl text-slate-800 mt-6">How was your session?</h1>
-        <p className="font-body text-sm text-slate-500 mt-2">
-          {booking.cook_name} · {formattedDate}
+      <div className="flex-1 px-6 pb-8">
+        <h1 className="font-display italic text-2xl text-foreground mb-1">Rate your session</h1>
+        <p className="font-body text-sm text-muted-foreground mb-6">
+          How was your experience with {booking.cook_name}
+          {booking.booking_date ? ` on ${format(new Date(booking.booking_date), "d MMM")}` : ""}?
         </p>
 
         {/* Stars */}
-        <div className="flex gap-4 justify-center mt-8">
-          {[1, 2, 3, 4, 5].map((i) => (
-            <Star
-              key={i}
-              className="w-10 h-10 cursor-pointer transition-colors"
-              fill={i <= (hoveredStar || selectedStar) ? "#B57E5D" : "none"}
-              stroke={i <= (hoveredStar || selectedStar) ? "#B57E5D" : "#e2e8f0"}
-              onMouseEnter={() => setHoveredStar(i)}
+        <div className="flex gap-2 justify-center mb-2">
+          {[1, 2, 3, 4, 5].map((s) => (
+            <button
+              key={s}
+              onMouseEnter={() => setHoveredStar(s)}
               onMouseLeave={() => setHoveredStar(0)}
-              onClick={() => setSelectedStar(i)}
-            />
+              onClick={() => setSelectedStar(s)}
+              className="transition-transform hover:scale-110"
+            >
+              <Star
+                className="w-10 h-10"
+                fill={s <= (hoveredStar || selectedStar) ? "#F5C542" : "none"}
+                stroke={s <= (hoveredStar || selectedStar) ? "#F5C542" : "#CBD5E1"}
+                strokeWidth={1.5}
+              />
+            </button>
           ))}
         </div>
-        {(hoveredStar || selectedStar) > 0 && (
-          <p className="font-body text-xs text-slate-400 text-center mt-2">
-            {starLabels[hoveredStar || selectedStar]}
-          </p>
-        )}
+        <p className="font-body text-xs text-center text-muted-foreground mb-6 h-4">
+          {starLabels[hoveredStar || selectedStar] || ""}
+        </p>
 
         {/* Note */}
         <textarea
           value={note}
           onChange={(e) => setNote(e.target.value)}
-          placeholder="Tell us more (optional)"
-          className="mt-6 mx-4 w-[calc(100%-2rem)] rounded-xl border border-slate-200 bg-white p-4 font-body text-sm text-slate-700 min-h-[80px] resize-none focus:outline-none focus:ring-2 focus:ring-[#86A383]"
+          placeholder="Any comments? (optional)"
+          rows={3}
+          className="w-full border border-border rounded-xl p-3 font-body text-sm text-foreground bg-card resize-none focus:outline-none focus:ring-2 focus:ring-primary/30 mb-6"
         />
 
-        {/* Submit */}
         <button
           onClick={handleSubmit}
           disabled={selectedStar === 0 || submitting}
-          className="mt-6 mx-4 w-[calc(100%-2rem)] py-4 rounded-xl font-body font-semibold text-base text-white disabled:opacity-50 flex items-center justify-center gap-2 transition-opacity"
-          style={{ backgroundColor: "#B57E5D" }}
+          className="w-full py-4 rounded-xl font-body font-semibold text-base text-white disabled:opacity-40 flex items-center justify-center gap-2"
+          style={{ backgroundColor: "#86A383" }}
         >
-          {submitting ? <Loader2 className="w-5 h-5 animate-spin text-white" /> : null}
-          {submitting ? "Submitting..." : "Submit Rating"}
+          {submitting ? <Loader2 className="w-5 h-5 animate-spin" /> : "Submit Rating"}
         </button>
       </div>
     </div>
