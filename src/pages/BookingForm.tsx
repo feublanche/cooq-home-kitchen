@@ -163,6 +163,15 @@ const BookingForm = () => {
       </div>
 
       <div className="px-6 pb-6 flex-1">
+        {/* ── BOOKING SUMMARY CARD ── */}
+        {routerState.cookInitials && (
+          <div className="bg-[#86A383]/10 rounded-xl p-4 mb-4">
+            <p className="font-body text-[14px] font-bold text-foreground">Booking with: {routerState.cookInitials}</p>
+            {routerState.selectedMenuName && <p className="font-body text-[12px] text-gray-500 italic">Menu: {routerState.selectedMenuName}</p>}
+            {routerState.cookArea && <p className="font-body text-[12px] text-gray-500">Area: {routerState.cookArea}</p>}
+          </div>
+        )}
+
         {/* ── TIER SELECTION ── */}
         <p className="font-body text-sm font-bold text-foreground mb-3">Choose your session tier</p>
         <div className="grid grid-cols-1 gap-3 mb-4">
