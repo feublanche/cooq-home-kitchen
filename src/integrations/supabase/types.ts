@@ -30,6 +30,7 @@ export type Database = {
           email: string
           frequency: string | null
           grocery_addon: boolean | null
+          grocery_fee: number | null
           id: string
           menu_id: string | null
           menu_selected: string
@@ -42,7 +43,9 @@ export type Database = {
           rating: number | null
           rating_note: string | null
           session_notes: string | null
+          session_type: string | null
           status: string | null
+          tier: string | null
           total_aed: number | null
         }
         Insert: {
@@ -60,6 +63,7 @@ export type Database = {
           email: string
           frequency?: string | null
           grocery_addon?: boolean | null
+          grocery_fee?: number | null
           id?: string
           menu_id?: string | null
           menu_selected: string
@@ -72,7 +76,9 @@ export type Database = {
           rating?: number | null
           rating_note?: string | null
           session_notes?: string | null
+          session_type?: string | null
           status?: string | null
+          tier?: string | null
           total_aed?: number | null
         }
         Update: {
@@ -90,6 +96,7 @@ export type Database = {
           email?: string
           frequency?: string | null
           grocery_addon?: boolean | null
+          grocery_fee?: number | null
           id?: string
           menu_id?: string | null
           menu_selected?: string
@@ -102,7 +109,9 @@ export type Database = {
           rating?: number | null
           rating_note?: string | null
           session_notes?: string | null
+          session_type?: string | null
           status?: string | null
+          tier?: string | null
           total_aed?: number | null
         }
         Relationships: []
