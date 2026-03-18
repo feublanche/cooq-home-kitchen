@@ -63,6 +63,7 @@ const App = () => (
               <Route path="/cook/menu-submit" element={<CookProtectedRoute><CookMenuSubmit /></CookProtectedRoute>} />
               <Route path="/cook/photo-upload" element={<CookProtectedRoute><CookPhotoUpload /></CookProtectedRoute>} />
               <Route path="/cook/earnings" element={<CookProtectedRoute><CookEarnings /></CookProtectedRoute>} />
+              <Route path="/cook/availability" element={<CookProtectedRoute><CookAvailability /></CookProtectedRoute>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </div>
