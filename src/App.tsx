@@ -46,7 +46,7 @@ const App = () => (
               <Route path="/login" element={<Login />} />
               <Route path="/my-bookings" element={<MyBookings />} />
               <Route path="/payment" element={<Payment />} />
-              <Route path="/rate-session" element={<RateSession />} />
+              <Route path="/rate/:bookingId" element={<RateSession />} />
               <Route path="/cook/login" element={<CookLogin />} />
               <Route path="/cook/dashboard" element={<CookProtectedRoute><CookDashboard /></CookProtectedRoute>} />
               <Route path="/cook/orders" element={<CookProtectedRoute><CookOrders /></CookProtectedRoute>} />

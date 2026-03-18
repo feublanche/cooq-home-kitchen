@@ -59,7 +59,7 @@ const BookingForm = () => {
     if (!validate()) return;
     setLoading(true);
     try {
-      const { error } = await supabase.from("bookings").insert({
+      const { data: newBooking, error } = await supabase.from("bookings").insert({
         customer_name: booking.customerName,
         email: booking.email,
         phone: booking.phone,
@@ -76,10 +76,21 @@ const BookingForm = () => {
         grocery_addon: booking.groceryAddon,
         total_aed: total,
         status: "pending",
-      });
-      if (error) throw error;
+      }).select().single();
+      if (error || !newBooking) throw error || new Error("Booking creation failed");
       updateBooking({ totalAed: total });
-      navigate("/confirmation");
+      navigate("/payment", {
+        state: {
+          bookingId: newBooking.id,
+          totalAed: newBooking.total_aed || 350,
+          customerName: newBooking.customer_name,
+          customerEmail: newBooking.email,
+          area: newBooking.area,
+          bookingDate: newBooking.booking_date,
+          menuSelected: newBooking.menu_selected,
+          cookName: newBooking.cook_name || null,
+        },
+      });
     } catch (err) {
       console.error("Booking error:", err);
     } finally {
