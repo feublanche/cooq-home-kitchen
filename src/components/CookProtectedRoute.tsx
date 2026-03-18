@@ -60,10 +60,8 @@ const CookProtectedRoute = ({ children }: { children: ReactNode }) => {
       }
 
       if (cookData.status === "rejected") {
-        setPendingApproval(false);
-        setCook(null);
+        setRejected(true);
         setChecking(false);
-        setLoading(false);
         return;
       }
 
