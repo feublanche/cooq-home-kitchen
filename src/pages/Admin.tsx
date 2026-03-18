@@ -181,6 +181,18 @@ const Admin = () => {
     fetchPhotos();
     fetchCooks();
     fetchMenus();
+    // Fetch DHA expiry alerts
+    const fetchExpiring = async () => {
+      const { data } = await supabase
+        .from("cooks")
+        .select("id, name, email, health_card_expiry")
+        .in("status", ["active", "approved"])
+        .not("health_card_expiry", "is", null);
+      const cutoff = new Date();
+      cutoff.setDate(cutoff.getDate() + 30);
+      setExpiringCooks((data || []).filter((c: any) => new Date(c.health_card_expiry) <= cutoff));
+    };
+    fetchExpiring();
   }, []);
 
   const updateStatus = async (id: string, status: string) => {
