@@ -275,8 +275,30 @@ const BookingForm = () => {
         </div>
 
         {/* ── FORM FIELDS ── */}
-        <FormInput label="Full name *" value={booking.customerName} onChange={(v) => updateBooking({ customerName: v })} error={errors.customerName} />
-        <FormInput label="Email address *" type="email" value={booking.email} onChange={(v) => updateBooking({ email: v })} error={errors.email} />
+        <div className="mb-4">
+          <label className="font-body text-sm font-medium text-foreground mb-1 block">Full name *</label>
+          <div className="relative">
+            <input
+              type="text" value={booking.customerName} readOnly={!!user?.user_metadata?.full_name}
+              onChange={(e) => updateBooking({ customerName: e.target.value })}
+              className="w-full p-3 rounded-lg border border-border bg-card font-body text-sm focus:outline-none focus:ring-2 focus:ring-primary pr-10"
+            />
+            {user?.user_metadata?.full_name && <Lock className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />}
+          </div>
+          {errors.customerName && <p className="font-body text-xs text-destructive mt-1">{errors.customerName}</p>}
+        </div>
+        <div className="mb-4">
+          <label className="font-body text-sm font-medium text-foreground mb-1 block">Email address *</label>
+          <div className="relative">
+            <input
+              type="email" value={booking.email} readOnly={!!user?.email}
+              onChange={(e) => updateBooking({ email: e.target.value })}
+              className="w-full p-3 rounded-lg border border-border bg-card font-body text-sm focus:outline-none focus:ring-2 focus:ring-primary pr-10"
+            />
+            {user?.email && <Lock className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />}
+          </div>
+          {errors.email && <p className="font-body text-xs text-destructive mt-1">{errors.email}</p>}
+        </div>
         <FormInput label="Phone number *" value={booking.phone} onChange={(v) => updateBooking({ phone: v })} placeholder="+971" error={errors.phone} />
         <FormInput label="Dubai area / community" value={booking.location} onChange={(v) => updateBooking({ location: v })} />
         <FormInput label="Full address / building name" value={booking.address} onChange={(v) => updateBooking({ address: v })} />
