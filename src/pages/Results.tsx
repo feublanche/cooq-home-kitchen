@@ -70,7 +70,7 @@ const Results = () => {
               <div className="h-10 bg-muted rounded-lg mt-4" />
             </div>
           ))
-        ) : cooks.length === 0 ? (
+        ) : displayCooks.length === 0 ? (
           <div className="text-center py-12">
             <p className="font-body text-sm text-muted-foreground">
               No cooks available yet in this area. Email{" "}
@@ -79,7 +79,13 @@ const Results = () => {
             </p>
           </div>
         ) : (
-          cooks.map((cook: any) => {
+          <>
+            {showExpandedNotice && (
+              <p className="text-xs text-gray-400 italic text-center px-4 mb-2">
+                Showing all available Cooq-certified cooks — we're expanding coverage across Dubai.
+              </p>
+            )}
+            {displayCooks.map((cook: any) => {
             const initials = getInitials(cook.name);
             return (
               <div key={cook.id} className="bg-card rounded-xl p-5 border border-border" style={{ boxShadow: "var(--shadow-card)" }}>
