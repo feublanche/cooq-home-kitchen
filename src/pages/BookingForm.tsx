@@ -392,10 +392,11 @@ const BookingForm = () => {
         <div className="mb-4">
           <label className="font-body text-sm font-medium text-foreground mb-1 block">Party size</label>
           <div className="flex items-center gap-3">
-            <button onClick={() => updateBooking({ partySize: Math.max(1, booking.partySize - 1) })} className="w-9 h-9 rounded-full bg-card border border-border flex items-center justify-center font-body font-bold">−</button>
+            <button onClick={() => { const limits = TIER_LIMITS[tier]; updateBooking({ partySize: Math.max(limits?.min ?? 1, booking.partySize - 1) }); }} className="w-9 h-9 rounded-full bg-card border border-border flex items-center justify-center font-body font-bold">−</button>
             <span className="font-body text-lg font-semibold">{booking.partySize}</span>
-            <button onClick={() => updateBooking({ partySize: Math.min(20, booking.partySize + 1) })} className="w-9 h-9 rounded-full bg-card border border-border flex items-center justify-center font-body font-bold">+</button>
+            <button onClick={() => { const limits = TIER_LIMITS[tier]; updateBooking({ partySize: Math.min(limits?.max ?? 20, booking.partySize + 1) }); }} className="w-9 h-9 rounded-full bg-card border border-border flex items-center justify-center font-body font-bold">+</button>
           </div>
+          <p className="font-body text-xs text-gray-400 mt-1">{TIER_HINTS[tier]}</p>
         </div>
 
         <div className="mb-4">

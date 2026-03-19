@@ -282,8 +282,9 @@ const Search = () => {
                       : "border-gray-100 bg-white"
                   }`}
                 >
-                  <p className="font-body text-sm font-bold text-foreground">{t.label}</p>
-                  <p className="font-body text-xs text-muted-foreground">{t.desc} · {t.price}</p>
+                  <p className="font-body text-sm font-bold text-foreground">{t.label} <span className="font-normal text-muted-foreground">· {t.desc}</span></p>
+                  <p className="font-body text-xs text-muted-foreground">{t.detail}</p>
+                  <p className="font-body text-xs font-semibold text-foreground mt-1">{t.price}</p>
                 </button>
               ))}
             </div>

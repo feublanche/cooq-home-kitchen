@@ -66,8 +66,6 @@ const Home = () => {
           <span>·</span>
           <a href="/privacy" className="hover:text-foreground transition-colors">Privacy Policy</a>
           <span>·</span>
-          <a href="/cook-agreement" className="hover:text-foreground transition-colors">Cook Agreement</a>
-          <span>·</span>
           <a href="mailto:hello@cooq.ae" className="hover:text-foreground transition-colors">hello@cooq.ae</a>
         </div>
       </footer>
