@@ -16,24 +16,25 @@ const Results = () => {
         .from("cooks")
         .select("*")
         .in("status", ["approved", "active"]);
-      let results = data || [];
-
-      if (cuisines?.length) {
-        results = results.filter((c: any) =>
-          c.cuisine?.some((cu: string) => cuisines.includes(cu))
-        );
-      }
-
-      if (neighborhood) {
-        results = results.filter((c: any) =>
-          c.area?.toLowerCase().includes(neighborhood.toLowerCase())
-        );
-      }
-
-      // NOTE: dietary filtering requires cook_menus join — skipped for now
-      return results;
+      return data || [];
     },
   });
+
+  const filtered = cooks.filter((cook: any) => {
+    if (cuisines && cuisines.length > 0 && !cuisines.includes('Any cuisine')) {
+      const cookCuisines = (cook.cuisine || []).map((c: string) => c.toLowerCase())
+      const match = cuisines.some((c: string) =>
+        cookCuisines.some((cc: string) =>
+          cc.includes(c.toLowerCase()) || c.toLowerCase().includes(cc)
+        )
+      )
+      if (!match) return false
+    }
+    return true
+  })
+
+  const displayCooks = filtered.length > 0 ? filtered : cooks;
+  const showExpandedNotice = !!neighborhood && displayCooks.length === cooks.length && cooks.length > 0;
 
   const getInitials = (name: string) =>
     name.split(" ").map((n: string) => n[0]).join(".") + ".";
@@ -49,8 +50,8 @@ const Results = () => {
 
       <div className="px-6 pb-4">
         <p className="font-body text-xs font-semibold tracking-[0.15em] uppercase text-copper mb-1">Your Matches</p>
-        <h1 className="font-display italic text-2xl text-foreground mb-2">
-          {isLoading ? "Finding cooks..." : `${cooks.length} cook${cooks.length !== 1 ? "s" : ""} match your preferences`}
+         <h1 className="font-display italic text-2xl text-foreground mb-2">
+          {isLoading ? "Finding cooks..." : `${displayCooks.length} cook${displayCooks.length !== 1 ? "s" : ""} match your preferences`}
         </h1>
       </div>
 
@@ -69,7 +70,7 @@ const Results = () => {
               <div className="h-10 bg-muted rounded-lg mt-4" />
             </div>
           ))
-        ) : cooks.length === 0 ? (
+        ) : displayCooks.length === 0 ? (
           <div className="text-center py-12">
             <p className="font-body text-sm text-muted-foreground">
               No cooks available yet in this area. Email{" "}
@@ -78,7 +79,13 @@ const Results = () => {
             </p>
           </div>
         ) : (
-          cooks.map((cook: any) => {
+          <>
+            {showExpandedNotice && (
+              <p className="text-xs text-gray-400 italic text-center px-4 mb-2">
+                Showing all available Cooq-certified cooks — we're expanding coverage across Dubai.
+              </p>
+            )}
+            {displayCooks.map((cook: any) => {
             const initials = getInitials(cook.name);
             return (
               <div key={cook.id} className="bg-card rounded-xl p-5 border border-border" style={{ boxShadow: "var(--shadow-card)" }}>
@@ -139,7 +146,8 @@ const Results = () => {
                 </button>
               </div>
             );
-          })
+            })}
+          </>
         )}
       </div>
     </div>
