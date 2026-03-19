@@ -74,9 +74,9 @@ const freqOptions = [
   }
 ];
 const tierOptions = [
-  { key: "duo", label: "Cooq Duo", desc: "1–2 people", price: "AED 350" },
-  { key: "family", label: "Cooq Family", desc: "3–4 people", price: "AED 420" },
-  { key: "large", label: "Cooq Large", desc: "5–6 people", price: "AED 550" },
+  { key: "duo", label: "Cooq Duo", desc: "1–2 people · ~2 hours", detail: "2 proteins · 2 sides · covers 3–4 days", price: "AED 350" },
+  { key: "family", label: "Cooq Family", desc: "3–4 people · ~3 hours", detail: "2 proteins · 3 sides · covers 3–4 days", price: "AED 420" },
+  { key: "large", label: "Cooq Large", desc: "5–6 people · ~4 hours", detail: "3 proteins · 3 sides · covers 3–4 days", price: "AED 550" },
 ];
 
 const Pill = ({ label, selected, onClick }: { label: string; selected: boolean; onClick: () => void }) => (
