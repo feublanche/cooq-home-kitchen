@@ -34,11 +34,10 @@ const freqOptions = [
     subtitle: 'Single session, no commitment',
     badge: null,
     rows: [
-      { tier: 'Duo', people: '1–2 people', price: 'AED 350 / session' },
-      { tier: 'Family', people: '3–4 people', price: 'AED 420 / session' },
-      { tier: 'Large', people: '5–6 people', price: 'AED 550 / session' },
+      { tier: 'Duo', people: '1–2 people', price: 'AED 350 / session', saving: null },
+      { tier: 'Family', people: '3–4 people', price: 'AED 420 / session', saving: null },
+      { tier: 'Large', people: '5–6 people', price: 'AED 550 / session', saving: null },
     ],
-    savings: null
   },
   {
     key: 'weekly',
@@ -46,11 +45,10 @@ const freqOptions = [
     subtitle: '4 sessions per month',
     badge: 'Save 15%',
     rows: [
-      { tier: 'Duo', people: '1–2 people', price: 'AED 1,190 / mo' },
-      { tier: 'Family', people: '3–4 people', price: 'AED 1,430 / mo' },
-      { tier: 'Large', people: '5–6 people', price: 'AED 1,870 / mo' },
+      { tier: 'Duo', people: '1–2 people', price: 'AED 1,190 / mo', saving: '210' },
+      { tier: 'Family', people: '3–4 people', price: 'AED 1,430 / mo', saving: '250' },
+      { tier: 'Large', people: '5–6 people', price: 'AED 1,870 / mo', saving: '330' },
     ],
-    savings: 'You save AED 210 · 250 · 330 per month vs one-time'
   },
   {
     key: 'twice',
@@ -58,11 +56,10 @@ const freqOptions = [
     subtitle: '8 sessions per month',
     badge: 'Save 15%',
     rows: [
-      { tier: 'Duo', people: '1–2 people', price: 'AED 2,380 / mo' },
-      { tier: 'Family', people: '3–4 people', price: 'AED 2,860 / mo' },
-      { tier: 'Large', people: '5–6 people', price: 'AED 3,740 / mo' },
+      { tier: 'Duo', people: '1–2 people', price: 'AED 2,380 / mo', saving: '420' },
+      { tier: 'Family', people: '3–4 people', price: 'AED 2,860 / mo', saving: '500' },
+      { tier: 'Large', people: '5–6 people', price: 'AED 3,740 / mo', saving: '660' },
     ],
-    savings: 'You save AED 420 · 500 · 660 per month vs one-time'
   },
   {
     key: 'three',
@@ -70,11 +67,10 @@ const freqOptions = [
     subtitle: '12 sessions per month · Full week coverage',
     badge: 'Save 15%',
     rows: [
-      { tier: 'Duo', people: '1–2 people', price: 'AED 3,570 / mo' },
-      { tier: 'Family', people: '3–4 people', price: 'AED 4,280 / mo' },
-      { tier: 'Large', people: '5–6 people', price: 'AED 5,610 / mo' },
+      { tier: 'Duo', people: '1–2 people', price: 'AED 3,570 / mo', saving: '630' },
+      { tier: 'Family', people: '3–4 people', price: 'AED 4,280 / mo', saving: '760' },
+      { tier: 'Large', people: '5–6 people', price: 'AED 5,610 / mo', saving: '990' },
     ],
-    savings: 'You save AED 630 · 760 · 990 per month vs one-time'
   }
 ];
 const tierOptions = [
