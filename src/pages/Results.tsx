@@ -50,8 +50,8 @@ const Results = () => {
 
       <div className="px-6 pb-4">
         <p className="font-body text-xs font-semibold tracking-[0.15em] uppercase text-copper mb-1">Your Matches</p>
-        <h1 className="font-display italic text-2xl text-foreground mb-2">
-          {isLoading ? "Finding cooks..." : `${cooks.length} cook${cooks.length !== 1 ? "s" : ""} match your preferences`}
+         <h1 className="font-display italic text-2xl text-foreground mb-2">
+          {isLoading ? "Finding cooks..." : `${displayCooks.length} cook${displayCooks.length !== 1 ? "s" : ""} match your preferences`}
         </h1>
       </div>
 
