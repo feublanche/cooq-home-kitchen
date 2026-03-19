@@ -82,20 +82,30 @@ const CookProfile = () => {
   const handleBook = async () => {
     if (!selectedMenu) return;
     const { data: { session } } = await supabase.auth.getSession();
-    if (session) {
-      navigate("/book", {
-        state: {
-          cookId: cook.id,
-          cookInitials: initials,
-          cookArea: cook.area,
-          selectedMenuId: selectedMenu.id,
-          selectedMenuName: selectedMenu.menu_name,
-          selectedMeals: selectedMenu.meals,
-        },
-      });
-    } else {
-      navigate("/account", { state: { returnTo: "/cook/" + id } });
+    if (!session) {
+      navigate('/account', { state: { returnTo: '/cook/' + id } });
+      return;
     }
+    if (session.user.email === 'cooqdubai@gmail.com') {
+      navigate('/account', { state: { returnTo: '/cook/' + id } });
+      return;
+    }
+    const { data: cookRecord } = await supabase
+      .from('cooks').select('id').eq('user_id', session.user.id).maybeSingle();
+    if (cookRecord) {
+      navigate('/account', { state: { returnTo: '/cook/' + id } });
+      return;
+    }
+    navigate('/book', {
+      state: {
+        cookId: cook.id,
+        cookInitials: initials,
+        cookArea: cook.area,
+        selectedMenuId: selectedMenu.id,
+        selectedMenuName: selectedMenu.menu_name,
+        selectedMeals: selectedMenu.meals,
+      },
+    });
   };
 
   return (
