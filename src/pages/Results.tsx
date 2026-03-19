@@ -16,22 +16,7 @@ const Results = () => {
         .from("cooks")
         .select("*")
         .in("status", ["approved", "active"]);
-      let results = data || [];
-
-      if (cuisines?.length) {
-        results = results.filter((c: any) =>
-          c.cuisine?.some((cu: string) => cuisines.includes(cu))
-        );
-      }
-
-      if (neighborhood) {
-        results = results.filter((c: any) =>
-          c.area?.toLowerCase().includes(neighborhood.toLowerCase())
-        );
-      }
-
-      // NOTE: dietary filtering requires cook_menus join — skipped for now
-      return results;
+      return data || [];
     },
   });
 
