@@ -82,7 +82,19 @@ const BookingForm = () => {
   const { booking, updateBooking } = useBooking();
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [tier, setTier] = useState<string>(routerState.tier || "duo");
+  const [tier, setTierRaw] = useState<string>(routerState.tier || "duo");
+
+  const setTier = (newTier: string) => {
+    setTierRaw(newTier);
+    const limits = TIER_LIMITS[newTier];
+    if (limits) {
+      updateBooking({ partySize: limits.min });
+    }
+    // Uncheck first session if not duo
+    if (newTier !== "duo") {
+      setIsFirstSession(false);
+    }
+  };
   const [frequency, setFrequency] = useState<string>("one-time");
   const [isFirstSession, setIsFirstSession] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
