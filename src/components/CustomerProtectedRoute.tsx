@@ -20,13 +20,12 @@ const CustomerProtectedRoute = ({ children }: { children: React.ReactNode }) => 
         navigate("/admin", { replace: true });
         return;
       }
-      // Check if cook
-      const { data: cook } = await supabase
+      const { data: cookRecord } = await supabase
         .from("cooks")
         .select("id")
         .eq("user_id", session.user.id)
         .maybeSingle();
-      if (cook) {
+      if (cookRecord) {
         navigate("/cook/dashboard", { replace: true });
         return;
       }
