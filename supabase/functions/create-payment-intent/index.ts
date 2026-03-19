@@ -26,15 +26,15 @@ serve(async (req) => {
       { global: { headers: { Authorization: authHeader } } }
     )
 
-    const { data: claimsData, error: claimsError } = await anonClient.auth.getClaims(authHeader.replace('Bearer ', ''))
-    if (claimsError || !claimsData?.claims) {
+    const { data: { user }, error: userError } = await anonClient.auth.getUser()
+    if (userError || !user) {
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    const callerEmail = claimsData.claims.email as string
+    const callerEmail = user.email as string
 
     const { booking_id } = await req.json()
 
