@@ -28,10 +28,22 @@ const SAVINGS: Record<string, Record<string, number>> = {
   'three':  { duo: 630, family: 760, large: 990  }
 };
 
+const TIER_LIMITS: Record<string, { min: number; max: number }> = {
+  duo:    { min: 1, max: 2 },
+  family: { min: 3, max: 4 },
+  large:  { min: 5, max: 6 },
+};
+
+const TIER_HINTS: Record<string, string> = {
+  duo:    "Duo sessions are for 1–2 people",
+  family: "Family sessions are for 3–4 people",
+  large:  "Large sessions are for 5–6 people",
+};
+
 const TIERS = [
-  { key: "duo", label: "Cooq Duo", people: "1–2 people", detail: "3 hours · 2 mains + 2 sides", price: 350, discoveryPrice: 299 },
-  { key: "family", label: "Cooq Family", people: "3–4 people", detail: "3 hours · 2 mains + 3 sides", price: 420, discoveryPrice: null },
-  { key: "large", label: "Cooq Large", people: "5–6 people", detail: "4 hours · 3 mains + 3 sides", price: 550, discoveryPrice: null },
+  { key: "duo", label: "Cooq Duo", people: "1–2 people · ~2 hours", detail: "2 proteins · 2 sides · covers 3–4 days", price: 350, discoveryPrice: 299 },
+  { key: "family", label: "Cooq Family", people: "3–4 people · ~3 hours", detail: "2 proteins · 3 sides · covers 3–4 days", price: 420, discoveryPrice: null },
+  { key: "large", label: "Cooq Large", people: "5–6 people · ~4 hours", detail: "3 proteins · 3 sides · covers 3–4 days", price: 550, discoveryPrice: null },
 ] as const;
 
 const FREQUENCIES = [
