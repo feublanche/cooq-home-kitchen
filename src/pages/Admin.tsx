@@ -361,6 +361,7 @@ const Admin = () => {
         </div>
         <div className="flex items-center gap-3">
           <span className="font-body text-xs text-background/70 uppercase tracking-wider">Operator Dashboard</span>
+          <a href="/cook-agreement" target="_blank" className="text-xs text-gray-400 underline hover:text-gray-600">Cook Agreement</a>
           <button
             onClick={async () => { await supabase.auth.signOut(); navigate("/login"); }}
             className="text-background/70 hover:text-background transition-colors"

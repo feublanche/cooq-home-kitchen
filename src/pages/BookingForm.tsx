@@ -28,10 +28,22 @@ const SAVINGS: Record<string, Record<string, number>> = {
   'three':  { duo: 630, family: 760, large: 990  }
 };
 
+const TIER_LIMITS: Record<string, { min: number; max: number }> = {
+  duo:    { min: 1, max: 2 },
+  family: { min: 3, max: 4 },
+  large:  { min: 5, max: 6 },
+};
+
+const TIER_HINTS: Record<string, string> = {
+  duo:    "Duo sessions are for 1–2 people",
+  family: "Family sessions are for 3–4 people",
+  large:  "Large sessions are for 5–6 people",
+};
+
 const TIERS = [
-  { key: "duo", label: "Cooq Duo", people: "1–2 people", detail: "3 hours · 2 mains + 2 sides", price: 350, discoveryPrice: 299 },
-  { key: "family", label: "Cooq Family", people: "3–4 people", detail: "3 hours · 2 mains + 3 sides", price: 420, discoveryPrice: null },
-  { key: "large", label: "Cooq Large", people: "5–6 people", detail: "4 hours · 3 mains + 3 sides", price: 550, discoveryPrice: null },
+  { key: "duo", label: "Cooq Duo", people: "1–2 people · ~2 hours", detail: "2 proteins · 2 sides · covers 3–4 days", price: 350, discoveryPrice: 299 },
+  { key: "family", label: "Cooq Family", people: "3–4 people · ~3 hours", detail: "2 proteins · 3 sides · covers 3–4 days", price: 420, discoveryPrice: null },
+  { key: "large", label: "Cooq Large", people: "5–6 people · ~4 hours", detail: "3 proteins · 3 sides · covers 3–4 days", price: 550, discoveryPrice: null },
 ] as const;
 
 const FREQUENCIES = [
@@ -70,7 +82,19 @@ const BookingForm = () => {
   const { booking, updateBooking } = useBooking();
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [tier, setTier] = useState<string>(routerState.tier || "duo");
+  const [tier, setTierRaw] = useState<string>(routerState.tier || "duo");
+
+  const setTier = (newTier: string) => {
+    setTierRaw(newTier);
+    const limits = TIER_LIMITS[newTier];
+    if (limits) {
+      updateBooking({ partySize: limits.min });
+    }
+    // Uncheck first session if not duo
+    if (newTier !== "duo") {
+      setIsFirstSession(false);
+    }
+  };
   const [frequency, setFrequency] = useState<string>("one-time");
   const [isFirstSession, setIsFirstSession] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
@@ -247,15 +271,24 @@ const BookingForm = () => {
         </div>
 
         {/* First session checkbox */}
-        <label className="flex items-center gap-2 mb-6 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={isFirstSession}
-            onChange={(e) => setIsFirstSession(e.target.checked)}
-            className="w-4 h-4 rounded border-border accent-primary"
-          />
-          <span className="font-body text-xs text-muted-foreground">This is my first Cooq session</span>
-        </label>
+        <div className="mb-6">
+          <label className={`flex items-center gap-2 cursor-pointer ${tier !== "duo" ? "opacity-40 cursor-not-allowed pointer-events-none" : ""}`}>
+            <input
+              type="checkbox"
+              checked={isFirstSession}
+              onChange={(e) => setIsFirstSession(e.target.checked)}
+              disabled={tier !== "duo"}
+              className="w-4 h-4 rounded border-border accent-primary"
+            />
+            <span className="font-body text-xs text-muted-foreground">This is my first Cooq session</span>
+          </label>
+          {tier === "duo" && isFirstSession && (
+            <p className="font-body text-xs mt-1" style={{ color: "#B57E5D" }}>AED 299 · First Cook trial</p>
+          )}
+          {tier !== "duo" && (
+            <p className="font-body text-xs text-gray-400 italic mt-1">First Cook trial is only available for Duo sessions</p>
+          )}
+        </div>
 
         {/* ── FREQUENCY ── */}
         <p className="font-body text-sm font-bold text-foreground mb-3">How often?</p>
@@ -359,10 +392,11 @@ const BookingForm = () => {
         <div className="mb-4">
           <label className="font-body text-sm font-medium text-foreground mb-1 block">Party size</label>
           <div className="flex items-center gap-3">
-            <button onClick={() => updateBooking({ partySize: Math.max(1, booking.partySize - 1) })} className="w-9 h-9 rounded-full bg-card border border-border flex items-center justify-center font-body font-bold">−</button>
+            <button onClick={() => { const limits = TIER_LIMITS[tier]; updateBooking({ partySize: Math.max(limits?.min ?? 1, booking.partySize - 1) }); }} className="w-9 h-9 rounded-full bg-card border border-border flex items-center justify-center font-body font-bold">−</button>
             <span className="font-body text-lg font-semibold">{booking.partySize}</span>
-            <button onClick={() => updateBooking({ partySize: Math.min(20, booking.partySize + 1) })} className="w-9 h-9 rounded-full bg-card border border-border flex items-center justify-center font-body font-bold">+</button>
+            <button onClick={() => { const limits = TIER_LIMITS[tier]; updateBooking({ partySize: Math.min(limits?.max ?? 20, booking.partySize + 1) }); }} className="w-9 h-9 rounded-full bg-card border border-border flex items-center justify-center font-body font-bold">+</button>
           </div>
+          <p className="font-body text-xs text-gray-400 mt-1">{TIER_HINTS[tier]}</p>
         </div>
 
         <div className="mb-4">
