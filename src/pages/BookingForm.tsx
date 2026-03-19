@@ -271,15 +271,24 @@ const BookingForm = () => {
         </div>
 
         {/* First session checkbox */}
-        <label className="flex items-center gap-2 mb-6 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={isFirstSession}
-            onChange={(e) => setIsFirstSession(e.target.checked)}
-            className="w-4 h-4 rounded border-border accent-primary"
-          />
-          <span className="font-body text-xs text-muted-foreground">This is my first Cooq session</span>
-        </label>
+        <div className="mb-6">
+          <label className={`flex items-center gap-2 cursor-pointer ${tier !== "duo" ? "opacity-40 cursor-not-allowed pointer-events-none" : ""}`}>
+            <input
+              type="checkbox"
+              checked={isFirstSession}
+              onChange={(e) => setIsFirstSession(e.target.checked)}
+              disabled={tier !== "duo"}
+              className="w-4 h-4 rounded border-border accent-primary"
+            />
+            <span className="font-body text-xs text-muted-foreground">This is my first Cooq session</span>
+          </label>
+          {tier === "duo" && isFirstSession && (
+            <p className="font-body text-xs mt-1" style={{ color: "#B57E5D" }}>AED 299 · First Cook trial</p>
+          )}
+          {tier !== "duo" && (
+            <p className="font-body text-xs text-gray-400 italic mt-1">First Cook trial is only available for Duo sessions</p>
+          )}
+        </div>
 
         {/* ── FREQUENCY ── */}
         <p className="font-body text-sm font-bold text-foreground mb-3">How often?</p>
