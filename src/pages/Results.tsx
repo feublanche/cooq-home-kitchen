@@ -20,6 +20,22 @@ const Results = () => {
     },
   });
 
+  const filtered = cooks.filter((cook: any) => {
+    if (cuisines && cuisines.length > 0 && !cuisines.includes('Any cuisine')) {
+      const cookCuisines = (cook.cuisine || []).map((c: string) => c.toLowerCase())
+      const match = cuisines.some((c: string) =>
+        cookCuisines.some((cc: string) =>
+          cc.includes(c.toLowerCase()) || c.toLowerCase().includes(cc)
+        )
+      )
+      if (!match) return false
+    }
+    return true
+  })
+
+  const displayCooks = filtered.length > 0 ? filtered : cooks;
+  const showExpandedNotice = !!neighborhood && displayCooks.length === cooks.length && cooks.length > 0;
+
   const getInitials = (name: string) =>
     name.split(" ").map((n: string) => n[0]).join(".") + ".";
 
