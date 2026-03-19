@@ -146,7 +146,8 @@ const Results = () => {
                 </button>
               </div>
             );
-          })
+            })}
+          </>
         )}
       </div>
     </div>

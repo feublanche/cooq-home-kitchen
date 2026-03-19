@@ -244,16 +244,20 @@ const Search = () => {
                       <tbody>
                         {option.rows.map(row => (
                           <tr key={row.tier} className="border-b border-gray-50 last:border-0">
-                            <td className="py-1.5 text-[#2D312E] font-medium text-xs">{row.tier}</td>
-                            <td className="py-1.5 text-gray-400 text-xs">{row.people}</td>
-                            <td className="py-1.5 text-[#B57E5D] font-semibold text-xs text-right">{row.price}</td>
+                            <td className="py-2 text-[#2D312E] font-medium text-xs">{row.tier}</td>
+                            <td className="py-2 text-gray-400 text-xs">{row.people}</td>
+                            <td className="py-2 text-right w-5/12">
+                              <span className="text-[#B57E5D] font-semibold text-xs block">{row.price}</span>
+                              {row.saving && (
+                                <span className="text-[#86A383] text-[10px] block leading-tight">
+                                  save AED {row.saving}/mo
+                                </span>
+                              )}
+                            </td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
-                    {option.savings && (
-                      <p className="text-[#86A383] text-xs mt-2 font-medium">{option.savings}</p>
-                    )}
                   </button>
                 );
               })}
