@@ -309,6 +309,39 @@ const CookPhotoUpload = () => {
   );
 };
 
+const SignedPhotoRow = ({ photo, formatDate }: { photo: PastUpload; formatDate: (d: string | null) => string }) => {
+  const [src, setSrc] = useState<string>("");
+  useEffect(() => {
+    const load = async () => {
+      // If it's already a full URL (legacy), use it; otherwise generate signed URL
+      if (photo.photo_url.startsWith("http")) {
+        setSrc(photo.photo_url);
+      } else {
+        const { data } = await supabase.storage.from("proof-photos").createSignedUrl(photo.photo_url, 3600);
+        if (data?.signedUrl) setSrc(data.signedUrl);
+      }
+    };
+    load();
+  }, [photo.photo_url]);
+
+  return (
+    <div className="flex items-center gap-3 py-3" style={{ borderBottom: "1px solid rgba(249,247,242,0.06)" }}>
+      {src ? (
+        <img src={src} alt={photo.photo_type} className="rounded-lg object-cover" style={{ width: "48px", height: "48px" }} />
+      ) : (
+        <div className="rounded-lg bg-gray-700 animate-pulse" style={{ width: "48px", height: "48px" }} />
+      )}
+      <div className="flex-1">
+        <p className="font-body capitalize" style={{ fontSize: "12px", color: "#F9F7F2" }}>{photo.photo_type}</p>
+        <p className="font-body" style={{ fontSize: "10px", color: "rgba(249,247,242,0.4)" }}>{formatDate(photo.uploaded_at)}</p>
+      </div>
+      <span className="font-body" style={{ fontSize: "11px", color: !photo.reviewed ? "#B57E5D" : photo.approved ? "#86A383" : "#ef4444" }}>
+        {!photo.reviewed ? "Pending" : photo.approved ? "Approved ✓" : "Rejected"}
+      </span>
+    </div>
+  );
+};
+
 const UploadZone = ({
   label,
   preview,
