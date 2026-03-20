@@ -166,6 +166,35 @@ export type Database = {
           },
         ]
       }
+      cook_blocked_dates: {
+        Row: {
+          blocked_date: string
+          cook_id: string
+          created_at: string | null
+          id: string
+        }
+        Insert: {
+          blocked_date: string
+          cook_id: string
+          created_at?: string | null
+          id?: string
+        }
+        Update: {
+          blocked_date?: string
+          cook_id?: string
+          created_at?: string | null
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cook_blocked_dates_cook_id_fkey"
+            columns: ["cook_id"]
+            isOneToOne: false
+            referencedRelation: "cooks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cook_menus: {
         Row: {
           cook_id: string | null
