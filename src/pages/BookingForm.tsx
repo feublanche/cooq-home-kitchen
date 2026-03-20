@@ -9,7 +9,7 @@ import type { User } from "@supabase/supabase-js";
 
 const steps = ["Preferences", "Match", "Profile", "Details", "Confirm"];
 
-const PRICING = {
+const PRICES: Record<string, Record<string, number>> = {
   'one-time':   { duo: 350,  family: 420,  large: 550  },
   'first-cook': { duo: 299,  family: 420,  large: 550  },
   'weekly':     { duo: 1190, family: 1430, large: 1870 },
@@ -55,9 +55,22 @@ const FREQUENCIES = [
 
 const GROCERY_FEE = 75;
 
-const getTotal = (tier: string, frequency: string, isFirstCook: boolean): number => {
-  const key = (isFirstCook && tier === 'duo' && frequency === 'one-time') ? 'first-cook' : frequency;
-  return PRICING[key as keyof typeof PRICING]?.[tier as keyof typeof PRICING['one-time']] ?? 350;
+const getTotal = (tier: string, freq: string, first: boolean): number => {
+  const key = (first && tier === 'duo' && freq === 'one-time') ? 'first-cook' : freq;
+  return PRICES[key]?.[tier] ?? 350;
+};
+
+const FREQ_LABELS: Record<string, string> = {
+  'one-time': 'One-time',
+  'weekly': 'Weekly',
+  'twice': 'Twice a week',
+  'three': '3× a week',
+};
+
+const TIER_LABELS: Record<string, string> = {
+  duo: 'Cooq Duo',
+  family: 'Cooq Family',
+  large: 'Cooq Large',
 };
 
 const FormInput = ({
@@ -82,20 +95,19 @@ const BookingForm = () => {
   const { booking, updateBooking } = useBooking();
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [tier, setTierRaw] = useState<string>(routerState.tier || "duo");
 
+  const hasTier = !!routerState.tier;
+  const hasFreq = !!routerState.frequency;
+
+  const [tier, setTierRaw] = useState<string>(routerState.tier || "duo");
   const setTier = (newTier: string) => {
     setTierRaw(newTier);
     const limits = TIER_LIMITS[newTier];
-    if (limits) {
-      updateBooking({ partySize: limits.min });
-    }
-    // Uncheck first session if not duo
-    if (newTier !== "duo") {
-      setIsFirstSession(false);
-    }
+    if (limits) updateBooking({ partySize: limits.min });
+    if (newTier !== "duo") setIsFirstSession(false);
   };
-  const [frequency, setFrequency] = useState<string>("one-time");
+
+  const [frequency, setFrequency] = useState<string>(routerState.frequency || "one-time");
   const [isFirstSession, setIsFirstSession] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [user, setUser] = useState<User | null>(null);
@@ -104,22 +116,22 @@ const BookingForm = () => {
     supabase.auth.getUser().then(({ data: { user: u } }) => {
       if (u) {
         setUser(u);
-        if (u.user_metadata?.full_name && !booking.customerName) {
-          updateBooking({ customerName: u.user_metadata.full_name });
-        }
-        if (u.email && !booking.email) {
-          updateBooking({ email: u.email });
-        }
+        if (u.user_metadata?.full_name && !booking.customerName) updateBooking({ customerName: u.user_metadata.full_name });
+        if (u.email && !booking.email) updateBooking({ email: u.email });
       }
     });
   }, []);
 
   const selectedTier = TIERS.find((t) => t.key === tier)!;
   const isDiscovery = isFirstSession && tier === "duo";
-
   const sessionPrice = getTotal(tier, frequency, isFirstSession);
   const groceryFee = booking.groceryAddon ? GROCERY_FEE : 0;
   const total = sessionPrice + groceryFee;
+
+  const formatBookingDate = (d: string) => {
+    if (!d) return "Not selected";
+    return new Date(d).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+  };
 
   const validate = () => {
     const e: Record<string, string> = {};
@@ -132,38 +144,31 @@ const BookingForm = () => {
 
   const handleSubmit = async () => {
     if (!validate()) return;
-
-    // Security: rate limit
     const lastSubmit = sessionStorage.getItem("cooq_last_submit");
     if (lastSubmit && Date.now() - Number(lastSubmit) < 300000) {
       toast({ title: "Please wait 5 minutes before submitting again.", variant: "destructive" });
       return;
     }
-
-    // Security: validate amount
     if (!total || total < 299 || total > 6000) {
       toast({ title: "Invalid booking amount.", variant: "destructive" });
       return;
     }
-
     setLoading(true);
     try {
-      // Security: sanitise text
       const sanitisedAllergyNotes = booking.allergyNotes?.replace(/<[^>]*>/g, "").trim() || "";
-
       sessionStorage.setItem("cooq_last_submit", String(Date.now()));
-
       const sessionType = isDiscovery ? "discovery" : "standard";
+      const areaField = booking.location || routerState.cookArea || "";
       const { data: newBooking, error } = await supabase.from("bookings").insert({
         customer_name: booking.customerName,
         email: booking.email,
         phone: booking.phone,
-        area: booking.location,
+        area: areaField,
         address: booking.address,
-        cook_id: routerState.cookId || booking.cookId,
-        cook_name: booking.cookName,
-        menu_selected: routerState.selectedMenuName || booking.menuSelected,
-        booking_date: booking.bookingDates.join(", "),
+        cook_id: routerState.cookId || booking.cookId || "unassigned",
+        cook_name: routerState.cookInitials || booking.cookName || "To be assigned",
+        menu_selected: routerState.selectedMenuName || booking.menuSelected || "Not selected",
+        booking_date: routerState.bookingDate || null,
         frequency,
         party_size: booking.partySize,
         dietary: booking.dietary,
@@ -185,22 +190,21 @@ const BookingForm = () => {
           totalAed: newBooking.total_aed || total,
           customerName: newBooking.customer_name,
           customerEmail: newBooking.email,
-          area: newBooking.area,
-          bookingDate: newBooking.booking_date,
+          area: areaField,
+          bookingDate: routerState.bookingDate,
+          bookingTime: routerState.bookingTime,
           menuSelected: newBooking.menu_selected,
           cookName: newBooking.cook_name || null,
+          cookId: routerState.cookId,
+          selectedMenuName: routerState.selectedMenuName,
         },
       });
     } catch (err) {
       console.error("Booking error:", err);
+      toast({ title: "Booking failed", description: String(err), variant: "destructive" });
     } finally {
       setLoading(false);
     }
-  };
-
-  const formatDate = (d: string) => {
-    if (!d) return "";
-    return new Date(d).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
   };
 
   return (
@@ -210,7 +214,6 @@ const BookingForm = () => {
         <img src={cooqLogo} alt="Cooq" className="h-7" />
       </nav>
 
-      {/* Progress */}
       <div className="px-6 mb-4">
         <div className="flex gap-1">
           {steps.map((s, i) => (
@@ -225,90 +228,97 @@ const BookingForm = () => {
       </div>
 
       <div className="px-6 pb-6 flex-1">
-        {/* ── BOOKING SUMMARY CARD ── */}
-        {routerState.cookInitials && (
-          <div className="bg-[#86A383]/10 rounded-xl p-4 mb-4">
-            <p className="font-body text-[14px] font-bold text-foreground">Booking with: {routerState.cookInitials}</p>
-            {routerState.selectedMenuName && <p className="font-body text-[12px] text-gray-500 italic">Menu: {routerState.selectedMenuName}</p>}
-            {routerState.cookArea && <p className="font-body text-[12px] text-gray-500">Area: {routerState.cookArea}</p>}
-          </div>
-        )}
+        {/* ── SUMMARY CARD ── */}
+        <div className="bg-[#86A383]/10 rounded-xl p-4 mb-5">
+          <p className="font-body text-[14px] font-bold text-foreground">
+            Cook: {routerState.cookInitials || "To be matched"}{routerState.cookArea ? ` · ${routerState.cookArea}` : ""}
+          </p>
+          <p className="font-body text-[12px] text-gray-500 italic">
+            Menu: {routerState.selectedMenuName || "No menu selected"}
+          </p>
+          <p className="font-body text-[12px] text-gray-500">
+            Date: {formatBookingDate(routerState.bookingDate)}
+          </p>
+          <p className="font-body text-[12px] text-gray-500">
+            Time: {routerState.bookingTime || "Not selected"}
+          </p>
+          <p className="font-body text-[12px] text-gray-500">
+            Tier: {TIER_LABELS[tier] || tier} · Frequency: {FREQ_LABELS[frequency] || frequency}
+          </p>
+          <p className="font-body text-[14px] font-bold mt-2" style={{ color: "#B57E5D" }}>
+            Total: AED {total.toLocaleString()}
+          </p>
+        </div>
 
         {/* ── TIER SELECTION ── */}
-        <p className="font-body text-sm font-bold text-foreground mb-3">Choose your session tier</p>
-        <div className="grid grid-cols-1 gap-3 mb-4">
-          {TIERS.map((t) => {
-            const selected = tier === t.key;
-            const showDiscovery = isFirstSession && t.key === "duo";
-            return (
-              <button
-                key={t.key}
-                type="button"
-                onClick={() => setTier(t.key)}
-                className={`text-left rounded-xl p-4 border-2 transition cursor-pointer ${
-                  selected ? "border-primary bg-primary/5" : "border-border bg-card"
-                }`}
-              >
-                <div className="flex justify-between items-start">
-                  <div>
-                    <p className="font-body text-sm font-bold text-foreground">{t.label} <span className="font-normal text-muted-foreground">· {t.people}</span></p>
-                    <p className="font-body text-xs text-muted-foreground">{t.detail}</p>
-                  </div>
-                  <div className="text-right">
-                    {showDiscovery ? (
-                      <>
-                        <p className="font-body text-sm font-bold" style={{ color: "#B57E5D" }}>AED 299</p>
-                        <span className="font-body text-[10px] px-1.5 py-0.5 rounded-full" style={{ backgroundColor: "rgba(181,126,93,0.15)", color: "#B57E5D" }}>First Cook trial</span>
-                      </>
-                    ) : (
-                      <p className="font-body text-sm font-bold text-foreground">AED {t.price}</p>
-                    )}
-                  </div>
-                </div>
-              </button>
-            );
-          })}
-        </div>
+        {hasTier ? (
+          <div className="mb-4 p-3 rounded-xl bg-card border border-border">
+            <p className="font-body text-sm text-muted-foreground">Tier: <span className="font-semibold text-foreground">{TIER_LABELS[tier]}</span></p>
+          </div>
+        ) : (
+          <>
+            <p className="font-body text-sm font-bold text-foreground mb-3">Choose your session tier</p>
+            <div className="grid grid-cols-1 gap-3 mb-4">
+              {TIERS.map((t) => {
+                const selected = tier === t.key;
+                const showDiscovery = isFirstSession && t.key === "duo";
+                return (
+                  <button key={t.key} type="button" onClick={() => setTier(t.key)}
+                    className={`text-left rounded-xl p-4 border-2 transition cursor-pointer ${selected ? "border-primary bg-primary/5" : "border-border bg-card"}`}>
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="font-body text-sm font-bold text-foreground">{t.label} <span className="font-normal text-muted-foreground">· {t.people}</span></p>
+                        <p className="font-body text-xs text-muted-foreground">{t.detail}</p>
+                      </div>
+                      <div className="text-right">
+                        {showDiscovery ? (
+                          <>
+                            <p className="font-body text-sm font-bold" style={{ color: "#B57E5D" }}>AED 299</p>
+                            <span className="font-body text-[10px] px-1.5 py-0.5 rounded-full" style={{ backgroundColor: "rgba(181,126,93,0.15)", color: "#B57E5D" }}>First Cook trial</span>
+                          </>
+                        ) : (
+                          <p className="font-body text-sm font-bold text-foreground">AED {t.price}</p>
+                        )}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </>
+        )}
 
         {/* First session checkbox */}
         <div className="mb-6">
           <label className={`flex items-center gap-2 cursor-pointer ${tier !== "duo" ? "opacity-40 cursor-not-allowed pointer-events-none" : ""}`}>
-            <input
-              type="checkbox"
-              checked={isFirstSession}
-              onChange={(e) => setIsFirstSession(e.target.checked)}
-              disabled={tier !== "duo"}
-              className="w-4 h-4 rounded border-border accent-primary"
-            />
+            <input type="checkbox" checked={isFirstSession} onChange={(e) => setIsFirstSession(e.target.checked)} disabled={tier !== "duo"} className="w-4 h-4 rounded border-border accent-primary" />
             <span className="font-body text-xs text-muted-foreground">This is my first Cooq session</span>
           </label>
-          {tier === "duo" && isFirstSession && (
-            <p className="font-body text-xs mt-1" style={{ color: "#B57E5D" }}>AED 299 · First Cook trial</p>
-          )}
-          {tier !== "duo" && (
-            <p className="font-body text-xs text-gray-400 italic mt-1">First Cook trial is only available for Duo sessions</p>
-          )}
+          {tier === "duo" && isFirstSession && <p className="font-body text-xs mt-1" style={{ color: "#B57E5D" }}>AED 299 · First Cook trial</p>}
+          {tier !== "duo" && <p className="font-body text-xs text-gray-400 italic mt-1">First Cook trial is only available for Duo sessions</p>}
         </div>
 
         {/* ── FREQUENCY ── */}
-        <p className="font-body text-sm font-bold text-foreground mb-3">How often?</p>
-        <div className="flex flex-wrap gap-2 mb-2">
-          {FREQUENCIES.map((f) => {
-            const selected = frequency === f.key;
-            return (
-              <button
-                key={f.key}
-                type="button"
-                onClick={() => setFrequency(f.key)}
-                className={`font-body text-xs px-4 py-2 rounded-full border transition ${
-                  selected ? "border-primary bg-primary/10 text-primary font-semibold" : "border-border text-muted-foreground"
-                }`}
-              >
-                {f.label}
-              </button>
-            );
-          })}
-        </div>
+        {hasFreq ? (
+          <div className="mb-4 p-3 rounded-xl bg-card border border-border">
+            <p className="font-body text-sm text-muted-foreground">Frequency: <span className="font-semibold text-foreground">{FREQ_LABELS[frequency]}</span></p>
+          </div>
+        ) : (
+          <>
+            <p className="font-body text-sm font-bold text-foreground mb-3">How often?</p>
+            <div className="flex flex-wrap gap-2 mb-2">
+              {FREQUENCIES.map((f) => {
+                const selected = frequency === f.key;
+                return (
+                  <button key={f.key} type="button" onClick={() => setFrequency(f.key)}
+                    className={`font-body text-xs px-4 py-2 rounded-full border transition ${selected ? "border-primary bg-primary/10 text-primary font-semibold" : "border-border text-muted-foreground"}`}>
+                    {f.label}
+                  </button>
+                );
+              })}
+            </div>
+          </>
+        )}
 
         {/* Savings badge */}
         {isDiscovery ? (
@@ -320,55 +330,20 @@ const BookingForm = () => {
             <p className="font-body text-xs px-2 py-1 rounded inline-block" style={{ color: "#86A383", backgroundColor: "rgba(134,163,131,0.1)" }}>
               You save AED {SAVINGS[frequency]?.[tier]} per month vs booking one-time
             </p>
-            <p className="font-body text-[11px] text-muted-foreground mt-1">
-              {SESSIONS[frequency]} sessions per month · 15% off
-            </p>
+            <p className="font-body text-[11px] text-muted-foreground mt-1">{SESSIONS[frequency]} sessions per month · 15% off</p>
           </div>
         ) : (
-          <p className="font-body text-xs text-muted-foreground mb-4">
-            AED {sessionPrice} per session
-          </p>
+          <p className="font-body text-xs text-muted-foreground mb-4">AED {sessionPrice} per session</p>
         )}
         <div className="mb-6" />
-
-        {/* ── ORDER SUMMARY ── */}
-        <div className="bg-primary/10 rounded-xl p-4 mb-6">
-          <p className="font-body text-sm font-semibold text-foreground">
-            {selectedTier.label} · {booking.cookName || "We'll match you"}
-          </p>
-          <p className="font-body text-xs text-muted-foreground">
-            {isDiscovery ? "First Cook trial" : "Standard session"} · {FREQUENCIES.find((f) => f.key === frequency)?.label}
-          </p>
-          {booking.menuSelected && (
-            <p className="font-body text-xs text-muted-foreground mt-1">{booking.menuSelected}</p>
-          )}
-          {booking.bookingDates.length > 0 && (
-            <p className="font-body text-xs text-muted-foreground">{booking.bookingDates.map(formatDate).join(", ")}</p>
-          )}
-          <div className="mt-2 pt-2 border-t border-primary/20">
-            <div className="flex justify-between font-body text-xs text-muted-foreground">
-              <span>Session{frequency !== "one-time" ? ` (${SESSIONS[frequency]}×/mo)` : ""}</span><span>AED {sessionPrice}</span>
-            </div>
-            {booking.groceryAddon && (
-              <div className="flex justify-between font-body text-xs text-muted-foreground">
-                <span>Grocery shopping</span><span>AED {GROCERY_FEE}</span>
-              </div>
-            )}
-            <div className="flex justify-between font-body text-sm font-bold mt-1" style={{ color: "#B57E5D" }}>
-              <span>Total</span><span>AED {total}</span>
-            </div>
-          </div>
-        </div>
 
         {/* ── FORM FIELDS ── */}
         <div className="mb-4">
           <label className="font-body text-sm font-medium text-foreground mb-1 block">Full name *</label>
           <div className="relative">
-            <input
-              type="text" value={booking.customerName} readOnly={!!user?.user_metadata?.full_name}
+            <input type="text" value={booking.customerName} readOnly={!!user?.user_metadata?.full_name}
               onChange={(e) => updateBooking({ customerName: e.target.value })}
-              className="w-full p-3 rounded-lg border border-border bg-card font-body text-sm focus:outline-none focus:ring-2 focus:ring-primary pr-10"
-            />
+              className="w-full p-3 rounded-lg border border-border bg-card font-body text-sm focus:outline-none focus:ring-2 focus:ring-primary pr-10" />
             {user?.user_metadata?.full_name && <Lock className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />}
           </div>
           {errors.customerName && <p className="font-body text-xs text-destructive mt-1">{errors.customerName}</p>}
@@ -376,11 +351,9 @@ const BookingForm = () => {
         <div className="mb-4">
           <label className="font-body text-sm font-medium text-foreground mb-1 block">Email address *</label>
           <div className="relative">
-            <input
-              type="email" value={booking.email} readOnly={!!user?.email}
+            <input type="email" value={booking.email} readOnly={!!user?.email}
               onChange={(e) => updateBooking({ email: e.target.value })}
-              className="w-full p-3 rounded-lg border border-border bg-card font-body text-sm focus:outline-none focus:ring-2 focus:ring-primary pr-10"
-            />
+              className="w-full p-3 rounded-lg border border-border bg-card font-body text-sm focus:outline-none focus:ring-2 focus:ring-primary pr-10" />
             {user?.email && <Lock className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />}
           </div>
           {errors.email && <p className="font-body text-xs text-destructive mt-1">{errors.email}</p>}
@@ -406,11 +379,8 @@ const BookingForm = () => {
 
         <div className="mb-6">
           <label className="font-body text-sm font-medium text-foreground mb-1 block">Allergies or special notes</label>
-          <textarea
-            value={booking.allergyNotes}
-            onChange={(e) => updateBooking({ allergyNotes: e.target.value })}
-            className="w-full p-3 rounded-lg border border-border bg-card font-body text-sm resize-none h-20 focus:outline-none focus:ring-2 focus:ring-primary"
-          />
+          <textarea value={booking.allergyNotes} onChange={(e) => updateBooking({ allergyNotes: e.target.value })}
+            className="w-full p-3 rounded-lg border border-border bg-card font-body text-sm resize-none h-20 focus:outline-none focus:ring-2 focus:ring-primary" />
         </div>
 
         {/* ── GROCERY TOGGLE ── */}
@@ -428,16 +398,12 @@ const BookingForm = () => {
             </div>
             <p className="font-body text-xs text-muted-foreground">Grocery shopping service: AED {GROCERY_FEE}</p>
           </div>
-          <button
-            onClick={() => updateBooking({ groceryAddon: !booking.groceryAddon })}
-            className={`w-12 h-7 rounded-full transition-colors relative ${booking.groceryAddon ? "bg-primary" : "bg-border"}`}
-          >
+          <button onClick={() => updateBooking({ groceryAddon: !booking.groceryAddon })}
+            className={`w-12 h-7 rounded-full transition-colors relative ${booking.groceryAddon ? "bg-primary" : "bg-border"}`}>
             <div className={`w-5 h-5 rounded-full bg-card absolute top-1 transition-transform ${booking.groceryAddon ? "translate-x-6" : "translate-x-1"}`} />
           </button>
         </div>
-        <p className="font-body text-xs text-muted-foreground mb-6">
-          Your Cooq handles the shopping. They'll submit the grocery receipt for your reimbursement.
-        </p>
+        <p className="font-body text-xs text-muted-foreground mb-6">Your Cooq handles the shopping. They'll submit the grocery receipt for your reimbursement.</p>
 
         {/* ── TOTAL ── */}
         <div className="space-y-1 mb-6">
@@ -447,14 +413,13 @@ const BookingForm = () => {
           </div>
           {booking.groceryAddon && (
             <div className="flex justify-between font-body text-sm text-muted-foreground">
-              <span>Grocery shopping service</span>
-              <span>AED {GROCERY_FEE}</span>
+              <span>Grocery shopping service</span><span>AED {GROCERY_FEE}</span>
             </div>
           )}
           <div className="h-px bg-border my-2" />
           <div className="flex justify-between items-center">
             <span className="font-body text-base font-semibold text-foreground">Total</span>
-            <span className="font-display text-xl font-bold" style={{ color: "#B57E5D" }}>AED {total}</span>
+            <span className="font-display text-xl font-bold" style={{ color: "#B57E5D" }}>AED {total.toLocaleString()}</span>
           </div>
         </div>
 
@@ -464,12 +429,9 @@ const BookingForm = () => {
           <span>I agree to Cooq's <a href="/terms" target="_blank" className="text-[#86A383] underline">Terms &amp; Conditions</a> and <a href="/privacy" target="_blank" className="text-[#86A383] underline">Privacy Policy</a></span>
         </label>
 
-        <button
-          disabled={loading || !agreedToTerms}
-          onClick={handleSubmit}
+        <button disabled={loading || !agreedToTerms} onClick={handleSubmit}
           className="w-full py-4 rounded-lg font-body font-semibold text-base disabled:opacity-40 transition-opacity"
-          style={{ backgroundColor: "#B57E5D", color: "#F9F7F2" }}
-        >
+          style={{ backgroundColor: "#B57E5D", color: "#F9F7F2" }}>
           {loading ? "Saving..." : "Confirm Booking →"}
         </button>
       </div>

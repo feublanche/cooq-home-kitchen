@@ -69,21 +69,24 @@ const MyBookings = () => {
     navigate("/");
   };
 
-  const formatDate = (d: string) =>
-    new Date(d).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+  const formatSessionDate = (b: Booking) => {
+    if (!b.booking_date) return "Date to be confirmed";
+    const formatted = new Date(b.booking_date).toLocaleDateString("en-GB", {
+      weekday: "short", day: "numeric", month: "short", year: "numeric",
+    });
+    const time = (b as any).booking_time;
+    return time ? `${formatted} · ${time}` : formatted;
+  };
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <nav className="flex items-center justify-between px-6 py-4">
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate("/")} className="text-foreground">
-            <ArrowLeft className="w-5 h-5" />
-          </button>
+          <button onClick={() => navigate("/")} className="text-foreground"><ArrowLeft className="w-5 h-5" /></button>
           <img src={cooqLogo} alt="Cooq" className="h-7" />
         </div>
         <button onClick={handleSignOut} className="flex items-center gap-1.5 text-muted-foreground font-body text-sm hover:text-foreground transition-colors">
-          <LogOut className="w-4 h-4" />
-          Sign out
+          <LogOut className="w-4 h-4" /> Sign out
         </button>
       </nav>
 
@@ -91,16 +94,10 @@ const MyBookings = () => {
         <h1 className="font-display italic text-2xl text-foreground mb-1">My Bookings</h1>
         <p className="font-body text-sm text-muted-foreground mb-4">{userEmail}</p>
 
-        {/* Filter tabs */}
         <div className="flex gap-2 mb-6 overflow-x-auto">
           {filterTabs.map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setFilter(tab)}
-              className={`px-4 py-1.5 rounded-full font-body text-xs transition-colors ${
-                filter === tab ? "bg-primary text-primary-foreground font-semibold" : "bg-muted text-muted-foreground"
-              }`}
-            >
+            <button key={tab} onClick={() => setFilter(tab)}
+              className={`px-4 py-1.5 rounded-full font-body text-xs transition-colors ${filter === tab ? "bg-primary text-primary-foreground font-semibold" : "bg-muted text-muted-foreground"}`}>
               {tab}
             </button>
           ))}
@@ -138,33 +135,30 @@ const MyBookings = () => {
                 </div>
 
                 <div className="space-y-1.5">
-                  {b.booking_date && (
-                    <div className="flex items-center gap-2 font-body text-sm text-muted-foreground">
-                      <Calendar className="w-3.5 h-3.5" />
-                      <span>{b.booking_date}</span>
-                    </div>
-                  )}
+                  <div className="flex items-center gap-2 font-body text-sm text-muted-foreground">
+                    <Calendar className="w-3.5 h-3.5" />
+                    <span>{formatSessionDate(b)}</span>
+                  </div>
                   {b.area && (
                     <div className="flex items-center gap-2 font-body text-sm text-muted-foreground">
                       <MapPin className="w-3.5 h-3.5" />
                       <span>{b.area}</span>
                     </div>
                   )}
+                  <p className="text-xs text-[#86A383]">
+                    {b.cook_name && b.cook_name !== "To be assigned" ? `Cook: ${b.cook_name}` : "Cook: To be assigned"}
+                  </p>
                 </div>
 
                 <div className="flex items-center justify-between mt-3 pt-3 border-t border-border">
-                  <span className="font-body text-xs text-muted-foreground">Booked {formatDate(b.created_at)}</span>
+                  <span className="font-body text-xs text-muted-foreground">Booked {new Date(b.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}</span>
                   <span className="font-display text-base font-bold text-copper">AED {b.total_aed || 0}</span>
                 </div>
 
-                {/* Rate link for completed unrated bookings */}
                 {b.status === "completed" && !b.rating && (
-                  <button
-                    onClick={() => navigate(`/rate/${b.id}`)}
-                    className="w-full mt-3 py-2 rounded-lg border border-copper text-copper font-body text-sm font-medium flex items-center justify-center gap-1.5 hover:bg-copper/5 transition-colors"
-                  >
-                    <Star className="w-3.5 h-3.5" />
-                    Rate your session →
+                  <button onClick={() => navigate(`/rate/${b.id}`)}
+                    className="w-full mt-3 py-2 rounded-lg border border-copper text-copper font-body text-sm font-medium flex items-center justify-center gap-1.5 hover:bg-copper/5 transition-colors">
+                    <Star className="w-3.5 h-3.5" /> Rate your session →
                   </button>
                 )}
               </div>
