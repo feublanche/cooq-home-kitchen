@@ -128,8 +128,9 @@ const CookPhotoUpload = () => {
       return;
     }
 
-    const { data: cUrl } = supabase.storage.from("proof-photos").getPublicUrl(cPath);
-    const { data: kUrl } = supabase.storage.from("proof-photos").getPublicUrl(kPath);
+    // Store path only, not public URL — signed URLs generated on demand
+    const cUrl = cPath;
+    const kUrl = kPath;
 
     const { error: insErr } = await supabase.from("quality_photos").insert([
       {
@@ -137,14 +138,14 @@ const CookPhotoUpload = () => {
         cook_id: cook.id,
         cook_name: cook.name,
         photo_type: "container",
-        photo_url: cUrl.publicUrl,
+        photo_url: cUrl,
       },
       {
         booking_id: selectedId,
         cook_id: cook.id,
         cook_name: cook.name,
         photo_type: "kitchen",
-        photo_url: kUrl.publicUrl,
+        photo_url: kUrl,
       },
     ]);
 
@@ -298,44 +299,45 @@ const CookPhotoUpload = () => {
           </div>
         ) : (
           pastUploads.map((p) => (
-            <div
-              key={p.id}
-              className="flex items-center gap-3 py-3"
-              style={{ borderBottom: "1px solid rgba(249,247,242,0.06)" }}
-            >
-              <img
-                src={p.photo_url}
-                alt={p.photo_type}
-                className="rounded-lg object-cover"
-                style={{ width: "48px", height: "48px" }}
-              />
-              <div className="flex-1">
-                <p className="font-body capitalize" style={{ fontSize: "12px", color: "#F9F7F2" }}>
-                  {p.photo_type}
-                </p>
-                <p className="font-body" style={{ fontSize: "10px", color: "rgba(249,247,242,0.4)" }}>
-                  {formatDate(p.uploaded_at)}
-                </p>
-              </div>
-              <span
-                className="font-body"
-                style={{
-                  fontSize: "11px",
-                  color: !p.reviewed
-                    ? "#B57E5D"
-                    : p.approved
-                    ? "#86A383"
-                    : "#ef4444",
-                }}
-              >
-                {!p.reviewed ? "Pending" : p.approved ? "Approved ✓" : "Rejected"}
-              </span>
-            </div>
+            <SignedPhotoRow key={p.id} photo={p} formatDate={formatDate} />
           ))
         )}
       </div>
 
       <CookBottomNav />
+    </div>
+  );
+};
+
+const SignedPhotoRow = ({ photo, formatDate }: { photo: PastUpload; formatDate: (d: string | null) => string }) => {
+  const [src, setSrc] = useState<string>("");
+  useEffect(() => {
+    const load = async () => {
+      // If it's already a full URL (legacy), use it; otherwise generate signed URL
+      if (photo.photo_url.startsWith("http")) {
+        setSrc(photo.photo_url);
+      } else {
+        const { data } = await supabase.storage.from("proof-photos").createSignedUrl(photo.photo_url, 3600);
+        if (data?.signedUrl) setSrc(data.signedUrl);
+      }
+    };
+    load();
+  }, [photo.photo_url]);
+
+  return (
+    <div className="flex items-center gap-3 py-3" style={{ borderBottom: "1px solid rgba(249,247,242,0.06)" }}>
+      {src ? (
+        <img src={src} alt={photo.photo_type} className="rounded-lg object-cover" style={{ width: "48px", height: "48px" }} />
+      ) : (
+        <div className="rounded-lg bg-gray-700 animate-pulse" style={{ width: "48px", height: "48px" }} />
+      )}
+      <div className="flex-1">
+        <p className="font-body capitalize" style={{ fontSize: "12px", color: "#F9F7F2" }}>{photo.photo_type}</p>
+        <p className="font-body" style={{ fontSize: "10px", color: "rgba(249,247,242,0.4)" }}>{formatDate(photo.uploaded_at)}</p>
+      </div>
+      <span className="font-body" style={{ fontSize: "11px", color: !photo.reviewed ? "#B57E5D" : photo.approved ? "#86A383" : "#ef4444" }}>
+        {!photo.reviewed ? "Pending" : photo.approved ? "Approved ✓" : "Rejected"}
+      </span>
     </div>
   );
 };
