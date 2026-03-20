@@ -298,38 +298,8 @@ const CookPhotoUpload = () => {
             </p>
           </div>
         ) : (
-          pastUploads.map((p) => {
-            // Generate signed URL for private bucket
-            const photoSrc = p.photo_url.startsWith('http') ? p.photo_url : '';
-            return (
-            <div
-              key={p.id}
-              className="flex items-center gap-3 py-3"
-              style={{ borderBottom: "1px solid rgba(249,247,242,0.06)" }}
-            >
-              <SignedImage storagePath={p.photo_url} alt={p.photo_type} />
-              <div className="flex-1">
-                <p className="font-body capitalize" style={{ fontSize: "12px", color: "#F9F7F2" }}>
-                  {p.photo_type}
-                </p>
-                <p className="font-body" style={{ fontSize: "10px", color: "rgba(249,247,242,0.4)" }}>
-                  {formatDate(p.uploaded_at)}
-                </p>
-              </div>
-              <span
-                className="font-body"
-                style={{
-                  fontSize: "11px",
-                  color: !p.reviewed
-                    ? "#B57E5D"
-                    : p.approved
-                    ? "#86A383"
-                    : "#ef4444",
-                }}
-              >
-                {!p.reviewed ? "Pending" : p.approved ? "Approved ✓" : "Rejected"}
-              </span>
-            </div>
+          pastUploads.map((p) => (
+            <SignedPhotoRow key={p.id} photo={p} formatDate={formatDate} />
           ))
         )}
       </div>
