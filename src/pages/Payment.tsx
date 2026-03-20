@@ -15,11 +15,14 @@ interface PaymentState {
   customerEmail: string;
   area: string;
   bookingDate: string;
+  bookingTime: string;
   menuSelected: string;
   cookName: string | null;
+  cookId: string;
+  selectedMenuName: string;
 }
 
-const CheckoutForm = ({ totalAed, bookingId, paymentIntentId }: { totalAed: number; bookingId: string; paymentIntentId: string }) => {
+const CheckoutForm = ({ totalAed, bookingId, paymentState, paymentIntentId }: { totalAed: number; bookingId: string; paymentState: PaymentState; paymentIntentId: string }) => {
   const stripe = useStripe();
   const elements = useElements();
   const navigate = useNavigate();
@@ -44,13 +47,23 @@ const CheckoutForm = ({ totalAed, bookingId, paymentIntentId }: { totalAed: numb
       return;
     }
 
-    // Payment succeeded without redirect
     await supabase
       .from("bookings")
       .update({ status: "confirmed", payment_intent_id: paymentIntentId })
       .eq("id", bookingId);
 
-    navigate("/confirmation", { replace: true });
+    navigate("/confirmation", {
+      replace: true,
+      state: {
+        bookingId: paymentState.bookingId,
+        cookId: paymentState.cookId,
+        totalPaid: paymentState.totalAed,
+        bookingDate: paymentState.bookingDate,
+        bookingTime: paymentState.bookingTime,
+        area: paymentState.area,
+        selectedMenuName: paymentState.selectedMenuName || paymentState.menuSelected,
+      },
+    });
   };
 
   return (
@@ -58,29 +71,16 @@ const CheckoutForm = ({ totalAed, bookingId, paymentIntentId }: { totalAed: numb
       <div className="mx-4 mt-4">
         <PaymentElement />
       </div>
-
       {error && (
         <div className="mx-4 mt-3 p-3 rounded-xl bg-red-50 border border-red-200">
           <p className="font-body text-sm text-red-600">{error}</p>
         </div>
       )}
-
-      <button
-        type="submit"
-        disabled={processing || !stripe}
+      <button type="submit" disabled={processing || !stripe}
         className="mx-4 mt-4 w-[calc(100%-2rem)] py-4 rounded-xl font-body font-semibold text-base text-white disabled:opacity-50 flex items-center justify-center gap-2 transition-opacity"
-        style={{ backgroundColor: "#B57E5D" }}
-      >
-        {processing ? (
-          <>
-            <Loader2 className="w-5 h-5 animate-spin text-white" />
-            Processing...
-          </>
-        ) : (
-          `Pay AED ${totalAed} Securely`
-        )}
+        style={{ backgroundColor: "#B57E5D" }}>
+        {processing ? (<><Loader2 className="w-5 h-5 animate-spin text-white" />Processing...</>) : `Pay AED ${totalAed} Securely`}
       </button>
-
       <div className="flex items-center justify-center gap-1.5 mt-3 mb-8">
         <Lock className="w-3 h-3 text-slate-400" />
         <span className="font-body text-[10px] text-slate-400">Secured by Stripe</span>
@@ -100,29 +100,20 @@ export default function Payment() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (!state) {
-      navigate("/", { replace: true });
-      return;
-    }
-
+    if (!state) { navigate("/", { replace: true }); return; }
     const createIntent = async () => {
       const { data, error: fnError } = await supabase.functions.invoke("create-payment-intent", {
-        body: {
-          booking_id: state.bookingId,
-        },
+        body: { booking_id: state.bookingId },
       });
-
       if (fnError || data?.error) {
         setError(data?.error || fnError?.message || "Unable to start payment.");
         setLoading(false);
         return;
       }
-
       setClientSecret(data.clientSecret);
       setPaymentIntentId(data.paymentIntentId);
       setLoading(false);
     };
-
     createIntent();
   }, [state, navigate]);
 
@@ -140,30 +131,19 @@ export default function Payment() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-4 px-6" style={{ backgroundColor: "#F9F7F2" }}>
         <p className="font-body text-sm text-slate-600 text-center">{error}</p>
-        <button
-          onClick={() => navigate(-1)}
-          className="font-body text-sm underline"
-          style={{ color: "#86A383" }}
-        >
-          Go back
-        </button>
+        <button onClick={() => navigate(-1)} className="font-body text-sm underline" style={{ color: "#86A383" }}>Go back</button>
       </div>
     );
   }
 
   const appearance = {
     theme: "stripe" as const,
-    variables: {
-      colorPrimary: "#86A383",
-      borderRadius: "12px",
-      fontFamily: "DM Sans, sans-serif",
-    },
+    variables: { colorPrimary: "#86A383", borderRadius: "12px", fontFamily: "DM Sans, sans-serif" },
   };
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: "#F9F7F2" }}>
       <div className="max-w-[430px] mx-auto">
-        {/* Header */}
         <div className="flex items-center justify-between px-4 py-4">
           <img src={cooqLogo} alt="Cooq" className="h-7" />
           <div className="flex items-center gap-1.5">
@@ -172,22 +152,26 @@ export default function Payment() {
           </div>
         </div>
 
-        {/* Order Summary */}
         <div className="bg-white rounded-xl shadow-sm mx-4 mt-4 p-5">
           <h2 className="font-display text-base text-slate-800 mb-3">Your Booking</h2>
-
           <div className="flex justify-between py-2 border-b border-slate-100">
             <span className="font-body text-sm text-slate-500">Cook</span>
             {state.cookName ? (
               <span className="font-body text-sm text-slate-800">{state.cookName}</span>
             ) : (
-              <span className="font-body text-sm text-slate-400 italic">We'll match you with a cook</span>
+              <span className="font-body text-sm text-slate-400 italic">To be matched</span>
             )}
           </div>
           <div className="flex justify-between py-2 border-b border-slate-100">
             <span className="font-body text-sm text-slate-500">Date</span>
-            <span className="font-body text-sm text-slate-800">{state.bookingDate}</span>
+            <span className="font-body text-sm text-slate-800">{state.bookingDate || "TBC"}</span>
           </div>
+          {state.bookingTime && (
+            <div className="flex justify-between py-2 border-b border-slate-100">
+              <span className="font-body text-sm text-slate-500">Time</span>
+              <span className="font-body text-sm text-slate-800">{state.bookingTime}</span>
+            </div>
+          )}
           <div className="flex justify-between py-2 border-b border-slate-100">
             <span className="font-body text-sm text-slate-500">Area</span>
             <span className="font-body text-sm text-slate-800">{state.area}</span>
@@ -196,21 +180,15 @@ export default function Payment() {
             <span className="font-body text-sm text-slate-500">Menu</span>
             <span className="font-body text-xs text-slate-400 italic truncate max-w-[180px]">{state.menuSelected}</span>
           </div>
-
           <div className="flex justify-between items-center pt-4 mt-2">
             <span className="font-display text-xl font-bold text-slate-800">AED {state.totalAed}</span>
             <span className="font-body text-[10px] text-slate-400 text-right">Held securely until session complete</span>
           </div>
         </div>
 
-        {/* Stripe Elements */}
         {clientSecret && (
           <Elements stripe={stripePromise} options={{ clientSecret, appearance }}>
-            <CheckoutForm
-              totalAed={state.totalAed}
-              bookingId={state.bookingId}
-              paymentIntentId={paymentIntentId}
-            />
+            <CheckoutForm totalAed={state.totalAed} bookingId={state.bookingId} paymentState={state} paymentIntentId={paymentIntentId} />
           </Elements>
         )}
       </div>
