@@ -23,7 +23,7 @@ const CookProfile = () => {
   const { data: cook, isLoading } = useQuery({
     queryKey: ["cook", id],
     queryFn: async () => {
-      const { data } = await supabase.from("cooks").select("*").eq("id", id!).single();
+      const { data } = await supabase.from("cooks").select("id, name, bio, cuisine, area, years_experience, health_card, photo_url").eq("id", id!).single();
       return data;
     },
     enabled: !!id,
