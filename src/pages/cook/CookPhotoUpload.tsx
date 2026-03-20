@@ -128,8 +128,9 @@ const CookPhotoUpload = () => {
       return;
     }
 
-    const { data: cUrl } = supabase.storage.from("proof-photos").getPublicUrl(cPath);
-    const { data: kUrl } = supabase.storage.from("proof-photos").getPublicUrl(kPath);
+    // Store path only, not public URL — signed URLs generated on demand
+    const cUrl = cPath;
+    const kUrl = kPath;
 
     const { error: insErr } = await supabase.from("quality_photos").insert([
       {
