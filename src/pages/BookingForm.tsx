@@ -73,6 +73,8 @@ const TIER_LABELS: Record<string, string> = {
   large: 'Cooq Large',
 };
 
+const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
 const FormInput = ({
   label, value, onChange, placeholder, error, type = "text",
 }: {
@@ -112,6 +114,10 @@ const BookingForm = () => {
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [user, setUser] = useState<User | null>(null);
 
+  // Recurring day selectors for twice/three frequency
+  const [secondDay, setSecondDay] = useState("");
+  const [thirdDay, setThirdDay] = useState("");
+
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user: u } }) => {
       if (u) {
@@ -124,9 +130,15 @@ const BookingForm = () => {
 
   const selectedTier = TIERS.find((t) => t.key === tier)!;
   const isDiscovery = isFirstSession && tier === "duo";
-  const sessionPrice = getTotal(tier, frequency, isFirstSession);
+  const sessionTotal = getTotal(tier, frequency, isFirstSession);
   const groceryFee = booking.groceryAddon ? GROCERY_FEE : 0;
-  const total = sessionPrice + groceryFee;
+
+  // Primary weekday from booking date
+  const primaryWeekday = routerState.bookingDate
+    ? DAY_NAMES[(new Date(routerState.bookingDate).getDay() + 6) % 7]
+    : "";
+
+  const recurringDays = [primaryWeekday, secondDay, thirdDay].filter(Boolean);
 
   const formatBookingDate = (d: string) => {
     if (!d) return "Not selected";
@@ -149,7 +161,7 @@ const BookingForm = () => {
       toast({ title: "Please wait 5 minutes before submitting again.", variant: "destructive" });
       return;
     }
-    if (!total || total < 299 || total > 6000) {
+    if (!sessionTotal || sessionTotal < 299 || sessionTotal > 6000) {
       toast({ title: "Invalid booking amount.", variant: "destructive" });
       return;
     }
@@ -159,7 +171,7 @@ const BookingForm = () => {
       sessionStorage.setItem("cooq_last_submit", String(Date.now()));
       const sessionType = isDiscovery ? "discovery" : "standard";
       const areaField = booking.location || routerState.cookArea || "";
-      const { data: newBooking, error } = await supabase.from("bookings").insert({
+      const insertData: any = {
         customer_name: booking.customerName,
         email: booking.email,
         phone: booking.phone,
@@ -174,20 +186,21 @@ const BookingForm = () => {
         dietary: booking.dietary,
         allergies_notes: sanitisedAllergyNotes,
         grocery_addon: booking.groceryAddon,
-        grocery_fee: booking.groceryAddon ? GROCERY_FEE : 0,
+        grocery_fee: groceryFee,
         tier,
         session_type: sessionType,
-        total_aed: total,
+        total_aed: sessionTotal,
         status: "pending",
         customer_user_id: user?.id || null,
         selected_menu_id: routerState.selectedMenuId || null,
-      }).select().single();
+      };
+      const { data: newBooking, error } = await supabase.from("bookings").insert(insertData).select().single();
       if (error || !newBooking) throw error || new Error("Booking creation failed");
-      updateBooking({ totalAed: total });
+      updateBooking({ totalAed: sessionTotal });
       navigate("/payment", {
         state: {
           bookingId: newBooking.id,
-          totalAed: newBooking.total_aed || total,
+          totalAed: sessionTotal,
           customerName: newBooking.customer_name,
           customerEmail: newBooking.email,
           area: areaField,
@@ -197,6 +210,8 @@ const BookingForm = () => {
           cookName: newBooking.cook_name || null,
           cookId: routerState.cookId,
           selectedMenuName: routerState.selectedMenuName,
+          recurringDays: JSON.stringify(recurringDays),
+          frequency,
         },
       });
     } catch (err) {
@@ -245,17 +260,32 @@ const BookingForm = () => {
           <p className="font-body text-[12px] text-gray-500">
             Tier: {TIER_LABELS[tier] || tier} · Frequency: {FREQ_LABELS[frequency] || frequency}
           </p>
-          <p className="font-body text-[14px] font-bold mt-2" style={{ color: "#B57E5D" }}>
-            Total: AED {total.toLocaleString()}
-          </p>
+          {recurringDays.length > 1 && (
+            <p className="font-body text-[12px] text-gray-500">
+              Weekly sessions: {recurringDays.join(" + ")}
+            </p>
+          )}
+          <div className="mt-2">
+            {frequency === "one-time" || frequency === "" ? (
+              <p className="font-body text-[14px] font-bold" style={{ color: "#B57E5D" }}>
+                AED {(sessionTotal + groceryFee).toLocaleString()}
+                {groceryFee > 0 && <span className="font-normal text-xs text-gray-400 ml-1">(incl. AED 75 grocery)</span>}
+              </p>
+            ) : (
+              <>
+                <p className="font-body text-[14px] font-bold" style={{ color: "#B57E5D" }}>
+                  AED {sessionTotal.toLocaleString()} / month
+                </p>
+                {groceryFee > 0 && (
+                  <p className="font-body text-[11px] text-gray-500">+ AED 75 grocery service fee per session</p>
+                )}
+              </>
+            )}
+          </div>
         </div>
 
         {/* ── TIER SELECTION ── */}
-        {hasTier ? (
-          <div className="mb-4 p-3 rounded-xl bg-card border border-border">
-            <p className="font-body text-sm text-muted-foreground">Tier: <span className="font-semibold text-foreground">{TIER_LABELS[tier]}</span></p>
-          </div>
-        ) : (
+        {!hasTier && (
           <>
             <p className="font-body text-sm font-bold text-foreground mb-3">Choose your session tier</p>
             <div className="grid grid-cols-1 gap-3 mb-4">
@@ -288,6 +318,12 @@ const BookingForm = () => {
           </>
         )}
 
+        {hasTier && (
+          <div className="mb-4 p-3 rounded-xl bg-card border border-border">
+            <p className="font-body text-sm text-muted-foreground">Tier: <span className="font-semibold text-foreground">{TIER_LABELS[tier]}</span></p>
+          </div>
+        )}
+
         {/* First session checkbox */}
         <div className="mb-6">
           <label className={`flex items-center gap-2 cursor-pointer ${tier !== "duo" ? "opacity-40 cursor-not-allowed pointer-events-none" : ""}`}>
@@ -299,11 +335,7 @@ const BookingForm = () => {
         </div>
 
         {/* ── FREQUENCY ── */}
-        {hasFreq ? (
-          <div className="mb-4 p-3 rounded-xl bg-card border border-border">
-            <p className="font-body text-sm text-muted-foreground">Frequency: <span className="font-semibold text-foreground">{FREQ_LABELS[frequency]}</span></p>
-          </div>
-        ) : (
+        {!hasFreq && (
           <>
             <p className="font-body text-sm font-bold text-foreground mb-3">How often?</p>
             <div className="flex flex-wrap gap-2 mb-2">
@@ -320,6 +352,12 @@ const BookingForm = () => {
           </>
         )}
 
+        {hasFreq && (
+          <div className="mb-4 p-3 rounded-xl bg-card border border-border">
+            <p className="font-body text-sm text-muted-foreground">Frequency: <span className="font-semibold text-foreground">{FREQ_LABELS[frequency]}</span></p>
+          </div>
+        )}
+
         {/* Savings badge */}
         {isDiscovery ? (
           <p className="font-body text-xs mb-4 px-2 py-1 rounded inline-block" style={{ color: "#B57E5D", backgroundColor: "rgba(181,126,93,0.1)" }}>
@@ -333,8 +371,69 @@ const BookingForm = () => {
             <p className="font-body text-[11px] text-muted-foreground mt-1">{SESSIONS[frequency]} sessions per month · 15% off</p>
           </div>
         ) : (
-          <p className="font-body text-xs text-muted-foreground mb-4">AED {sessionPrice} per session</p>
+          <p className="font-body text-xs text-muted-foreground mb-4">AED {sessionTotal} per session</p>
         )}
+
+        {/* ── RECURRING DAY SELECTORS ── */}
+        {frequency === "twice" && (
+          <div className="mb-6">
+            <p className="font-body text-[13px] font-semibold text-foreground mb-2">Choose your second weekly day</p>
+            <div className="flex flex-wrap gap-2">
+              {DAY_NAMES.map((day) => {
+                const disabled = day === primaryWeekday;
+                const selected = secondDay === day;
+                return (
+                  <button key={day} type="button" disabled={disabled}
+                    onClick={() => setSecondDay(day)}
+                    className={`px-4 py-2 rounded-full text-sm transition ${disabled ? "opacity-30 cursor-not-allowed bg-gray-100 text-gray-400" : selected ? "bg-[#86A383] text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>
+                    {day}
+                  </button>
+                );
+              })}
+            </div>
+            {recurringDays.length > 1 && (
+              <p className="font-body text-xs text-muted-foreground mt-2">Weekly sessions: {recurringDays.join(" + ")}</p>
+            )}
+          </div>
+        )}
+
+        {frequency === "three" && (
+          <div className="mb-6">
+            <p className="font-body text-[13px] font-semibold text-foreground mb-2">Choose your two additional weekly days</p>
+            <p className="font-body text-xs text-muted-foreground mb-2">Second day:</p>
+            <div className="flex flex-wrap gap-2 mb-3">
+              {DAY_NAMES.map((day) => {
+                const disabled = day === primaryWeekday || day === thirdDay;
+                const selected = secondDay === day;
+                return (
+                  <button key={day} type="button" disabled={disabled}
+                    onClick={() => setSecondDay(day)}
+                    className={`px-4 py-2 rounded-full text-sm transition ${disabled ? "opacity-30 cursor-not-allowed bg-gray-100 text-gray-400" : selected ? "bg-[#86A383] text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>
+                    {day}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="font-body text-xs text-muted-foreground mb-2">Third day:</p>
+            <div className="flex flex-wrap gap-2">
+              {DAY_NAMES.map((day) => {
+                const disabled = day === primaryWeekday || day === secondDay;
+                const selected = thirdDay === day;
+                return (
+                  <button key={day} type="button" disabled={disabled}
+                    onClick={() => setThirdDay(day)}
+                    className={`px-4 py-2 rounded-full text-sm transition ${disabled ? "opacity-30 cursor-not-allowed bg-gray-100 text-gray-400" : selected ? "bg-[#86A383] text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>
+                    {day}
+                  </button>
+                );
+              })}
+            </div>
+            {recurringDays.length > 1 && (
+              <p className="font-body text-xs text-muted-foreground mt-2">Weekly sessions: {recurringDays.join(" + ")}</p>
+            )}
+          </div>
+        )}
+
         <div className="mb-6" />
 
         {/* ── FORM FIELDS ── */}
@@ -409,17 +508,25 @@ const BookingForm = () => {
         <div className="space-y-1 mb-6">
           <div className="flex justify-between font-body text-sm text-muted-foreground">
             <span>{selectedTier.label} {isDiscovery ? "(First Cook)" : ""} {frequency !== "one-time" ? "/mo" : ""}</span>
-            <span>AED {sessionPrice}</span>
+            <span>AED {sessionTotal.toLocaleString()}</span>
           </div>
           {booking.groceryAddon && (
             <div className="flex justify-between font-body text-sm text-muted-foreground">
-              <span>Grocery shopping service</span><span>AED {GROCERY_FEE}</span>
+              <span>Grocery shopping service{frequency !== "one-time" ? " (per session)" : ""}</span>
+              <span>AED {GROCERY_FEE}</span>
             </div>
           )}
           <div className="h-px bg-border my-2" />
           <div className="flex justify-between items-center">
             <span className="font-body text-base font-semibold text-foreground">Total</span>
-            <span className="font-display text-xl font-bold" style={{ color: "#B57E5D" }}>AED {total.toLocaleString()}</span>
+            {frequency === "one-time" || frequency === "" ? (
+              <span className="font-display text-xl font-bold" style={{ color: "#B57E5D" }}>AED {(sessionTotal + groceryFee).toLocaleString()}</span>
+            ) : (
+              <div className="text-right">
+                <span className="font-display text-xl font-bold" style={{ color: "#B57E5D" }}>AED {sessionTotal.toLocaleString()} /mo</span>
+                {groceryFee > 0 && <p className="text-[10px] text-gray-400">+ AED 75 grocery per session</p>}
+              </div>
+            )}
           </div>
         </div>
 
