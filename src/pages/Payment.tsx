@@ -62,6 +62,8 @@ const CheckoutForm = ({ totalAed, bookingId, paymentState, paymentIntentId }: { 
         bookingTime: paymentState.bookingTime,
         area: paymentState.area,
         selectedMenuName: paymentState.selectedMenuName || paymentState.menuSelected,
+        recurringDays: (paymentState as any).recurringDays,
+        frequency: (paymentState as any).frequency,
       },
     });
   };
