@@ -106,8 +106,13 @@ const Confirmation = () => {
       {/* Info box */}
       <div className="bg-[#86A383]/10 border border-[#86A383]/20 rounded-xl mx-4 mt-4 p-4">
         <p className="text-[#86A383] text-sm leading-relaxed">
-          We'll send you a WhatsApp message and email the day before your session to confirm your cook's arrival time. Your cook will arrive within ±30 minutes of the agreed time slot.
+          We'll contact you on WhatsApp the day before your session to confirm your cook's exact arrival time.
         </p>
+        {state.recurringDays && JSON.parse(state.recurringDays).length > 1 && (
+          <p className="text-[#86A383] text-sm mt-2">
+            Your {state.frequency || "recurring"} sessions: {JSON.parse(state.recurringDays).join(" + ")}
+          </p>
+        )}
       </div>
 
       {/* Buttons */}

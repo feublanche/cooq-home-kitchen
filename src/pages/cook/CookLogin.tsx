@@ -39,53 +39,41 @@ const CookLogin = () => {
     checkExisting();
   }, [navigate]);
 
-  // Listen for auth changes (magic link return, etc.)
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === "SIGNED_IN" && session) {
-        if (hasRedirected.current) return;
-        const { data: cook } = await supabase
-          .from("cooks")
-          .select("id")
-          .eq("user_id", session.user.id)
-          .maybeSingle();
-        if (cook) {
-          hasRedirected.current = true;
-          navigate("/cook/dashboard", { replace: true });
-        } else {
-          setError("Cook account not found. Contact hello@cooq.ae");
-        }
-      }
-    });
-    return () => subscription.unsubscribe();
-  }, [navigate]);
-
-  const handlePasswordLogin = async () => {
-    if (!email || !password) return;
-    setLoading(true);
-    setError("");
-    const { error: authError, data } = await supabase.auth.signInWithPassword({ email, password });
-    if (authError) {
-      setError("Incorrect email or password");
-      setLoading(false);
+  const handleSignIn = async () => {
+    const emailVal = (document.querySelector('input[type="email"]') as HTMLInputElement)?.value?.trim();
+    const passwordVal = (document.querySelector('input[type="password"]') as HTMLInputElement)?.value?.trim();
+    if (!emailVal || !passwordVal) {
+      setError("Please enter your email and password");
       return;
     }
-    if (data.user) {
-      const { data: cook } = await supabase
-        .from("cooks")
-        .select("id")
-        .eq("user_id", data.user.id)
-        .maybeSingle();
-      if (cook) {
-        if (!hasRedirected.current) {
-          hasRedirected.current = true;
-          navigate("/cook/dashboard", { replace: true });
-        }
-      } else {
-        setError("Cook account not found. Contact hello@cooq.ae");
+    setLoading(true);
+    setError("");
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: emailVal,
+        password: passwordVal,
+      });
+      if (error) {
+        setError(error.message);
+        setLoading(false);
+        return;
       }
+      if (emailVal === "cooqdubai@gmail.com") {
+        navigate("/admin", { replace: true });
+        return;
+      }
+      const { data: cook } = await supabase
+        .from("cooks").select("id,status").eq("user_id", data.user.id).maybeSingle();
+      if (cook) {
+        navigate("/cook/dashboard", { replace: true });
+      } else {
+        setError("No cook account found. Email hello@cooq.ae");
+        setLoading(false);
+      }
+    } catch (e: any) {
+      setError(e.message || "Sign in failed");
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleMagicLink = async () => {
@@ -156,7 +144,7 @@ const CookLogin = () => {
           Forgot password?
         </button>
         <button
-          onClick={handlePasswordLogin} disabled={loading || !email || !password}
+          onClick={handleSignIn} disabled={loading}
           className="w-full py-3 rounded-xl font-body font-semibold text-sm transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
           style={{ backgroundColor: "#B57E5D", color: "#F9F7F2" }}
         >

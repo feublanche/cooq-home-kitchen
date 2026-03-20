@@ -1,7 +1,6 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { routeAfterAuth } from "@/utils/authRouting";
 import cooqLogo from "@/assets/cooq-logo.png";
 import { Loader2 } from "lucide-react";
 
@@ -15,22 +14,30 @@ const Login = () => {
   const [magicLinkLoading, setMagicLinkLoading] = useState(false);
   const [resetSent, setResetSent] = useState(false);
 
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event) => {
-      if (event === "SIGNED_IN") {
-        await routeAfterAuth(navigate);
-      }
-    });
-    return () => subscription.unsubscribe();
-  }, [navigate]);
-
-  const handlePasswordLogin = async () => {
-    if (!email || !password) return;
+  const handleSignIn = async () => {
+    const emailVal = (document.querySelector('input[type="email"]') as HTMLInputElement)?.value?.trim();
+    const passwordVal = (document.querySelector('input[type="password"]') as HTMLInputElement)?.value?.trim();
+    if (!emailVal || !passwordVal) {
+      setError("Please enter your email and password");
+      return;
+    }
     setLoading(true);
     setError("");
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    setLoading(false);
-    if (error) setError(error.message);
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: emailVal,
+        password: passwordVal,
+      });
+      if (error) {
+        setError(error.message);
+        setLoading(false);
+        return;
+      }
+      navigate("/admin", { replace: true });
+    } catch (e: any) {
+      setError(e.message || "Sign in failed");
+      setLoading(false);
+    }
   };
 
   const handleMagicLink = async () => {
@@ -79,7 +86,6 @@ const Login = () => {
           </p>
         )}
 
-        {/* Email + Password */}
         <input
           type="email"
           placeholder="Email"
@@ -104,8 +110,8 @@ const Login = () => {
           Forgot password?
         </button>
         <button
-          onClick={handlePasswordLogin}
-          disabled={loading || !email || !password}
+          onClick={handleSignIn}
+          disabled={loading}
           className="w-full py-3 rounded-xl font-body font-semibold text-sm transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
           style={{ backgroundColor: "#B57E5D", color: "#F9F7F2" }}
         >
