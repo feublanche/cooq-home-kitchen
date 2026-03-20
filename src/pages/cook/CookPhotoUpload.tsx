@@ -138,14 +138,14 @@ const CookPhotoUpload = () => {
         cook_id: cook.id,
         cook_name: cook.name,
         photo_type: "container",
-        photo_url: cUrl.publicUrl,
+        photo_url: cUrl,
       },
       {
         booking_id: selectedId,
         cook_id: cook.id,
         cook_name: cook.name,
         photo_type: "kitchen",
-        photo_url: kUrl.publicUrl,
+        photo_url: kUrl,
       },
     ]);
 

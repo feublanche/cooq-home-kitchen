@@ -201,7 +201,7 @@ const BookingForm = () => {
       });
     } catch (err) {
       console.error("Booking error:", err);
-      toast({ title: "Booking failed", description: String(err), variant: "destructive" });
+      toast({ title: "Booking failed", description: "Something went wrong. Please try again or contact hello@cooq.ae", variant: "destructive" });
     } finally {
       setLoading(false);
     }
