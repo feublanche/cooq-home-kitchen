@@ -14,7 +14,7 @@ const Results = () => {
     queryFn: async () => {
       const { data } = await supabase
         .from("cooks")
-        .select("*")
+        .select("id, name, bio, cuisine, area, years_experience, health_card, photo_url")
         .in("status", ["approved", "active"]);
       return data || [];
     },
