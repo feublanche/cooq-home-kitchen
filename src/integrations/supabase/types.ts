@@ -354,6 +354,21 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      check_cooks_maria: {
+        Args: never
+        Returns: {
+          cook_id: string
+          nm: string
+          st: string
+          uid: string
+        }[]
+      }
+      count_bad_bookings: {
+        Args: never
+        Returns: {
+          invalid_count: number
+        }[]
+      }
       get_booking_for_rating: {
         Args: { booking_uuid: string }
         Returns: {
@@ -364,6 +379,51 @@ export type Database = {
           rated_at: string
           rating: number
           status: string
+        }[]
+      }
+      get_cooks_cols: {
+        Args: never
+        Returns: {
+          col_name: string
+          col_type: string
+        }[]
+      }
+      get_cooks_rls: {
+        Args: never
+        Returns: {
+          pol_cmd: string
+          pol_name: string
+          pol_qual: string
+          pol_roles: string
+          pol_with_check: string
+        }[]
+      }
+      get_cooks_triggers: {
+        Args: never
+        Returns: {
+          trig_event: string
+          trig_func: string
+          trig_name: string
+          trig_timing: string
+        }[]
+      }
+      list_all_cooks: {
+        Args: never
+        Returns: {
+          cook_id: string
+          nm: string
+          st: string
+          uid: string
+        }[]
+      }
+      show_invalid_bookings: {
+        Args: never
+        Returns: {
+          bad_amt: number
+          customer: string
+          freq_val: string
+          row_id: string
+          tier_val: string
         }[]
       }
       submit_booking_rating: {
