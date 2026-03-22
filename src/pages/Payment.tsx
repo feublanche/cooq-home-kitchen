@@ -47,10 +47,7 @@ const CheckoutForm = ({ totalAed, bookingId, paymentState, paymentIntentId }: { 
       return;
     }
 
-    await supabase
-      .from("bookings")
-      .update({ status: "confirmed", payment_intent_id: paymentIntentId })
-      .eq("id", bookingId);
+    // Booking confirmation handled server-side by stripe-webhook
 
     navigate("/confirmation", {
       replace: true,
