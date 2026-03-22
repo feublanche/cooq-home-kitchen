@@ -1,0 +1,1 @@
+DROP POLICY "Customer can rate own booking" ON public.bookings;
