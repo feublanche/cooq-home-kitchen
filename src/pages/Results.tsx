@@ -1,7 +1,7 @@
 import { useNavigate, useLocation } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, ShieldCheck, ChefHat, MapPin, Clock } from "lucide-react";
+import { ArrowLeft, ShieldCheck, ChefHat, MapPin, Clock, Star } from "lucide-react";
 import cooqLogo from "@/assets/cooq-logo.png";
 
 const Results = () => {
@@ -19,6 +19,30 @@ const Results = () => {
       return data || [];
     },
   });
+
+  // Load ratings per cook
+  const { data: cookRatings = {} } = useQuery({
+    queryKey: ["cook-ratings"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("bookings")
+        .select("cook_id, rating")
+        .not("rating", "is", null);
+      const map: Record<string, { sum: number; count: number }> = {};
+      (data || []).forEach((b: any) => {
+        if (!map[b.cook_id]) map[b.cook_id] = { sum: 0, count: 0 };
+        map[b.cook_id].sum += b.rating;
+        map[b.cook_id].count += 1;
+      });
+      return map;
+    },
+  });
+
+  const getAvgRating = (cookId: string) => {
+    const r = (cookRatings as any)[cookId];
+    if (!r || r.count === 0) return null;
+    return (r.sum / r.count).toFixed(1);
+  };
 
   const filtered = cooks.filter((cook: any) => {
     if (cuisines && cuisines.length > 0 && !cuisines.includes('Any cuisine')) {
@@ -81,8 +105,8 @@ const Results = () => {
         ) : (
           <>
             {showExpandedNotice && (
-              <p className="text-xs text-gray-400 italic text-center px-4 mb-2">
-                Showing all available Cooq-certified cooks — we're expanding coverage across Dubai.
+             <p className="text-xs text-gray-400 italic text-center px-4 mb-2">
+                Showing all available Cooq-vetted cooks — we're expanding coverage across Dubai.
               </p>
             )}
             {displayCooks.map((cook: any) => {
@@ -103,7 +127,15 @@ const Results = () => {
                     </div>
                   )}
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-display text-lg text-foreground">{initials}</h3>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-display text-lg text-foreground">{initials}</h3>
+                      {getAvgRating(cook.id) && (
+                        <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full bg-amber-50 text-amber-600 font-body text-xs font-semibold">
+                          <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                          {getAvgRating(cook.id)}
+                        </span>
+                      )}
+                    </div>
 
                     <div className="flex items-center gap-1.5 mt-1">
                       <ChefHat className="w-3.5 h-3.5 text-copper flex-shrink-0" />
@@ -126,7 +158,7 @@ const Results = () => {
                   {cook.health_card && (
                     <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 border border-primary/20 font-body text-xs font-semibold text-primary">
                       <ShieldCheck className="w-4 h-4" />
-                      Cooq Certified
+                      Cooq Vetted
                     </span>
                   )}
                 </div>
@@ -134,7 +166,7 @@ const Results = () => {
                 {cook.health_card && (
                   <p className="font-body text-[10px] text-muted-foreground mt-2 leading-snug">
                     <ShieldCheck className="w-3 h-3 inline text-primary mr-0.5 -mt-0.5" />
-                    Visa verified · Health certificate · Taste-test vetted
+                    Visa verified · Health certificate · Taste-tested
                   </p>
                 )}
 

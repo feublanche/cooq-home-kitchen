@@ -41,6 +41,17 @@ interface Booking {
   email: string;
   created_at: string;
   paid: boolean;
+  tier?: string;
+  frequency?: string;
+  party_size?: number;
+  address?: string;
+  allergies_notes?: string;
+  session_type?: string;
+  rating?: number;
+  rating_note?: string;
+  grocery_fee?: number;
+  selected_menu_id?: string;
+  payment_intent_id?: string;
 }
 
 interface QualityPhoto {
@@ -125,6 +136,7 @@ const Admin = () => {
   const [cooks, setCooks] = useState<CookRecord[]>([]);
   const [menus, setMenus] = useState<MenuRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [expandedBookingId, setExpandedBookingId] = useState<string | null>(null);
   const [expiringCooks, setExpiringCooks] = useState<any[]>([]);
 
   // Supply Manager state
@@ -460,37 +472,64 @@ const Admin = () => {
                 <div className="space-y-3">
                   {filteredBookings.map((b) => {
                     const hasCook = b.cook_name && b.cook_id;
+                    const expanded = expandedBookingId === b.id;
                     return (
-                      <div key={b.id} className="bg-card rounded-xl p-4 border border-border" style={{ boxShadow: "var(--shadow-card)" }}>
-                        <div className="flex items-start justify-between mb-2">
-                          <div>
-                            <p className="font-body text-sm font-semibold text-foreground">{b.customer_name}</p>
-                            <p className="font-body text-xs text-muted-foreground">
-                              {b.area || "—"} · {b.booking_date || "No date"}
-                            </p>
-                          </div>
-                          <select
-                            value={b.status}
-                            onChange={(e) => updateStatus(b.id, e.target.value)}
-                            className={`font-body text-xs font-semibold px-2 py-1 rounded-lg border-0 ${statusColors[b.status] || ""}`}
-                          >
-                            <option value="pending">Pending</option>
-                            <option value="confirmed">Confirmed</option>
-                            <option value="completed">Completed</option>
-                            <option value="cancelled">Cancelled</option>
-                          </select>
-                        </div>
-                        {hasCook ? (
-                          <p className="font-body text-xs text-primary">Cook: {b.cook_name}</p>
-                        ) : (
-                          <div className="flex items-center gap-2 mt-1">
-                            <span className="font-body text-xs text-copper">Unassigned</span>
-                            <button
-                              onClick={() => openAssignDrawer(b)}
-                              className="font-body text-[10px] font-semibold px-2 py-1 rounded-lg bg-copper/10 text-copper hover:bg-copper/20 transition-colors"
+                      <div key={b.id} className="bg-card rounded-xl border border-border" style={{ boxShadow: "var(--shadow-card)" }}>
+                        <button type="button" onClick={() => setExpandedBookingId(expanded ? null : b.id)} className="w-full text-left p-4">
+                          <div className="flex items-start justify-between mb-2">
+                            <div>
+                              <p className="font-body text-sm font-semibold text-foreground">{b.customer_name}</p>
+                              <p className="font-body text-xs text-muted-foreground">
+                                {b.area || "—"} · {b.booking_date || "No date"}
+                              </p>
+                            </div>
+                            <select
+                              value={b.status}
+                              onClick={(e) => e.stopPropagation()}
+                              onChange={(e) => { e.stopPropagation(); updateStatus(b.id, e.target.value); }}
+                              className={`font-body text-xs font-semibold px-2 py-1 rounded-lg border-0 ${statusColors[b.status] || ""}`}
                             >
-                              Assign Cook
-                            </button>
+                              <option value="pending">Pending</option>
+                              <option value="confirmed">Confirmed</option>
+                              <option value="completed">Completed</option>
+                              <option value="cancelled">Cancelled</option>
+                            </select>
+                          </div>
+                          {hasCook ? (
+                            <p className="font-body text-xs text-primary">Cook: {b.cook_name}</p>
+                          ) : (
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="font-body text-xs text-copper">Unassigned</span>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); openAssignDrawer(b); }}
+                                className="font-body text-[10px] font-semibold px-2 py-1 rounded-lg bg-copper/10 text-copper hover:bg-copper/20 transition-colors"
+                              >
+                                Assign Cook
+                              </button>
+                            </div>
+                          )}
+                        </button>
+                        {expanded && (
+                          <div className="px-4 pb-4 border-t border-border pt-3 space-y-1.5">
+                            <div className="grid grid-cols-2 gap-x-4 gap-y-1 font-body text-xs">
+                              <p className="text-muted-foreground">Email</p><p className="text-foreground">{b.email}</p>
+                              <p className="text-muted-foreground">Phone</p><p className="text-foreground">{b.phone}</p>
+                              <p className="text-muted-foreground">Address</p><p className="text-foreground">{b.address || "—"}</p>
+                              <p className="text-muted-foreground">Menu</p><p className="text-foreground">{b.menu_selected}</p>
+                              <p className="text-muted-foreground">Tier</p><p className="text-foreground">{b.tier || "—"}</p>
+                              <p className="text-muted-foreground">Frequency</p><p className="text-foreground">{b.frequency || "—"}</p>
+                              <p className="text-muted-foreground">Party Size</p><p className="text-foreground">{b.party_size || "—"}</p>
+                              <p className="text-muted-foreground">Dietary</p><p className="text-foreground">{b.dietary?.join(", ") || "None"}</p>
+                              <p className="text-muted-foreground">Allergies</p><p className="text-foreground">{b.allergies_notes || "None"}</p>
+                              <p className="text-muted-foreground">Grocery</p><p className="text-foreground">{b.grocery_addon ? `Yes (AED ${b.grocery_fee || 75})` : "No"}</p>
+                              <p className="text-muted-foreground">Session Type</p><p className="text-foreground">{b.session_type || "standard"}</p>
+                              <p className="text-muted-foreground">Total</p><p className="text-foreground font-semibold text-copper">AED {b.total_aed}</p>
+                              <p className="text-muted-foreground">Paid</p><p className="text-foreground">{b.paid ? "Yes ✓" : "No"}</p>
+                              <p className="text-muted-foreground">Rating</p><p className="text-foreground">{b.rating ? `${b.rating}/5` : "—"}</p>
+                              <p className="text-muted-foreground">Created</p><p className="text-foreground">{new Date(b.created_at).toLocaleDateString("en-GB")}</p>
+                            </div>
+                            {b.rating_note && <p className="font-body text-xs text-muted-foreground italic mt-1">"{b.rating_note}"</p>}
+                            {b.cook_email && <p className="font-body text-xs text-muted-foreground mt-1">Cook: {b.cook_email} · {b.cook_phone || "—"}</p>}
                           </div>
                         )}
                       </div>
@@ -635,25 +674,26 @@ const Admin = () => {
                         <p className="font-body text-xs text-copper mt-0.5">{m.cuisine || "—"}</p>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className={`font-body text-[10px] font-semibold px-2 py-0.5 rounded-full ${menuStatusColors[ms] || ""}`}>
-                          {ms === "pending_review" ? "Pending" : ms === "approved" ? "Approved" : "Rejected"}
-                        </span>
-                        {ms === "pending_review" && (
-                          <>
-                            <button
-                              onClick={() => handleMenuApprove(m)}
-                              className="p-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
-                            >
-                              <CheckCircle2 className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => setRejectMenuId(rejectMenuId === m.id ? null : m.id)}
-                              className="p-1.5 rounded-lg bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors"
-                            >
-                              <XCircle className="w-4 h-4" />
-                            </button>
-                          </>
-                        )}
+                        <select
+                          value={ms}
+                          onChange={async (e) => {
+                            const newStatus = e.target.value;
+                            if (newStatus === "approved") {
+                              handleMenuApprove(m);
+                            } else if (newStatus === "rejected") {
+                              setRejectMenuId(m.id);
+                            } else if (newStatus === "pending_review") {
+                              setMenus((prev) => prev.map((x) => (x.id === m.id ? { ...x, status: "pending_review" } : x)));
+                              await supabase.from("cook_menus").update({ status: "pending_review", rejection_reason: null }).eq("id", m.id);
+                              toast({ title: "Menu reset to pending" });
+                            }
+                          }}
+                          className={`font-body text-xs font-semibold px-2 py-1 rounded-lg border-0 cursor-pointer ${menuStatusColors[ms] || ""}`}
+                        >
+                          <option value="pending_review">Pending</option>
+                          <option value="approved">Approved</option>
+                          <option value="rejected">Rejected</option>
+                        </select>
                       </div>
                     </div>
 

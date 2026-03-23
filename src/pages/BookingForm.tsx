@@ -131,7 +131,7 @@ const BookingForm = () => {
   const selectedTier = TIERS.find((t) => t.key === tier)!;
   const isDiscovery = isFirstSession && tier === "duo";
   const sessionTotal = getTotal(tier, frequency, isFirstSession);
-  const groceryFee = booking.groceryAddon ? GROCERY_FEE : 0;
+  const groceryFee = 0; // Grocery shopping removed for now
 
   // Primary weekday from booking date
   const primaryWeekday = routerState.bookingDate
@@ -185,8 +185,8 @@ const BookingForm = () => {
         party_size: booking.partySize,
         dietary: booking.dietary,
         allergies_notes: sanitisedAllergyNotes,
-        grocery_addon: booking.groceryAddon,
-        grocery_fee: groceryFee,
+        grocery_addon: false,
+        grocery_fee: 0,
         tier,
         session_type: sessionType,
         total_aed: sessionTotal,
@@ -268,24 +268,18 @@ const BookingForm = () => {
           <div className="mt-2">
             {frequency === "one-time" || frequency === "" ? (
               <p className="font-body text-[14px] font-bold" style={{ color: "#B57E5D" }}>
-                AED {(sessionTotal + groceryFee).toLocaleString()}
-                {groceryFee > 0 && <span className="font-normal text-xs text-gray-400 ml-1">(incl. AED 75 grocery)</span>}
+                AED {sessionTotal.toLocaleString()}
               </p>
             ) : (
-              <>
-                <p className="font-body text-[14px] font-bold" style={{ color: "#B57E5D" }}>
-                  AED {sessionTotal.toLocaleString()} / month
-                </p>
-                {groceryFee > 0 && (
-                  <p className="font-body text-[11px] text-gray-500">+ AED 75 grocery service fee per session</p>
-                )}
-              </>
+              <p className="font-body text-[14px] font-bold" style={{ color: "#B57E5D" }}>
+                AED {sessionTotal.toLocaleString()} / month
+              </p>
             )}
           </div>
         </div>
 
         {/* ── TIER SELECTION ── */}
-        {!hasTier && (
+        {!hasTier && frequency === 'one-time' && (
           <>
             <p className="font-body text-sm font-bold text-foreground mb-3">Choose your session tier</p>
             <div className="grid grid-cols-1 gap-3 mb-4">
@@ -295,21 +289,52 @@ const BookingForm = () => {
                 return (
                   <button key={t.key} type="button" onClick={() => setTier(t.key)}
                     className={`text-left rounded-xl p-4 border-2 transition cursor-pointer ${selected ? "border-primary bg-primary/5" : "border-border bg-card"}`}>
+                    <p className="font-body text-sm font-bold text-foreground">{t.label}</p>
+                    <p className="font-body text-xs text-muted-foreground mt-1">{t.people}</p>
+                    <p className="font-body text-xs text-muted-foreground">{t.detail}</p>
+                    <div className="mt-2">
+                      <p className="font-body text-xs text-muted-foreground">Party of:</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        {Array.from({ length: TIER_LIMITS[t.key].max - TIER_LIMITS[t.key].min + 1 }, (_, i) => TIER_LIMITS[t.key].min + i).map((n) => (
+                          <button key={n} type="button"
+                            onClick={(e) => { e.stopPropagation(); setTier(t.key); updateBooking({ partySize: n }); }}
+                            className={`w-8 h-8 rounded-full text-xs font-semibold transition ${selected && booking.partySize === n ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
+                            {n}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="mt-2 text-right">
+                      {showDiscovery ? (
+                        <>
+                          <p className="font-body text-sm font-bold" style={{ color: "#B57E5D" }}>AED 299</p>
+                          <span className="font-body text-[10px] px-1.5 py-0.5 rounded-full" style={{ backgroundColor: "rgba(181,126,93,0.15)", color: "#B57E5D" }}>First Cook trial</span>
+                        </>
+                      ) : (
+                        <p className="font-body text-sm font-bold text-foreground">AED {t.price}</p>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </>
+        )}
+        {!hasTier && frequency !== 'one-time' && frequency !== '' && (
+          <>
+            <p className="font-body text-sm font-bold text-foreground mb-3">Choose your session tier</p>
+            <div className="grid grid-cols-1 gap-3 mb-4">
+              {TIERS.map((t) => {
+                const selected = tier === t.key;
+                return (
+                  <button key={t.key} type="button" onClick={() => setTier(t.key)}
+                    className={`text-left rounded-xl p-4 border-2 transition cursor-pointer ${selected ? "border-primary bg-primary/5" : "border-border bg-card"}`}>
                     <div className="flex justify-between items-start">
                       <div>
                         <p className="font-body text-sm font-bold text-foreground">{t.label} <span className="font-normal text-muted-foreground">· {t.people}</span></p>
                         <p className="font-body text-xs text-muted-foreground">{t.detail}</p>
                       </div>
-                      <div className="text-right">
-                        {showDiscovery ? (
-                          <>
-                            <p className="font-body text-sm font-bold" style={{ color: "#B57E5D" }}>AED 299</p>
-                            <span className="font-body text-[10px] px-1.5 py-0.5 rounded-full" style={{ backgroundColor: "rgba(181,126,93,0.15)", color: "#B57E5D" }}>First Cook trial</span>
-                          </>
-                        ) : (
-                          <p className="font-body text-sm font-bold text-foreground">AED {t.price}</p>
-                        )}
-                      </div>
+                      <p className="font-body text-sm font-bold text-foreground">AED {t.price}</p>
                     </div>
                   </button>
                 );
@@ -461,15 +486,7 @@ const BookingForm = () => {
         <FormInput label="Dubai area / community" value={booking.location} onChange={(v) => updateBooking({ location: v })} />
         <FormInput label="Full address / building name" value={booking.address} onChange={(v) => updateBooking({ address: v })} />
 
-        <div className="mb-4">
-          <label className="font-body text-sm font-medium text-foreground mb-1 block">Party size</label>
-          <div className="flex items-center gap-3">
-            <button onClick={() => { const limits = TIER_LIMITS[tier]; updateBooking({ partySize: Math.max(limits?.min ?? 1, booking.partySize - 1) }); }} className="w-9 h-9 rounded-full bg-card border border-border flex items-center justify-center font-body font-bold">−</button>
-            <span className="font-body text-lg font-semibold">{booking.partySize}</span>
-            <button onClick={() => { const limits = TIER_LIMITS[tier]; updateBooking({ partySize: Math.min(limits?.max ?? 20, booking.partySize + 1) }); }} className="w-9 h-9 rounded-full bg-card border border-border flex items-center justify-center font-body font-bold">+</button>
-          </div>
-          <p className="font-body text-xs text-gray-400 mt-1">{TIER_HINTS[tier]}</p>
-        </div>
+        {/* Party size auto-set by tier — no manual stepper needed */}
 
         <div className="mb-4">
           <label className="font-body text-sm font-medium text-foreground mb-1 block">Dietary requirements</label>
@@ -482,27 +499,7 @@ const BookingForm = () => {
             className="w-full p-3 rounded-lg border border-border bg-card font-body text-sm resize-none h-20 focus:outline-none focus:ring-2 focus:ring-primary" />
         </div>
 
-        {/* ── GROCERY TOGGLE ── */}
-        <div className="flex items-center justify-between p-4 rounded-xl bg-card border border-border mb-2" style={{ boxShadow: "var(--shadow-card)" }}>
-          <div>
-            <div className="flex items-center gap-1.5">
-              <p className="font-body text-sm font-semibold text-foreground">Add grocery shopping</p>
-              <div className="group relative">
-                <Info className="w-3.5 h-3.5 text-muted-foreground cursor-help" />
-                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-56 p-3 rounded-lg bg-foreground text-background font-body text-xs leading-relaxed opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity z-20 shadow-lg">
-                  Your Cooq will purchase the groceries and submit the receipt to you for reimbursement. This fee covers the shopping service only.
-                  <div className="absolute top-full left-1/2 -translate-x-1/2 w-2 h-2 bg-foreground rotate-45 -mt-1" />
-                </div>
-              </div>
-            </div>
-            <p className="font-body text-xs text-muted-foreground">Grocery shopping service: AED {GROCERY_FEE}</p>
-          </div>
-          <button onClick={() => updateBooking({ groceryAddon: !booking.groceryAddon })}
-            className={`w-12 h-7 rounded-full transition-colors relative ${booking.groceryAddon ? "bg-primary" : "bg-border"}`}>
-            <div className={`w-5 h-5 rounded-full bg-card absolute top-1 transition-transform ${booking.groceryAddon ? "translate-x-6" : "translate-x-1"}`} />
-          </button>
-        </div>
-        <p className="font-body text-xs text-muted-foreground mb-6">Your Cooq handles the shopping. They'll submit the grocery receipt for your reimbursement.</p>
+        {/* Grocery shopping — coming soon */}
 
         {/* ── TOTAL ── */}
         <div className="space-y-1 mb-6">
@@ -510,22 +507,13 @@ const BookingForm = () => {
             <span>{selectedTier.label} {isDiscovery ? "(First Cook)" : ""} {frequency !== "one-time" ? "/mo" : ""}</span>
             <span>AED {sessionTotal.toLocaleString()}</span>
           </div>
-          {booking.groceryAddon && (
-            <div className="flex justify-between font-body text-sm text-muted-foreground">
-              <span>Grocery shopping service{frequency !== "one-time" ? " (per session)" : ""}</span>
-              <span>AED {GROCERY_FEE}</span>
-            </div>
-          )}
           <div className="h-px bg-border my-2" />
           <div className="flex justify-between items-center">
             <span className="font-body text-base font-semibold text-foreground">Total</span>
             {frequency === "one-time" || frequency === "" ? (
-              <span className="font-display text-xl font-bold" style={{ color: "#B57E5D" }}>AED {(sessionTotal + groceryFee).toLocaleString()}</span>
+              <span className="font-display text-xl font-bold" style={{ color: "#B57E5D" }}>AED {sessionTotal.toLocaleString()}</span>
             ) : (
-              <div className="text-right">
-                <span className="font-display text-xl font-bold" style={{ color: "#B57E5D" }}>AED {sessionTotal.toLocaleString()} /mo</span>
-                {groceryFee > 0 && <p className="text-[10px] text-gray-400">+ AED 75 grocery per session</p>}
-              </div>
+              <span className="font-display text-xl font-bold" style={{ color: "#B57E5D" }}>AED {sessionTotal.toLocaleString()} /mo</span>
             )}
           </div>
         </div>

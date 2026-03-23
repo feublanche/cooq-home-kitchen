@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, ShieldCheck, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowLeft, ShieldCheck, ChevronLeft, ChevronRight, Star } from "lucide-react";
 import cooqLogo from "@/assets/cooq-logo.png";
 
 const DAY_NAMES_SHORT = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -192,10 +192,10 @@ const CookProfile = () => {
           <p className="font-body text-sm text-muted-foreground mt-2">
             {cook.cuisine?.join(" · ")} · {cook.area} · {cook.years_experience} years
           </p>
-          <div className="flex items-center gap-2 mt-3">
+           <div className="flex items-center gap-2 mt-3">
             {cook.health_card && (
               <span className="flex items-center gap-1 px-3 py-1 rounded-full bg-primary/10 text-primary font-body text-xs font-medium">
-                <ShieldCheck className="w-3.5 h-3.5" /> Cooq Certified
+                <ShieldCheck className="w-3.5 h-3.5" /> Cooq Vetted
               </span>
             )}
           </div>

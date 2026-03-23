@@ -27,7 +27,7 @@ const cuisineOptions = [
 ];
 
 const dietaryOptions = [
-  "Halal", "Vegetarian", "Vegan", "Gluten-Free", "Dairy-Free", "Nut-Free", "Pork-Free", "Kid-Friendly",
+  "Halal", "Vegetarian", "Vegan", "Gluten-Free", "Dairy-Free", "Nut-Free", "Pork-Free", "Kid-Friendly", "Keto",
 ];
 
 const mealFields = [

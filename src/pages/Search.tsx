@@ -25,7 +25,7 @@ const SAVINGS = {
 };
 
 const cuisineOptions = ["Arabic", "Lebanese", "Emirati", "Moroccan", "Indian", "Pakistani", "Filipino", "Mediterranean", "Asian", "Italian"];
-const dietaryOptions = ["Halal", "Vegetarian", "Vegan", "Gluten-Free", "Dairy-Free", "Nut-Free", "Kid-Friendly"];
+const dietaryOptions = ["Halal", "Vegetarian", "Vegan", "Gluten-Free", "Dairy-Free", "Nut-Free", "Kid-Friendly", "Keto"];
 
 const freqOptions = [
   {
