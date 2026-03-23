@@ -285,7 +285,7 @@ const BookingForm = () => {
         </div>
 
         {/* ── TIER SELECTION ── */}
-        {!hasTier && (
+        {!hasTier && frequency === 'one-time' && (
           <>
             <p className="font-body text-sm font-bold text-foreground mb-3">Choose your session tier</p>
             <div className="grid grid-cols-1 gap-3 mb-4">
@@ -295,21 +295,52 @@ const BookingForm = () => {
                 return (
                   <button key={t.key} type="button" onClick={() => setTier(t.key)}
                     className={`text-left rounded-xl p-4 border-2 transition cursor-pointer ${selected ? "border-primary bg-primary/5" : "border-border bg-card"}`}>
+                    <p className="font-body text-sm font-bold text-foreground">{t.label}</p>
+                    <p className="font-body text-xs text-muted-foreground mt-1">{t.people}</p>
+                    <p className="font-body text-xs text-muted-foreground">{t.detail}</p>
+                    <div className="mt-2">
+                      <p className="font-body text-xs text-muted-foreground">Party of:</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        {Array.from({ length: TIER_LIMITS[t.key].max - TIER_LIMITS[t.key].min + 1 }, (_, i) => TIER_LIMITS[t.key].min + i).map((n) => (
+                          <button key={n} type="button"
+                            onClick={(e) => { e.stopPropagation(); setTier(t.key); updateBooking({ partySize: n }); }}
+                            className={`w-8 h-8 rounded-full text-xs font-semibold transition ${selected && booking.partySize === n ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
+                            {n}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="mt-2 text-right">
+                      {showDiscovery ? (
+                        <>
+                          <p className="font-body text-sm font-bold" style={{ color: "#B57E5D" }}>AED 299</p>
+                          <span className="font-body text-[10px] px-1.5 py-0.5 rounded-full" style={{ backgroundColor: "rgba(181,126,93,0.15)", color: "#B57E5D" }}>First Cook trial</span>
+                        </>
+                      ) : (
+                        <p className="font-body text-sm font-bold text-foreground">AED {t.price}</p>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </>
+        )}
+        {!hasTier && frequency !== 'one-time' && frequency !== '' && (
+          <>
+            <p className="font-body text-sm font-bold text-foreground mb-3">Choose your session tier</p>
+            <div className="grid grid-cols-1 gap-3 mb-4">
+              {TIERS.map((t) => {
+                const selected = tier === t.key;
+                return (
+                  <button key={t.key} type="button" onClick={() => setTier(t.key)}
+                    className={`text-left rounded-xl p-4 border-2 transition cursor-pointer ${selected ? "border-primary bg-primary/5" : "border-border bg-card"}`}>
                     <div className="flex justify-between items-start">
                       <div>
                         <p className="font-body text-sm font-bold text-foreground">{t.label} <span className="font-normal text-muted-foreground">· {t.people}</span></p>
                         <p className="font-body text-xs text-muted-foreground">{t.detail}</p>
                       </div>
-                      <div className="text-right">
-                        {showDiscovery ? (
-                          <>
-                            <p className="font-body text-sm font-bold" style={{ color: "#B57E5D" }}>AED 299</p>
-                            <span className="font-body text-[10px] px-1.5 py-0.5 rounded-full" style={{ backgroundColor: "rgba(181,126,93,0.15)", color: "#B57E5D" }}>First Cook trial</span>
-                          </>
-                        ) : (
-                          <p className="font-body text-sm font-bold text-foreground">AED {t.price}</p>
-                        )}
-                      </div>
+                      <p className="font-body text-sm font-bold text-foreground">AED {t.price}</p>
                     </div>
                   </button>
                 );
