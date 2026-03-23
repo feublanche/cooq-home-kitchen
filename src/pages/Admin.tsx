@@ -673,25 +673,26 @@ const Admin = () => {
                         <p className="font-body text-xs text-copper mt-0.5">{m.cuisine || "—"}</p>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className={`font-body text-[10px] font-semibold px-2 py-0.5 rounded-full ${menuStatusColors[ms] || ""}`}>
-                          {ms === "pending_review" ? "Pending" : ms === "approved" ? "Approved" : "Rejected"}
-                        </span>
-                        {ms === "pending_review" && (
-                          <>
-                            <button
-                              onClick={() => handleMenuApprove(m)}
-                              className="p-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
-                            >
-                              <CheckCircle2 className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => setRejectMenuId(rejectMenuId === m.id ? null : m.id)}
-                              className="p-1.5 rounded-lg bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors"
-                            >
-                              <XCircle className="w-4 h-4" />
-                            </button>
-                          </>
-                        )}
+                        <select
+                          value={ms}
+                          onChange={async (e) => {
+                            const newStatus = e.target.value;
+                            if (newStatus === "approved") {
+                              handleMenuApprove(m);
+                            } else if (newStatus === "rejected") {
+                              setRejectMenuId(m.id);
+                            } else if (newStatus === "pending_review") {
+                              setMenus((prev) => prev.map((x) => (x.id === m.id ? { ...x, status: "pending_review" } : x)));
+                              await supabase.from("cook_menus").update({ status: "pending_review", rejection_reason: null }).eq("id", m.id);
+                              toast({ title: "Menu reset to pending" });
+                            }
+                          }}
+                          className={`font-body text-xs font-semibold px-2 py-1 rounded-lg border-0 cursor-pointer ${menuStatusColors[ms] || ""}`}
+                        >
+                          <option value="pending_review">Pending</option>
+                          <option value="approved">Approved</option>
+                          <option value="rejected">Rejected</option>
+                        </select>
                       </div>
                     </div>
 

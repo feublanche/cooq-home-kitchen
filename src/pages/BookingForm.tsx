@@ -505,27 +505,7 @@ const BookingForm = () => {
             className="w-full p-3 rounded-lg border border-border bg-card font-body text-sm resize-none h-20 focus:outline-none focus:ring-2 focus:ring-primary" />
         </div>
 
-        {/* ── GROCERY TOGGLE ── */}
-        <div className="flex items-center justify-between p-4 rounded-xl bg-card border border-border mb-2" style={{ boxShadow: "var(--shadow-card)" }}>
-          <div>
-            <div className="flex items-center gap-1.5">
-              <p className="font-body text-sm font-semibold text-foreground">Add grocery shopping</p>
-              <div className="group relative">
-                <Info className="w-3.5 h-3.5 text-muted-foreground cursor-help" />
-                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-56 p-3 rounded-lg bg-foreground text-background font-body text-xs leading-relaxed opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity z-20 shadow-lg">
-                  Your Cooq will purchase the groceries and submit the receipt to you for reimbursement. This fee covers the shopping service only.
-                  <div className="absolute top-full left-1/2 -translate-x-1/2 w-2 h-2 bg-foreground rotate-45 -mt-1" />
-                </div>
-              </div>
-            </div>
-            <p className="font-body text-xs text-muted-foreground">Grocery shopping service: AED {GROCERY_FEE}</p>
-          </div>
-          <button onClick={() => updateBooking({ groceryAddon: !booking.groceryAddon })}
-            className={`w-12 h-7 rounded-full transition-colors relative ${booking.groceryAddon ? "bg-primary" : "bg-border"}`}>
-            <div className={`w-5 h-5 rounded-full bg-card absolute top-1 transition-transform ${booking.groceryAddon ? "translate-x-6" : "translate-x-1"}`} />
-          </button>
-        </div>
-        <p className="font-body text-xs text-muted-foreground mb-6">Your Cooq handles the shopping. They'll submit the grocery receipt for your reimbursement.</p>
+        {/* Grocery shopping — coming soon */}
 
         {/* ── TOTAL ── */}
         <div className="space-y-1 mb-6">

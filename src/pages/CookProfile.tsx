@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, ShieldCheck, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowLeft, ShieldCheck, ChevronLeft, ChevronRight, Star } from "lucide-react";
 import cooqLogo from "@/assets/cooq-logo.png";
 
 const DAY_NAMES_SHORT = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
