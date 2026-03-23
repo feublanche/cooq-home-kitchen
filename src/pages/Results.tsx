@@ -132,7 +132,7 @@ const Results = () => {
                   {cook.health_card && (
                     <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 border border-primary/20 font-body text-xs font-semibold text-primary">
                       <ShieldCheck className="w-4 h-4" />
-                      Cooq Certified
+                      Cooq Vetted
                     </span>
                   )}
                 </div>
