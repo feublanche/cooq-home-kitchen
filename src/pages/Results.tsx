@@ -81,8 +81,8 @@ const Results = () => {
         ) : (
           <>
             {showExpandedNotice && (
-              <p className="text-xs text-gray-400 italic text-center px-4 mb-2">
-                Showing all available Cooq-certified cooks — we're expanding coverage across Dubai.
+             <p className="text-xs text-gray-400 italic text-center px-4 mb-2">
+                Showing all available Cooq-vetted cooks — we're expanding coverage across Dubai.
               </p>
             )}
             {displayCooks.map((cook: any) => {
