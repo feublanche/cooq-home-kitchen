@@ -268,18 +268,12 @@ const BookingForm = () => {
           <div className="mt-2">
             {frequency === "one-time" || frequency === "" ? (
               <p className="font-body text-[14px] font-bold" style={{ color: "#B57E5D" }}>
-                AED {(sessionTotal + groceryFee).toLocaleString()}
-                {groceryFee > 0 && <span className="font-normal text-xs text-gray-400 ml-1">(incl. AED 75 grocery)</span>}
+                AED {sessionTotal.toLocaleString()}
               </p>
             ) : (
-              <>
-                <p className="font-body text-[14px] font-bold" style={{ color: "#B57E5D" }}>
-                  AED {sessionTotal.toLocaleString()} / month
-                </p>
-                {groceryFee > 0 && (
-                  <p className="font-body text-[11px] text-gray-500">+ AED 75 grocery service fee per session</p>
-                )}
-              </>
+              <p className="font-body text-[14px] font-bold" style={{ color: "#B57E5D" }}>
+                AED {sessionTotal.toLocaleString()} / month
+              </p>
             )}
           </div>
         </div>
