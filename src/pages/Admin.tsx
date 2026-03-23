@@ -472,10 +472,10 @@ const Admin = () => {
                 <div className="space-y-3">
                   {filteredBookings.map((b) => {
                     const hasCook = b.cook_name && b.cook_id;
-                    const [expanded, setExpanded] = useState(false);
+                    const expanded = expandedBookingId === b.id;
                     return (
                       <div key={b.id} className="bg-card rounded-xl border border-border" style={{ boxShadow: "var(--shadow-card)" }}>
-                        <button type="button" onClick={() => setExpanded(!expanded)} className="w-full text-left p-4">
+                        <button type="button" onClick={() => setExpandedBookingId(expanded ? null : b.id)} className="w-full text-left p-4">
                           <div className="flex items-start justify-between mb-2">
                             <div>
                               <p className="font-body text-sm font-semibold text-foreground">{b.customer_name}</p>
