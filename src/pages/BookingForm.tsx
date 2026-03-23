@@ -492,15 +492,7 @@ const BookingForm = () => {
         <FormInput label="Dubai area / community" value={booking.location} onChange={(v) => updateBooking({ location: v })} />
         <FormInput label="Full address / building name" value={booking.address} onChange={(v) => updateBooking({ address: v })} />
 
-        <div className="mb-4">
-          <label className="font-body text-sm font-medium text-foreground mb-1 block">Party size</label>
-          <div className="flex items-center gap-3">
-            <button onClick={() => { const limits = TIER_LIMITS[tier]; updateBooking({ partySize: Math.max(limits?.min ?? 1, booking.partySize - 1) }); }} className="w-9 h-9 rounded-full bg-card border border-border flex items-center justify-center font-body font-bold">−</button>
-            <span className="font-body text-lg font-semibold">{booking.partySize}</span>
-            <button onClick={() => { const limits = TIER_LIMITS[tier]; updateBooking({ partySize: Math.min(limits?.max ?? 20, booking.partySize + 1) }); }} className="w-9 h-9 rounded-full bg-card border border-border flex items-center justify-center font-body font-bold">+</button>
-          </div>
-          <p className="font-body text-xs text-gray-400 mt-1">{TIER_HINTS[tier]}</p>
-        </div>
+        {/* Party size auto-set by tier — no manual stepper needed */}
 
         <div className="mb-4">
           <label className="font-body text-sm font-medium text-foreground mb-1 block">Dietary requirements</label>
