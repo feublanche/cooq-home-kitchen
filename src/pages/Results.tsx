@@ -1,7 +1,7 @@
 import { useNavigate, useLocation } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, ShieldCheck, ChefHat, MapPin, Clock } from "lucide-react";
+import { ArrowLeft, ShieldCheck, ChefHat, MapPin, Clock, Star } from "lucide-react";
 import cooqLogo from "@/assets/cooq-logo.png";
 
 const Results = () => {
