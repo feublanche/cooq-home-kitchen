@@ -14,11 +14,17 @@ const Results = () => {
     queryFn: async () => {
       const { data } = await supabase
         .from("cooks")
-        .select("id, name, bio, cuisine, area, years_experience, health_card, photo_url")
+        .select("id, name, bio, cuisine, area, years_experience, health_card, photo_url, rating_avg:bookings(rating)")
         .in("status", ["approved", "active"]);
       return data || [];
     },
   });
+
+  // Calculate average rating for a cook from bookings
+  const getAvgRating = (cook: any) => {
+    // rating_avg won't work via join easily, so we'll show ratings from a separate query
+    return null;
+  };
 
   const filtered = cooks.filter((cook: any) => {
     if (cuisines && cuisines.length > 0 && !cuisines.includes('Any cuisine')) {
