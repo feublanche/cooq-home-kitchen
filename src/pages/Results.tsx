@@ -127,7 +127,15 @@ const Results = () => {
                     </div>
                   )}
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-display text-lg text-foreground">{initials}</h3>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-display text-lg text-foreground">{initials}</h3>
+                      {getAvgRating(cook.id) && (
+                        <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full bg-amber-50 text-amber-600 font-body text-xs font-semibold">
+                          <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                          {getAvgRating(cook.id)}
+                        </span>
+                      )}
+                    </div>
 
                     <div className="flex items-center gap-1.5 mt-1">
                       <ChefHat className="w-3.5 h-3.5 text-copper flex-shrink-0" />
