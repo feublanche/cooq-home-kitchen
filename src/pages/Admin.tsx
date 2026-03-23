@@ -41,6 +41,17 @@ interface Booking {
   email: string;
   created_at: string;
   paid: boolean;
+  tier?: string;
+  frequency?: string;
+  party_size?: number;
+  address?: string;
+  allergies_notes?: string;
+  session_type?: string;
+  rating?: number;
+  rating_note?: string;
+  grocery_fee?: number;
+  selected_menu_id?: string;
+  payment_intent_id?: string;
 }
 
 interface QualityPhoto {
