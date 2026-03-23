@@ -507,22 +507,13 @@ const BookingForm = () => {
             <span>{selectedTier.label} {isDiscovery ? "(First Cook)" : ""} {frequency !== "one-time" ? "/mo" : ""}</span>
             <span>AED {sessionTotal.toLocaleString()}</span>
           </div>
-          {booking.groceryAddon && (
-            <div className="flex justify-between font-body text-sm text-muted-foreground">
-              <span>Grocery shopping service{frequency !== "one-time" ? " (per session)" : ""}</span>
-              <span>AED {GROCERY_FEE}</span>
-            </div>
-          )}
           <div className="h-px bg-border my-2" />
           <div className="flex justify-between items-center">
             <span className="font-body text-base font-semibold text-foreground">Total</span>
             {frequency === "one-time" || frequency === "" ? (
-              <span className="font-display text-xl font-bold" style={{ color: "#B57E5D" }}>AED {(sessionTotal + groceryFee).toLocaleString()}</span>
+              <span className="font-display text-xl font-bold" style={{ color: "#B57E5D" }}>AED {sessionTotal.toLocaleString()}</span>
             ) : (
-              <div className="text-right">
-                <span className="font-display text-xl font-bold" style={{ color: "#B57E5D" }}>AED {sessionTotal.toLocaleString()} /mo</span>
-                {groceryFee > 0 && <p className="text-[10px] text-gray-400">+ AED 75 grocery per session</p>}
-              </div>
+              <span className="font-display text-xl font-bold" style={{ color: "#B57E5D" }}>AED {sessionTotal.toLocaleString()} /mo</span>
             )}
           </div>
         </div>
