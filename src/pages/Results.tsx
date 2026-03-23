@@ -14,16 +14,34 @@ const Results = () => {
     queryFn: async () => {
       const { data } = await supabase
         .from("cooks")
-        .select("id, name, bio, cuisine, area, years_experience, health_card, photo_url, rating_avg:bookings(rating)")
+        .select("id, name, bio, cuisine, area, years_experience, health_card, photo_url")
         .in("status", ["approved", "active"]);
       return data || [];
     },
   });
 
-  // Calculate average rating for a cook from bookings
-  const getAvgRating = (cook: any) => {
-    // rating_avg won't work via join easily, so we'll show ratings from a separate query
-    return null;
+  // Load ratings per cook
+  const { data: cookRatings = {} } = useQuery({
+    queryKey: ["cook-ratings"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("bookings")
+        .select("cook_id, rating")
+        .not("rating", "is", null);
+      const map: Record<string, { sum: number; count: number }> = {};
+      (data || []).forEach((b: any) => {
+        if (!map[b.cook_id]) map[b.cook_id] = { sum: 0, count: 0 };
+        map[b.cook_id].sum += b.rating;
+        map[b.cook_id].count += 1;
+      });
+      return map;
+    },
+  });
+
+  const getAvgRating = (cookId: string) => {
+    const r = (cookRatings as any)[cookId];
+    if (!r || r.count === 0) return null;
+    return (r.sum / r.count).toFixed(1);
   };
 
   const filtered = cooks.filter((cook: any) => {
