@@ -131,7 +131,7 @@ const BookingForm = () => {
   const selectedTier = TIERS.find((t) => t.key === tier)!;
   const isDiscovery = isFirstSession && tier === "duo";
   const sessionTotal = getTotal(tier, frequency, isFirstSession);
-  const groceryFee = booking.groceryAddon ? GROCERY_FEE : 0;
+  const groceryFee = 0; // Grocery shopping removed for now
 
   // Primary weekday from booking date
   const primaryWeekday = routerState.bookingDate
