@@ -60,6 +60,7 @@ const App = () => (
               <Route path="/terms" element={<Terms />} />
               <Route path="/privacy" element={<Privacy />} />
               <Route path="/cook-agreement" element={<CookAgreement />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/cook/login" element={<CookLogin />} />
               <Route path="/cook/dashboard" element={<CookProtectedRoute><CookDashboard /></CookProtectedRoute>} />
               <Route path="/cook/orders" element={<CookProtectedRoute><CookOrders /></CookProtectedRoute>} />
