@@ -42,7 +42,7 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
-          <div className="max-w-[430px] mx-auto min-h-screen bg-background">
+          <div className="max-w-[430px] mx-auto min-h-screen bg-background" style={{ minHeight: '100vh' }}>
             <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/search" element={<Search />} />
