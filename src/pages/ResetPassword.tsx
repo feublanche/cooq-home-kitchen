@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import cooqLogo from "@/assets/cooq-logo.png";
@@ -155,6 +156,14 @@ const ResetPassword = () => {
             </button>
           </>
         )}
+
+        <Link
+          to="/cook/login"
+          className="block text-center font-body text-xs mt-5 underline"
+          style={{ color: "rgba(249,247,242,0.5)" }}
+        >
+          ← Back to login
+        </Link>
       </div>
     </div>
   );
