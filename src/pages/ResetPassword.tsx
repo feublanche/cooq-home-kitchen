@@ -156,6 +156,14 @@ const ResetPassword = () => {
             </button>
           </>
         )}
+
+        <Link
+          to="/cook/login"
+          className="block text-center font-body text-xs mt-5 underline"
+          style={{ color: "rgba(249,247,242,0.5)" }}
+        >
+          ← Back to login
+        </Link>
       </div>
     </div>
   );
