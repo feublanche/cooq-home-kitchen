@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import cooqLogo from "@/assets/cooq-logo.png";
 import { Loader2 } from "lucide-react";
 
-const CookLogin = () => {
+const CookLogin: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const stateError = (location.state as any)?.error || "";
