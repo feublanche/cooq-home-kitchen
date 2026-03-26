@@ -31,6 +31,7 @@ import CustomerProtectedRoute from "@/components/CustomerProtectedRoute";
 import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
 import CookAgreement from "./pages/CookAgreement";
+import ResetPassword from "./pages/ResetPassword";
 
 const queryClient = new QueryClient();
 
@@ -59,6 +60,7 @@ const App = () => (
               <Route path="/terms" element={<Terms />} />
               <Route path="/privacy" element={<Privacy />} />
               <Route path="/cook-agreement" element={<CookAgreement />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/cook/login" element={<CookLogin />} />
               <Route path="/cook/dashboard" element={<CookProtectedRoute><CookDashboard /></CookProtectedRoute>} />
               <Route path="/cook/orders" element={<CookProtectedRoute><CookOrders /></CookProtectedRoute>} />
