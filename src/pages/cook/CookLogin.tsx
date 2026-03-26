@@ -202,6 +202,42 @@ const CookLogin = () => {
           </button>
         )}
 
+        {/* Test signup section */}
+        <div className="mt-4">
+          <button
+            onClick={() => setShowTestSignup(!showTestSignup)}
+            className="font-body text-xs underline"
+            style={{ color: "rgba(249,247,242,0.5)" }}
+          >
+            Sign up for testing
+          </button>
+          {showTestSignup && (
+            <div className="mt-3 p-3 rounded-xl" style={{ backgroundColor: "rgba(249,247,242,0.04)", border: "1px solid rgba(239,68,68,0.3)" }}>
+              <p className="font-body text-[10px] font-bold mb-2 px-1 py-0.5 rounded inline-block" style={{ color: "#ef4444", backgroundColor: "rgba(239,68,68,0.1)" }}>
+                TESTING ONLY — remove before launch
+              </p>
+              <input
+                type="email" placeholder="Email" value={signupEmail} onChange={(e) => setSignupEmail(e.target.value)}
+                className={inputStyle + " mt-2"}
+                style={{ backgroundColor: "rgba(249,247,242,0.06)", color: "#F9F7F2", borderColor: "rgba(239,68,68,0.25)", borderWidth: 1 }}
+              />
+              <input
+                type="password" placeholder="Password (min 6 chars)" value={signupPassword} onChange={(e) => setSignupPassword(e.target.value)}
+                className={inputStyle + " mt-2"}
+                style={{ backgroundColor: "rgba(249,247,242,0.06)", color: "#F9F7F2", borderColor: "rgba(239,68,68,0.25)", borderWidth: 1 }}
+              />
+              <button
+                onClick={handleTestSignup} disabled={signupLoading}
+                className="w-full py-2.5 rounded-xl font-body font-semibold text-xs mt-3 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
+                style={{ backgroundColor: "rgba(239,68,68,0.15)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.3)" }}
+              >
+                {signupLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+                Create test account
+              </button>
+            </div>
+          )}
+        </div>
+
         {/* New cook info */}
         <div className="mt-5 pt-5" style={{ borderTop: "1px solid rgba(249,247,242,0.1)" }}>
           <p className="font-body text-[13px] font-semibold mb-1" style={{ color: "#F9F7F2" }}>
