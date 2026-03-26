@@ -164,6 +164,13 @@ export type Database = {
             referencedRelation: "cooks"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "cook_availability_cook_id_fkey"
+            columns: ["cook_id"]
+            isOneToOne: false
+            referencedRelation: "public_cooks"
+            referencedColumns: ["id"]
+          },
         ]
       }
       cook_blocked_dates: {
@@ -191,6 +198,13 @@ export type Database = {
             columns: ["cook_id"]
             isOneToOne: false
             referencedRelation: "cooks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cook_blocked_dates_cook_id_fkey"
+            columns: ["cook_id"]
+            isOneToOne: false
+            referencedRelation: "public_cooks"
             referencedColumns: ["id"]
           },
         ]
@@ -244,6 +258,13 @@ export type Database = {
             columns: ["cook_id"]
             isOneToOne: false
             referencedRelation: "cooks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cook_menus_cook_id_fkey"
+            columns: ["cook_id"]
+            isOneToOne: false
+            referencedRelation: "public_cooks"
             referencedColumns: ["id"]
           },
         ]
@@ -351,7 +372,42 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      public_cooks: {
+        Row: {
+          area: string | null
+          bio: string | null
+          cuisine: string[] | null
+          health_card: boolean | null
+          id: string | null
+          name: string | null
+          photo_url: string | null
+          status: string | null
+          years_experience: number | null
+        }
+        Insert: {
+          area?: string | null
+          bio?: string | null
+          cuisine?: string[] | null
+          health_card?: boolean | null
+          id?: string | null
+          name?: string | null
+          photo_url?: string | null
+          status?: string | null
+          years_experience?: number | null
+        }
+        Update: {
+          area?: string | null
+          bio?: string | null
+          cuisine?: string[] | null
+          health_card?: boolean | null
+          id?: string | null
+          name?: string | null
+          photo_url?: string | null
+          status?: string | null
+          years_experience?: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       check_cooks_maria: {
