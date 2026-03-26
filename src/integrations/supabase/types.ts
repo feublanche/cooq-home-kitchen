@@ -407,6 +407,34 @@ export type Database = {
           trig_timing: string
         }[]
       }
+      get_public_cook_by_id: {
+        Args: { cook_uuid: string }
+        Returns: {
+          area: string
+          bio: string
+          cuisine: string[]
+          health_card: boolean
+          id: string
+          name: string
+          photo_url: string
+          status: string
+          years_experience: number
+        }[]
+      }
+      get_public_cooks: {
+        Args: never
+        Returns: {
+          area: string
+          bio: string
+          cuisine: string[]
+          health_card: boolean
+          id: string
+          name: string
+          photo_url: string
+          status: string
+          years_experience: number
+        }[]
+      }
       list_all_cooks: {
         Args: never
         Returns: {

@@ -12,10 +12,7 @@ const Results = () => {
   const { data: cooks = [], isLoading } = useQuery({
     queryKey: ["cooks", neighborhood, cuisines, dietary],
     queryFn: async () => {
-      const { data } = await supabase
-        .from("cooks")
-        .select("id, name, bio, cuisine, area, years_experience, health_card, photo_url")
-        .in("status", ["approved", "active"]);
+      const { data } = await supabase.rpc("get_public_cooks");
       return data || [];
     },
   });

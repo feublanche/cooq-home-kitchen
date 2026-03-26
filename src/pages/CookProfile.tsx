@@ -23,7 +23,8 @@ const CookProfile = () => {
   const { data: cook, isLoading } = useQuery({
     queryKey: ["cook", id],
     queryFn: async () => {
-      const { data } = await supabase.from("cooks").select("id, name, bio, cuisine, area, years_experience, health_card, photo_url").eq("id", id!).single();
+      const { data: rows } = await supabase.rpc("get_public_cook_by_id", { cook_uuid: id! });
+      const data = rows?.[0] || null;
       return data;
     },
     enabled: !!id,
