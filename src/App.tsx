@@ -31,6 +31,7 @@ import CustomerProtectedRoute from "@/components/CustomerProtectedRoute";
 import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
 import CookAgreement from "./pages/CookAgreement";
+import ResetPassword from "./pages/ResetPassword";
 
 const queryClient = new QueryClient();
 
