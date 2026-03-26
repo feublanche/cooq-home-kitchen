@@ -4,7 +4,7 @@
 
 @layer base {
   :root {
-    /* Cooq Brand Colors — all HSL */
+    /* Cooq Brand — light mode (only mode) */
     --background: 40 33% 96%; /* #F9F7F2 flour */
     --foreground: 135 4% 18%; /* #2D312E slate */
 
