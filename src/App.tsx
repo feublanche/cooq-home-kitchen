@@ -4,6 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { BookingProvider } from "@/context/BookingContext";
+import { CookProvider } from "@/context/CookContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import CookProtectedRoute from "@/components/CookProtectedRoute";
 import Home from "./pages/Home";
