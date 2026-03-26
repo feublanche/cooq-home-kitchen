@@ -71,6 +71,7 @@ const App = () => (
           </div>
         </BrowserRouter>
       </BookingProvider>
+      </CookProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );
