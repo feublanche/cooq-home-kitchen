@@ -93,6 +93,30 @@ const CookLogin = () => {
     else setMagicLinkSent(true);
   };
 
+  const handleTestSignup = async () => {
+    if (!signupEmail || !signupPassword) { setError("Enter email and password"); return; }
+    if (signupPassword.length < 6) { setError("Password must be at least 6 characters"); return; }
+    setSignupLoading(true);
+    setError("");
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email: signupEmail,
+        password: signupPassword,
+      });
+      if (error) { setError(error.message); setSignupLoading(false); return; }
+      if (data.user) {
+        setShowTestSignup(false);
+        setError("");
+        setEmail(signupEmail);
+        setPassword(signupPassword);
+        alert("Account created! Check your email to confirm, then sign in.");
+      }
+    } catch (e: any) {
+      setError(e.message || "Signup failed");
+    }
+    setSignupLoading(false);
+  };
+
   const handleForgotPassword = async () => {
     if (!email) { setError("Enter your email first"); return; }
     setError("");
