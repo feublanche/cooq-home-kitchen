@@ -22,13 +22,13 @@ const Confirmation = () => {
       }
       // Load cook data
       if (cookId) {
-        const { data: cook } = await supabase.from("cooks").select("name, photo_url, cuisine").eq("id", cookId).single();
-        if (cook) setCookData(cook);
+        const { data: rows } = await supabase.rpc("get_public_cook_by_id", { cook_uuid: cookId });
+        if (rows?.[0]) setCookData(rows[0]);
       } else if (bookingId) {
         const { data: booking } = await supabase.from("bookings").select("cook_id, cook_name").eq("id", bookingId).single();
         if (booking?.cook_id) {
-          const { data: cook } = await supabase.from("cooks").select("name, photo_url, cuisine").eq("id", booking.cook_id).single();
-          if (cook) setCookData(cook);
+          const { data: rows } = await supabase.rpc("get_public_cook_by_id", { cook_uuid: booking.cook_id });
+          if (rows?.[0]) setCookData(rows[0]);
         }
       }
     };
