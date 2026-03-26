@@ -16,6 +16,10 @@ const CookLogin = () => {
   const [magicLinkLoading, setMagicLinkLoading] = useState(false);
   const [resetSent, setResetSent] = useState(false);
   const [checkingSession, setCheckingSession] = useState(true);
+  const [showTestSignup, setShowTestSignup] = useState(false);
+  const [signupEmail, setSignupEmail] = useState("");
+  const [signupPassword, setSignupPassword] = useState("");
+  const [signupLoading, setSignupLoading] = useState(false);
   const hasRedirected = useRef(false);
 
   // On mount: check if already logged in as a cook
