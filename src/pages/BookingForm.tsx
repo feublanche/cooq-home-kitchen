@@ -143,8 +143,8 @@ const BookingForm = () => {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const hasTier = !!routerState.tier;
-  const hasFreq = !!routerState.frequency;
+  const hasTier = false;
+  const hasFreq = false;
 
   // Recurring day selectors for twice/three frequency
   const [secondDay, setSecondDay] = useState("");
