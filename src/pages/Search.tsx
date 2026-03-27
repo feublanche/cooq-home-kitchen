@@ -38,8 +38,12 @@ const cuisineOptions = [
   "Mediterranean",
   "Asian",
   "Italian",
+  "Greek",
+  "Japanese",
+  "Sushi",
+  "Spanish",
 ];
-const dietaryOptions = ["Vegetarian", "Vegan", "Gluten-Free", "Dairy-Free", "Nut-Free", "Kid-Friendly", "Keto"];
+const dietaryOptions = ["Vegetarian", "Vegan", "Gluten-Free", "Dairy-Free", "Nut-Free", "Kid-Friendly", "Keto", "Low-carb"];
 
 const freqOptions = [
   {
