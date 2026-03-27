@@ -225,7 +225,7 @@ const BookingForm = () => {
   const isDiscovery = isFirstSession && tier === "duo";
   const sessionTotal = getTotal(tier, frequency, isFirstSession);
   const groceryFee = 0; // Grocery shopping removed for now
-  const primaryBookingDate = routerState.bookingDate || "";
+  const [primaryBookingDate, setPrimaryBookingDate] = useState(routerState.bookingDate || "");
   const primaryMenuName = routerState.selectedMenuName || booking.menuSelected || "Not selected";
   const secondaryMenuName = availableMenus.find((menu) => menu.id === secondSessionMenuId)?.menu_name || "";
   const minSelectableDate = useMemo(() => {
