@@ -250,6 +250,7 @@ const BookingForm = () => {
     if (!booking.customerName.trim()) e.customerName = "Required";
     if (!booking.email.trim() || !/\S+@\S+\.\S+/.test(booking.email)) e.email = "Valid email required";
     if (!booking.phone.trim()) e.phone = "Required";
+    if (!primaryBookingDate) e.bookingDate = "Please select a session date";
     if (frequency === "twice" && !secondSessionDate) e.secondSessionDate = "Please choose your second date";
     if (frequency === "twice" && primaryBookingDate && secondSessionDate === primaryBookingDate) {
       e.secondSessionDate = "Second date must be different from the first date";
