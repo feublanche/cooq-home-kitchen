@@ -381,9 +381,8 @@ const BookingForm = () => {
             Cook: {routerState.cookInitials || "To be matched"}
             {routerState.cookArea ? ` · ${routerState.cookArea}` : ""}
           </p>
-          <p className="font-body text-[12px] text-gray-500 italic">Menu: {primaryMenuName}</p>
-          <p className="font-body text-[12px] text-gray-500">Date: {formatBookingDate(primaryBookingDate)}</p>
-          <p className="font-body text-[12px] text-gray-500">Time: {routerState.bookingTime || "Not selected"}</p>
+          <p className="font-body text-[12px] text-muted-foreground italic">Menu: {primaryMenuName}</p>
+          <p className="font-body text-[12px] text-muted-foreground">Date: {formatBookingDate(primaryBookingDate)}</p>
           {frequency === "twice" && secondSessionDate && (
             <>
               <p className="font-body text-[12px] text-gray-500">Second date: {formatBookingDate(secondSessionDate)}</p>
