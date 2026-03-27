@@ -590,6 +590,21 @@ const BookingForm = () => {
           <p className="font-body text-xs text-muted-foreground mb-4">AED {sessionTotal} per session</p>
         )}
 
+        {/* ── PRIMARY DATE PICKER ── */}
+        <div className="mb-6">
+          <p className="font-body text-sm font-bold text-foreground mb-2">Session date *</p>
+          <input
+            type="date"
+            min={minSelectableDate}
+            value={primaryBookingDate}
+            onChange={(e) => setPrimaryBookingDate(e.target.value)}
+            className="w-full p-3 rounded-lg border border-border bg-card font-body text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+          />
+          {!primaryBookingDate && errors.bookingDate && (
+            <p className="font-body text-xs text-destructive mt-1">{errors.bookingDate}</p>
+          )}
+        </div>
+
         {/* ── RECURRING DAY SELECTORS ── */}
         {frequency === "twice" && (
           <div className="mb-6 rounded-xl border border-border bg-card p-4 space-y-3">
