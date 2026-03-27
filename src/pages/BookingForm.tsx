@@ -150,6 +150,9 @@ const BookingForm = () => {
     if (!booking.customerName.trim()) e.customerName = "Required";
     if (!booking.email.trim() || !/\S+@\S+\.\S+/.test(booking.email)) e.email = "Valid email required";
     if (!booking.phone.trim()) e.phone = "Required";
+    if (frequency === "twice" && !secondDay) e.secondDay = "Please select a second day";
+    if (frequency === "three" && !secondDay) e.secondDay = "Please select a second day";
+    if (frequency === "three" && !thirdDay) e.thirdDay = "Please select a third day";
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -419,6 +422,7 @@ const BookingForm = () => {
             {recurringDays.length > 1 && (
               <p className="font-body text-xs text-muted-foreground mt-2">Weekly sessions: {recurringDays.join(" + ")}</p>
             )}
+            {errors.secondDay && <p className="font-body text-xs text-destructive mt-2">{errors.secondDay}</p>}
           </div>
         )}
 
@@ -456,6 +460,8 @@ const BookingForm = () => {
             {recurringDays.length > 1 && (
               <p className="font-body text-xs text-muted-foreground mt-2">Weekly sessions: {recurringDays.join(" + ")}</p>
             )}
+            {errors.secondDay && <p className="font-body text-xs text-destructive mt-2">{errors.secondDay}</p>}
+            {errors.thirdDay && <p className="font-body text-xs text-destructive mt-2">{errors.thirdDay}</p>}
           </div>
         )}
 
