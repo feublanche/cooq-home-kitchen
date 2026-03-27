@@ -6,77 +6,109 @@ import cooqLogo from "@/assets/cooq-logo.png";
 import { ChevronDown } from "lucide-react";
 
 const PRICING = {
-  'one-time':   { duo: 350,  family: 420,  large: 550  },
-  'first-cook': { duo: 299,  family: 420,  large: 550  },
-  'weekly':     { duo: 1190, family: 1430, large: 1870 },
-  'twice':      { duo: 2380, family: 2860, large: 3740 },
-  'three':      { duo: 3570, family: 4280, large: 5610 }
+  "one-time": { duo: 350, family: 420, large: 550 },
+  "first-cook": { duo: 299, family: 420, large: 550 },
+  weekly: { duo: 1190, family: 1430, large: 1870 },
+  twice: { duo: 2380, family: 2860, large: 3740 },
+  three: { duo: 3570, family: 4280, large: 5610 },
 };
 
 const SESSIONS = {
-  'one-time': 1, 'first-cook': 1,
-  'weekly': 4, 'twice': 8, 'three': 12
+  "one-time": 1,
+  "first-cook": 1,
+  weekly: 4,
+  twice: 8,
+  three: 12,
 };
 
 const SAVINGS = {
-  'weekly': { duo: 210, family: 250, large: 330  },
-  'twice':  { duo: 420, family: 500, large: 660  },
-  'three':  { duo: 630, family: 760, large: 990  }
+  weekly: { duo: 210, family: 250, large: 330 },
+  twice: { duo: 420, family: 500, large: 660 },
+  three: { duo: 630, family: 760, large: 990 },
 };
 
-const cuisineOptions = ["Arabic", "Lebanese", "Emirati", "Moroccan", "Indian", "Pakistani", "Filipino", "Mediterranean", "Asian", "Italian"];
-const dietaryOptions = ["Halal", "Vegetarian", "Vegan", "Gluten-Free", "Dairy-Free", "Nut-Free", "Kid-Friendly", "Keto"];
+const cuisineOptions = [
+  "Arabic",
+  "Lebanese",
+  "Emirati",
+  "Moroccan",
+  "Indian",
+  "Pakistani",
+  "Filipino",
+  "Mediterranean",
+  "Asian",
+  "Italian",
+];
+const dietaryOptions = ["Vegetarian", "Vegan", "Gluten-Free", "Dairy-Free", "Nut-Free", "Kid-Friendly", "Keto"];
 
 const freqOptions = [
   {
-    key: 'one-time',
-    label: 'One-time',
-    subtitle: 'Single session, no commitment',
+    key: "one-time",
+    label: "One-time",
+    subtitle: "Single session, no commitment",
     badge: null,
     rows: [
-      { tier: 'Duo', people: '1–2 people', price: 'AED 350 / session', saving: null },
-      { tier: 'Family', people: '3–4 people', price: 'AED 420 / session', saving: null },
-      { tier: 'Large', people: '5–6 people', price: 'AED 550 / session', saving: null },
+      { tier: "Duo", people: "1–2 people", price: "AED 350 / session", saving: null },
+      { tier: "Family", people: "3–4 people", price: "AED 420 / session", saving: null },
+      { tier: "Large", people: "5–6 people", price: "AED 550 / session", saving: null },
     ],
   },
   {
-    key: 'weekly',
-    label: 'Weekly',
-    subtitle: '4 sessions per month',
-    badge: 'Save 15%',
+    key: "weekly",
+    label: "Weekly",
+    subtitle: "4 sessions per month",
+    badge: "Save 15%",
     rows: [
-      { tier: 'Duo', people: '1–2 people', price: 'AED 1,190 / mo', saving: '210' },
-      { tier: 'Family', people: '3–4 people', price: 'AED 1,430 / mo', saving: '250' },
-      { tier: 'Large', people: '5–6 people', price: 'AED 1,870 / mo', saving: '330' },
+      { tier: "Duo", people: "1–2 people", price: "AED 1,190 / mo", saving: "210" },
+      { tier: "Family", people: "3–4 people", price: "AED 1,430 / mo", saving: "250" },
+      { tier: "Large", people: "5–6 people", price: "AED 1,870 / mo", saving: "330" },
     ],
   },
   {
-    key: 'twice',
-    label: 'Twice a week',
-    subtitle: '8 sessions per month',
-    badge: 'Save 15%',
+    key: "twice",
+    label: "Twice a week",
+    subtitle: "8 sessions per month",
+    badge: "Save 15%",
     rows: [
-      { tier: 'Duo', people: '1–2 people', price: 'AED 2,380 / mo', saving: '420' },
-      { tier: 'Family', people: '3–4 people', price: 'AED 2,860 / mo', saving: '500' },
-      { tier: 'Large', people: '5–6 people', price: 'AED 3,740 / mo', saving: '660' },
+      { tier: "Duo", people: "1–2 people", price: "AED 2,380 / mo", saving: "420" },
+      { tier: "Family", people: "3–4 people", price: "AED 2,860 / mo", saving: "500" },
+      { tier: "Large", people: "5–6 people", price: "AED 3,740 / mo", saving: "660" },
     ],
   },
   {
-    key: 'three',
-    label: '3× a week',
-    subtitle: '12 sessions per month · Full week coverage',
-    badge: 'Save 15%',
+    key: "three",
+    label: "3× a week",
+    subtitle: "12 sessions per month · Full week coverage",
+    badge: "Save 15%",
     rows: [
-      { tier: 'Duo', people: '1–2 people', price: 'AED 3,570 / mo', saving: '630' },
-      { tier: 'Family', people: '3–4 people', price: 'AED 4,280 / mo', saving: '760' },
-      { tier: 'Large', people: '5–6 people', price: 'AED 5,610 / mo', saving: '990' },
+      { tier: "Duo", people: "1–2 people", price: "AED 3,570 / mo", saving: "630" },
+      { tier: "Family", people: "3–4 people", price: "AED 4,280 / mo", saving: "760" },
+      { tier: "Large", people: "5–6 people", price: "AED 5,610 / mo", saving: "990" },
     ],
-  }
+  },
 ];
 const tierOptions = [
-  { key: "duo", label: "Cooq Duo", desc: "1–2 people · ~2 hours · AED 350", detail: "2 proteins · 2 sides · covers 3–4 days", price: "AED 350" },
-  { key: "family", label: "Cooq Family", desc: "3–4 people · ~3 hours · AED 420", detail: "2 proteins · 3 sides · covers 3–4 days", price: "AED 420" },
-  { key: "large", label: "Cooq Large", desc: "5–6 people · ~4 hours · AED 550", detail: "3 proteins · 3 sides · covers 3–4 days", price: "AED 550" },
+  {
+    key: "duo",
+    label: "Cooq Duo",
+    desc: "1–2 people · ~2 hours · AED 350",
+    detail: "2 proteins · 2 sides · covers 3–4 days",
+    price: "AED 350",
+  },
+  {
+    key: "family",
+    label: "Cooq Family",
+    desc: "3–4 people · ~3 hours · AED 420",
+    detail: "2 proteins · 3 sides · covers 3–4 days",
+    price: "AED 420",
+  },
+  {
+    key: "large",
+    label: "Cooq Large",
+    desc: "5–6 people · ~4 hours · AED 550",
+    detail: "3 proteins · 3 sides · covers 3–4 days",
+    price: "AED 550",
+  },
 ];
 
 const Pill = ({ label, selected, onClick }: { label: string; selected: boolean; onClick: () => void }) => (
@@ -108,17 +140,22 @@ const Search = () => {
 
   const totalSteps = 5;
 
-  const toggleArr = (arr: string[], val: string) =>
-    arr.includes(val) ? arr.filter((v) => v !== val) : [...arr, val];
+  const toggleArr = (arr: string[], val: string) => (arr.includes(val) ? arr.filter((v) => v !== val) : [...arr, val]);
 
   const canNext = () => {
     switch (step) {
-      case 1: return !!neighborhood;
-      case 2: return true;
-      case 3: return true;
-      case 4: return !!frequency;
-      case 5: return !!tier;
-      default: return false;
+      case 1:
+        return !!neighborhood;
+      case 2:
+        return true;
+      case 3:
+        return true;
+      case 4:
+        return !!frequency;
+      case 5:
+        return !!tier;
+      default:
+        return false;
     }
   };
 
@@ -140,10 +177,15 @@ const Search = () => {
       <div className="px-6 mb-6">
         <div className="flex gap-2">
           {Array.from({ length: totalSteps }, (_, i) => (
-            <div key={i} className={`h-1.5 rounded-full flex-1 transition-colors ${i < step ? "bg-primary" : "bg-border"}`} />
+            <div
+              key={i}
+              className={`h-1.5 rounded-full flex-1 transition-colors ${i < step ? "bg-primary" : "bg-border"}`}
+            />
           ))}
         </div>
-        <p className="font-body text-xs text-muted-foreground mt-2">Step {step} of {totalSteps}</p>
+        <p className="font-body text-xs text-muted-foreground mt-2">
+          Step {step} of {totalSteps}
+        </p>
       </div>
 
       <div className="flex-1 px-6 pb-6">
@@ -159,7 +201,9 @@ const Search = () => {
               >
                 <option value="">Select your neighborhood...</option>
                 {dubaiNeighborhoods.map((loc) => (
-                  <option key={loc} value={loc}>{loc}</option>
+                  <option key={loc} value={loc}>
+                    {loc}
+                  </option>
                 ))}
               </select>
               <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground pointer-events-none" />
@@ -221,15 +265,15 @@ const Search = () => {
                     type="button"
                     onClick={() => setFrequency(option.key)}
                     className={`w-full text-left rounded-xl p-4 border-2 cursor-pointer transition-all ${
-                      selected
-                        ? "border-[#86A383] bg-[#86A383]/5"
-                        : "border-gray-100 bg-white"
+                      selected ? "border-[#86A383] bg-[#86A383]/5" : "border-gray-100 bg-white"
                     }`}
                   >
                     <div className="flex justify-between items-center mb-2">
                       <span className="font-semibold text-[#2D312E] text-base">{option.label}</span>
                       {option.badge && (
-                        <span className="bg-[#86A383]/10 text-[#86A383] text-xs px-2 py-0.5 rounded-full font-medium">{option.badge}</span>
+                        <span className="bg-[#86A383]/10 text-[#86A383] text-xs px-2 py-0.5 rounded-full font-medium">
+                          {option.badge}
+                        </span>
                       )}
                     </div>
                     <p className="text-gray-400 text-xs mb-3">{option.subtitle}</p>
@@ -242,7 +286,7 @@ const Search = () => {
                         </tr>
                       </thead>
                       <tbody>
-                        {option.rows.map(row => (
+                        {option.rows.map((row) => (
                           <tr key={row.tier} className="border-b border-gray-50 last:border-0">
                             <td className="py-2 text-[#2D312E] font-medium text-xs">{row.tier}</td>
                             <td className="py-2 text-gray-400 text-xs">{row.people}</td>
@@ -277,12 +321,12 @@ const Search = () => {
                   type="button"
                   onClick={() => setTier(t.key)}
                   className={`w-full text-left rounded-xl p-4 border-2 transition-colors ${
-                    tier === t.key
-                      ? "border-[#86A383] bg-[#86A383]/5"
-                      : "border-gray-100 bg-white"
+                    tier === t.key ? "border-[#86A383] bg-[#86A383]/5" : "border-gray-100 bg-white"
                   }`}
                 >
-                  <p className="font-body text-sm font-bold text-foreground">{t.label} <span className="font-normal text-muted-foreground">· {t.desc}</span></p>
+                  <p className="font-body text-sm font-bold text-foreground">
+                    {t.label} <span className="font-normal text-muted-foreground">· {t.desc}</span>
+                  </p>
                   <p className="font-body text-xs text-muted-foreground">{t.detail}</p>
                   <p className="font-body text-xs font-semibold text-foreground mt-1">{t.price}</p>
                 </button>
