@@ -6,7 +6,20 @@ import { ArrowLeft, ShieldCheck, ChevronLeft, ChevronRight, Star } from "lucide-
 import cooqLogo from "@/assets/cooq-logo.png";
 
 const DAY_NAMES_SHORT = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-const MONTH_NAMES = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+const MONTH_NAMES = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
 
 const CookProfile = () => {
   const { id } = useParams<{ id: string }>();
@@ -45,7 +58,9 @@ const CookProfile = () => {
       try {
         const { data } = await supabase.from("cook_availability").select("*").eq("cook_id", id!).eq("available", true);
         return data || [];
-      } catch { return []; }
+      } catch {
+        return [];
+      }
     },
     enabled: !!id,
   });
@@ -54,9 +69,14 @@ const CookProfile = () => {
     queryKey: ["cook-blocked", id],
     queryFn: async () => {
       try {
-        const { data } = await supabase.from("cook_blocked_dates" as any).select("blocked_date").eq("cook_id", id!);
+        const { data } = await supabase
+          .from("cook_blocked_dates" as any)
+          .select("blocked_date")
+          .eq("cook_id", id!);
         return (data || []).map((r: any) => r.blocked_date);
-      } catch { return []; }
+      } catch {
+        return [];
+      }
     },
     enabled: !!id,
   });
@@ -104,7 +124,9 @@ const CookProfile = () => {
     return (
       <div className="min-h-screen bg-background flex flex-col">
         <nav className="flex items-center gap-3 px-6 py-4">
-          <button onClick={() => navigate("/results")} className="text-foreground"><ArrowLeft className="w-5 h-5" /></button>
+          <button onClick={() => navigate("/results")} className="text-foreground">
+            <ArrowLeft className="w-5 h-5" />
+          </button>
           <img src={cooqLogo} alt="Cooq" className="h-7" />
         </nav>
         <div className="px-6 animate-pulse space-y-4">
@@ -121,44 +143,58 @@ const CookProfile = () => {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6">
         <p className="font-body text-lg text-foreground mb-4">Cook not found</p>
-        <button onClick={() => navigate("/results")} className="font-body text-sm text-copper underline">← Back to cooks</button>
+        <button onClick={() => navigate("/results")} className="font-body text-sm text-copper underline">
+          ← Back to cooks
+        </button>
       </div>
     );
   }
 
-  const initials = cook.name.split(" ").map((n: string) => n[0]).join(".") + ".";
+  const initials =
+    cook.name
+      .split(" ")
+      .map((n: string) => n[0])
+      .join(".") + ".";
 
   const handleBook = async () => {
     if (!selectedMenu || !selectedDate || !selectedSlot) return;
-    const { data: { session } } = await supabase.auth.getSession();
+    const initials =
+      cook.name
+        .split(" ")
+        .map((n: string) => n[0])
+        .join(".") + ".";
+    const bookingState = {
+      cookId: cook.id,
+      cookInitials: initials,
+      cookArea: cook.area,
+      selectedMenuId: selectedMenu.id,
+      selectedMenuName: selectedMenu.menu_name,
+      selectedMeals: selectedMenu.meals,
+      bookingDate: selectedDate.toISOString().split("T")[0],
+      bookingTime: selectedSlot,
+      tier: (location.state as any)?.tier,
+      frequency: (location.state as any)?.frequency,
+    };
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
     if (!session) {
-      navigate('/account', { state: { returnTo: '/cook/' + id } });
+      sessionStorage.setItem("cooq_pending_booking", JSON.stringify(bookingState));
+      navigate("/account", { state: { returnTo: "/cook/" + id } });
       return;
     }
-    if (session.user.email === 'cooqdubai@gmail.com') {
-      navigate('/account', { state: { returnTo: '/cook/' + id } });
+    if (session.user.email === "cooqdubai@gmail.com") {
+      sessionStorage.setItem("cooq_pending_booking", JSON.stringify(bookingState));
+      navigate("/account", { state: { returnTo: "/cook/" + id } });
       return;
     }
-    const { data: cookRecord } = await supabase
-      .from('cooks').select('id').eq('user_id', session.user.id).maybeSingle();
+    const { data: cookRecord } = await supabase.from("cooks").select("id").eq("user_id", session.user.id).maybeSingle();
     if (cookRecord) {
-      navigate('/account', { state: { returnTo: '/cook/' + id } });
+      sessionStorage.setItem("cooq_pending_booking", JSON.stringify(bookingState));
+      navigate("/account", { state: { returnTo: "/cook/" + id } });
       return;
     }
-    navigate('/book', {
-      state: {
-        cookId: cook.id,
-        cookInitials: initials,
-        cookArea: cook.area,
-        selectedMenuId: selectedMenu.id,
-        selectedMenuName: selectedMenu.menu_name,
-        selectedMeals: selectedMenu.meals,
-        bookingDate: selectedDate.toISOString().split("T")[0],
-        bookingTime: selectedSlot,
-        tier: (location.state as any)?.tier,
-        frequency: (location.state as any)?.frequency,
-      },
-    });
+    navigate("/book", { state: bookingState });
   };
 
   const canBook = !!selectedMenu && !!selectedDate && !!selectedSlot;
@@ -182,9 +218,17 @@ const CookProfile = () => {
         {/* Profile header */}
         <div className="flex flex-col items-center text-center mb-8">
           {cook.photo_url ? (
-            <img src={cook.photo_url} alt="" className="w-24 h-24 rounded-full object-cover mb-4" style={{ filter: "blur(12px)" }} />
+            <img
+              src={cook.photo_url}
+              alt=""
+              className="w-24 h-24 rounded-full object-cover mb-4"
+              style={{ filter: "blur(12px)" }}
+            />
           ) : (
-            <div className="w-24 h-24 rounded-full mb-4 flex items-center justify-center" style={{ backgroundColor: "#B57E5D", filter: "blur(12px)" }}>
+            <div
+              className="w-24 h-24 rounded-full mb-4 flex items-center justify-center"
+              style={{ backgroundColor: "#B57E5D", filter: "blur(12px)" }}
+            >
               <span className="font-display text-3xl text-white">{initials}</span>
             </div>
           )}
@@ -193,7 +237,7 @@ const CookProfile = () => {
           <p className="font-body text-sm text-muted-foreground mt-2">
             {cook.cuisine?.join(" · ")} · {cook.area} · {cook.years_experience} years
           </p>
-           <div className="flex items-center gap-2 mt-3">
+          <div className="flex items-center gap-2 mt-3">
             {cook.health_card && (
               <span className="flex items-center gap-1 px-3 py-1 rounded-full bg-primary/10 text-primary font-body text-xs font-medium">
                 <ShieldCheck className="w-3.5 h-3.5" /> Cooq Vetted
@@ -211,18 +255,30 @@ const CookProfile = () => {
           <div className="bg-white rounded-xl border border-gray-100 p-3">
             {/* Month nav */}
             <div className="flex items-center justify-between mb-3">
-              <button onClick={() => canGoPrev && setCalMonth(new Date(calMonth.getFullYear(), calMonth.getMonth() - 1, 1))} disabled={!canGoPrev} className="p-1 disabled:opacity-20">
+              <button
+                onClick={() => canGoPrev && setCalMonth(new Date(calMonth.getFullYear(), calMonth.getMonth() - 1, 1))}
+                disabled={!canGoPrev}
+                className="p-1 disabled:opacity-20"
+              >
                 <ChevronLeft className="w-4 h-4 text-gray-600" />
               </button>
-              <span className="font-body text-sm font-semibold text-[#2D312E]">{MONTH_NAMES[calMonth.getMonth()]} {calMonth.getFullYear()}</span>
-              <button onClick={() => canGoNext && setCalMonth(new Date(calMonth.getFullYear(), calMonth.getMonth() + 1, 1))} disabled={!canGoNext} className="p-1 disabled:opacity-20">
+              <span className="font-body text-sm font-semibold text-[#2D312E]">
+                {MONTH_NAMES[calMonth.getMonth()]} {calMonth.getFullYear()}
+              </span>
+              <button
+                onClick={() => canGoNext && setCalMonth(new Date(calMonth.getFullYear(), calMonth.getMonth() + 1, 1))}
+                disabled={!canGoNext}
+                className="p-1 disabled:opacity-20"
+              >
                 <ChevronRight className="w-4 h-4 text-gray-600" />
               </button>
             </div>
             {/* Day headers */}
             <div className="grid grid-cols-7 gap-1 mb-1">
-              {DAY_NAMES_SHORT.map(d => (
-                <div key={d} className="text-center font-body text-[10px] text-gray-400 font-medium">{d}</div>
+              {DAY_NAMES_SHORT.map((d) => (
+                <div key={d} className="text-center font-body text-[10px] text-gray-400 font-medium">
+                  {d}
+                </div>
               ))}
             </div>
             {/* Day cells */}
@@ -235,7 +291,10 @@ const CookProfile = () => {
                   <button
                     key={date.toISOString()}
                     disabled={!avail}
-                    onClick={() => { setSelectedDate(date); setSelectedSlot(null); }}
+                    onClick={() => {
+                      setSelectedDate(date);
+                      setSelectedSlot(null);
+                    }}
                     className={`w-full aspect-square rounded-full flex items-center justify-center font-body text-xs transition-colors ${
                       isSelected
                         ? "bg-[#2D312E] text-white ring-2 ring-[#86A383]"
@@ -255,7 +314,9 @@ const CookProfile = () => {
         {/* Time slots */}
         {selectedDate && (
           <div className="mb-6">
-            <p className="font-body text-xs font-semibold tracking-[0.15em] uppercase text-copper mb-2">Choose a time</p>
+            <p className="font-body text-xs font-semibold tracking-[0.15em] uppercase text-copper mb-2">
+              Choose a time
+            </p>
             <div className="flex flex-wrap gap-2">
               {getSlotsForDate(selectedDate).length === 0 ? (
                 <p className="font-body text-xs text-muted-foreground italic">No time slots set for this day</p>
@@ -301,14 +362,21 @@ const CookProfile = () => {
                     {menu.meals?.length > 0 && (
                       <div className="mt-1 space-y-0.5">
                         {menu.meals.map((meal: string, i: number) => (
-                          <p key={i} className="font-body text-[12px] text-gray-500">● {meal}</p>
+                          <p key={i} className="font-body text-[12px] text-gray-500">
+                            ● {meal}
+                          </p>
                         ))}
                       </div>
                     )}
                     {menu.dietary?.length > 0 && (
                       <div className="flex flex-wrap gap-1 mt-2">
                         {menu.dietary.map((d: string, i: number) => (
-                          <span key={i} className="px-2 py-0.5 rounded-full bg-primary/10 font-body text-[9px] text-foreground">{d}</span>
+                          <span
+                            key={i}
+                            className="px-2 py-0.5 rounded-full bg-primary/10 font-body text-[9px] text-foreground"
+                          >
+                            {d}
+                          </span>
                         ))}
                       </div>
                     )}
