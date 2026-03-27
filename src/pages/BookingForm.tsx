@@ -76,9 +76,9 @@ const TIER_LABELS: Record<string, string> = {
 const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 const normalizeFrequency = (value: string) => {
-  const key = value.trim().toLowerCase();
-  if (["twice", "twice a week", "twice-aweek", "twice-a-week"].includes(key)) return "twice";
-  if (["three", "3x a week", "3× a week", "3x", "3×"].includes(key)) return "three";
+  const key = value.trim().toLowerCase().replace(/\s+/g, " ");
+  if (key.includes("twice")) return "twice";
+  if (key.includes("3x") || key.includes("3×") || key.includes("three")) return "three";
   if (["weekly", "once a week"].includes(key)) return "weekly";
   return "one-time";
 };
