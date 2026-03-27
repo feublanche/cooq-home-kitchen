@@ -150,10 +150,6 @@ const Search = () => {
         return true;
       case 3:
         return true;
-      case 4:
-        return !!frequency;
-      case 5:
-        return !!tier;
       default:
         return false;
     }
