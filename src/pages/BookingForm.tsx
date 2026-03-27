@@ -422,6 +422,7 @@ const BookingForm = () => {
             {recurringDays.length > 1 && (
               <p className="font-body text-xs text-muted-foreground mt-2">Weekly sessions: {recurringDays.join(" + ")}</p>
             )}
+            {errors.secondDay && <p className="font-body text-xs text-destructive mt-2">{errors.secondDay}</p>}
           </div>
         )}
 
