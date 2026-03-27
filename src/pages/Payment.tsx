@@ -20,6 +20,8 @@ interface PaymentState {
   cookName: string | null;
   cookId: string;
   selectedMenuName: string;
+  secondaryBookingDate?: string | null;
+  secondaryMenuName?: string | null;
 }
 
 const CheckoutForm = ({ totalAed, bookingId, paymentState, paymentIntentId }: { totalAed: number; bookingId: string; paymentState: PaymentState; paymentIntentId: string }) => {
@@ -59,6 +61,8 @@ const CheckoutForm = ({ totalAed, bookingId, paymentState, paymentIntentId }: { 
         bookingTime: paymentState.bookingTime,
         area: paymentState.area,
         selectedMenuName: paymentState.selectedMenuName || paymentState.menuSelected,
+          secondaryBookingDate: paymentState.secondaryBookingDate,
+          secondaryMenuName: paymentState.secondaryMenuName,
         recurringDays: (paymentState as any).recurringDays,
         frequency: (paymentState as any).frequency,
       },
@@ -179,6 +183,18 @@ export default function Payment() {
             <span className="font-body text-sm text-slate-500">Menu</span>
             <span className="font-body text-xs text-slate-400 italic truncate max-w-[180px]">{state.menuSelected}</span>
           </div>
+          {state.secondaryBookingDate && (
+            <div className="flex justify-between py-2 border-b border-slate-100">
+              <span className="font-body text-sm text-slate-500">2nd Date</span>
+              <span className="font-body text-sm text-slate-800">{state.secondaryBookingDate}</span>
+            </div>
+          )}
+          {state.secondaryMenuName && (
+            <div className="flex justify-between py-2 border-b border-slate-100">
+              <span className="font-body text-sm text-slate-500">2nd Menu</span>
+              <span className="font-body text-xs text-slate-400 italic truncate max-w-[180px]">{state.secondaryMenuName}</span>
+            </div>
+          )}
           <div className="flex justify-between items-center pt-4 mt-2">
             <span className="font-display text-xl font-bold text-slate-800">AED {state.totalAed}</span>
             <span className="font-body text-[10px] text-slate-400 text-right">Held securely until session complete</span>
