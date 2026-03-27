@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useBooking } from "@/context/BookingContext";
 import { ArrowLeft, Info, Lock } from "lucide-react";
@@ -75,6 +75,14 @@ const TIER_LABELS: Record<string, string> = {
 
 const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
+const normalizeFrequency = (value: string) => {
+  const key = value.trim().toLowerCase();
+  if (["twice", "twice a week", "twice-aweek", "twice-a-week"].includes(key)) return "twice";
+  if (["three", "3x a week", "3× a week", "3x", "3×"].includes(key)) return "three";
+  if (["weekly", "once a week"].includes(key)) return "weekly";
+  return "one-time";
+};
+
 const FormInput = ({
   label, value, onChange, placeholder, error, type = "text",
 }: {
@@ -101,6 +109,15 @@ const BookingForm = () => {
   const hasTier = !!routerState.tier;
   const hasFreq = !!routerState.frequency;
 
+  // Recurring day selectors for twice/three frequency
+  const [secondDay, setSecondDay] = useState("");
+  const [thirdDay, setThirdDay] = useState("");
+
+  // Secondary session details for twice/week
+  const [secondSessionDate, setSecondSessionDate] = useState("");
+  const [secondSessionMenuId, setSecondSessionMenuId] = useState("");
+  const [availableMenus, setAvailableMenus] = useState<Array<{ id: string; menu_name: string }>>([]);
+
   const [tier, setTierRaw] = useState<string>(routerState.tier || "duo");
   const setTier = (newTier: string) => {
     setTierRaw(newTier);
@@ -109,14 +126,25 @@ const BookingForm = () => {
     if (newTier !== "duo") setIsFirstSession(false);
   };
 
-  const [frequency, setFrequency] = useState<string>(routerState.frequency || "one-time");
+  const [frequency, setFrequencyRaw] = useState<string>(normalizeFrequency(routerState.frequency || booking.frequency || "one-time"));
+  const setFrequency = (newFrequency: string) => {
+    setFrequencyRaw(normalizeFrequency(newFrequency));
+    setSecondDay("");
+    setThirdDay("");
+    setSecondSessionDate("");
+    setSecondSessionMenuId("");
+    setErrors((prev) => {
+      const next = { ...prev };
+      delete next.secondDay;
+      delete next.thirdDay;
+      delete next.secondSessionDate;
+      delete next.secondSessionMenu;
+      return next;
+    });
+  };
   const [isFirstSession, setIsFirstSession] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [user, setUser] = useState<User | null>(null);
-
-  // Recurring day selectors for twice/three frequency
-  const [secondDay, setSecondDay] = useState("");
-  const [thirdDay, setThirdDay] = useState("");
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user: u } }) => {
@@ -128,17 +156,52 @@ const BookingForm = () => {
     });
   }, []);
 
+  useEffect(() => {
+    const cookId = routerState.cookId || booking.cookId;
+    if (!cookId) return;
+
+    let active = true;
+    supabase
+      .from("cook_menus")
+      .select("id, menu_name")
+      .eq("cook_id", cookId)
+      .eq("status", "approved")
+      .then(({ data, error }) => {
+        if (!active) return;
+        if (error) {
+          console.error("Failed to load cook menus", error);
+          return;
+        }
+        const menus = (data || []) as Array<{ id: string; menu_name: string }>;
+        setAvailableMenus(menus);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [routerState.cookId, booking.cookId]);
+
   const selectedTier = TIERS.find((t) => t.key === tier)!;
   const isDiscovery = isFirstSession && tier === "duo";
   const sessionTotal = getTotal(tier, frequency, isFirstSession);
   const groceryFee = 0; // Grocery shopping removed for now
+  const primaryBookingDate = routerState.bookingDate || "";
+  const primaryMenuName = routerState.selectedMenuName || booking.menuSelected || "Not selected";
+  const secondaryMenuName = availableMenus.find((menu) => menu.id === secondSessionMenuId)?.menu_name || "";
+  const minSelectableDate = useMemo(() => {
+    const date = new Date();
+    date.setDate(date.getDate() + 2);
+    return date.toISOString().split("T")[0];
+  }, []);
 
   // Primary weekday from booking date
-  const primaryWeekday = routerState.bookingDate
-    ? DAY_NAMES[(new Date(routerState.bookingDate).getDay() + 6) % 7]
+  const primaryWeekday = primaryBookingDate
+    ? DAY_NAMES[(new Date(primaryBookingDate).getDay() + 6) % 7]
     : "";
-
-  const recurringDays = [primaryWeekday, secondDay, thirdDay].filter(Boolean);
+  const secondaryWeekday = frequency === "twice" && secondSessionDate
+    ? DAY_NAMES[(new Date(secondSessionDate).getDay() + 6) % 7]
+    : secondDay;
+  const recurringDays = [primaryWeekday, secondaryWeekday, thirdDay].filter(Boolean);
 
   const formatBookingDate = (d: string) => {
     if (!d) return "Not selected";
@@ -150,7 +213,11 @@ const BookingForm = () => {
     if (!booking.customerName.trim()) e.customerName = "Required";
     if (!booking.email.trim() || !/\S+@\S+\.\S+/.test(booking.email)) e.email = "Valid email required";
     if (!booking.phone.trim()) e.phone = "Required";
-    if (frequency === "twice" && !secondDay) e.secondDay = "Please select a second day";
+    if (frequency === "twice" && !secondSessionDate) e.secondSessionDate = "Please choose your second date";
+    if (frequency === "twice" && primaryBookingDate && secondSessionDate === primaryBookingDate) {
+      e.secondSessionDate = "Second date must be different from the first date";
+    }
+    if (frequency === "twice" && !secondSessionMenuId) e.secondSessionMenu = "Please choose your second menu";
     if (frequency === "three" && !secondDay) e.secondDay = "Please select a second day";
     if (frequency === "three" && !thirdDay) e.thirdDay = "Please select a third day";
     setErrors(e);
@@ -174,6 +241,18 @@ const BookingForm = () => {
       sessionStorage.setItem("cooq_last_submit", String(Date.now()));
       const sessionType = isDiscovery ? "discovery" : "standard";
       const areaField = booking.location || routerState.cookArea || "";
+        const sessionNotes = frequency === "twice"
+          ? JSON.stringify({
+              recurring_days: recurringDays,
+              secondary_session: {
+                date: secondSessionDate,
+                menu_id: secondSessionMenuId || null,
+                menu_name: secondaryMenuName || null,
+              },
+            })
+          : recurringDays.length > 1
+            ? JSON.stringify({ recurring_days: recurringDays })
+            : null;
       const insertData: any = {
         customer_name: booking.customerName,
         email: booking.email,
@@ -182,12 +261,13 @@ const BookingForm = () => {
         address: booking.address,
         cook_id: routerState.cookId || booking.cookId || "unassigned",
         cook_name: routerState.cookInitials || booking.cookName || "To be assigned",
-        menu_selected: routerState.selectedMenuName || booking.menuSelected || "Not selected",
-        booking_date: routerState.bookingDate || null,
+          menu_selected: primaryMenuName,
+          booking_date: primaryBookingDate || null,
         frequency,
         party_size: booking.partySize,
         dietary: booking.dietary,
         allergies_notes: sanitisedAllergyNotes,
+          session_notes: sessionNotes,
         grocery_addon: false,
         grocery_fee: 0,
         tier,
@@ -207,12 +287,14 @@ const BookingForm = () => {
           customerName: newBooking.customer_name,
           customerEmail: newBooking.email,
           area: areaField,
-          bookingDate: routerState.bookingDate,
+          bookingDate: primaryBookingDate,
           bookingTime: routerState.bookingTime,
-          menuSelected: newBooking.menu_selected,
+          menuSelected: primaryMenuName,
           cookName: newBooking.cook_name || null,
           cookId: routerState.cookId,
-          selectedMenuName: routerState.selectedMenuName,
+          selectedMenuName: primaryMenuName,
+          secondaryBookingDate: frequency === "twice" ? secondSessionDate : null,
+          secondaryMenuName: frequency === "twice" ? secondaryMenuName : null,
           recurringDays: JSON.stringify(recurringDays),
           frequency,
         },
@@ -252,14 +334,24 @@ const BookingForm = () => {
             Cook: {routerState.cookInitials || "To be matched"}{routerState.cookArea ? ` · ${routerState.cookArea}` : ""}
           </p>
           <p className="font-body text-[12px] text-gray-500 italic">
-            Menu: {routerState.selectedMenuName || "No menu selected"}
+            Menu: {primaryMenuName}
           </p>
           <p className="font-body text-[12px] text-gray-500">
-            Date: {formatBookingDate(routerState.bookingDate)}
+            Date: {formatBookingDate(primaryBookingDate)}
           </p>
           <p className="font-body text-[12px] text-gray-500">
             Time: {routerState.bookingTime || "Not selected"}
           </p>
+          {frequency === "twice" && secondSessionDate && (
+            <>
+              <p className="font-body text-[12px] text-gray-500">
+                Second date: {formatBookingDate(secondSessionDate)}
+              </p>
+              <p className="font-body text-[12px] text-gray-500 italic">
+                Second menu: {secondaryMenuName || "Not selected"}
+              </p>
+            </>
+          )}
           <p className="font-body text-[12px] text-gray-500">
             Tier: {TIER_LABELS[tier] || tier} · Frequency: {FREQ_LABELS[frequency] || frequency}
           </p>
@@ -404,25 +496,42 @@ const BookingForm = () => {
 
         {/* ── RECURRING DAY SELECTORS ── */}
         {frequency === "twice" && (
-          <div className="mb-6">
-            <p className="font-body text-[13px] font-semibold text-foreground mb-2">Choose your second weekly day</p>
-            <div className="flex flex-wrap gap-2">
-              {DAY_NAMES.map((day) => {
-                const disabled = day === primaryWeekday;
-                const selected = secondDay === day;
-                return (
-                  <button key={day} type="button" disabled={disabled}
-                    onClick={() => setSecondDay(day)}
-                    className={`px-4 py-2 rounded-full text-sm transition ${disabled ? "opacity-30 cursor-not-allowed bg-gray-100 text-gray-400" : selected ? "bg-[#86A383] text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>
-                    {day}
-                  </button>
-                );
-              })}
+          <div className="mb-6 rounded-xl border border-border bg-card p-4 space-y-3">
+            <p className="font-body text-[13px] font-semibold text-foreground">Second weekly session</p>
+
+            <div>
+              <label className="font-body text-xs text-muted-foreground mb-1 block">Second date *</label>
+              <input
+                type="date"
+                min={minSelectableDate}
+                value={secondSessionDate}
+                onChange={(e) => setSecondSessionDate(e.target.value)}
+                className="w-full p-3 rounded-lg border border-border bg-background font-body text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+              {errors.secondSessionDate && <p className="font-body text-xs text-destructive mt-1">{errors.secondSessionDate}</p>}
             </div>
+
+            <div>
+              <label className="font-body text-xs text-muted-foreground mb-1 block">Second menu *</label>
+              <select
+                value={secondSessionMenuId}
+                onChange={(e) => setSecondSessionMenuId(e.target.value)}
+                className="w-full p-3 rounded-lg border border-border bg-background font-body text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+              >
+                <option value="">Select your second menu</option>
+                {availableMenus.map((menu) => (
+                  <option key={menu.id} value={menu.id}>{menu.menu_name}</option>
+                ))}
+              </select>
+              {errors.secondSessionMenu && <p className="font-body text-xs text-destructive mt-1">{errors.secondSessionMenu}</p>}
+              {availableMenus.length === 0 && (
+                <p className="font-body text-xs text-muted-foreground mt-1">No approved menus are available for this cook yet.</p>
+              )}
+            </div>
+
             {recurringDays.length > 1 && (
               <p className="font-body text-xs text-muted-foreground mt-2">Weekly sessions: {recurringDays.join(" + ")}</p>
             )}
-            {errors.secondDay && <p className="font-body text-xs text-destructive mt-2">{errors.secondDay}</p>}
           </div>
         )}
 
