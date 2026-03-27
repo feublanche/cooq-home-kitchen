@@ -1,13 +1,15 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useBooking } from "@/context/BookingContext";
-import { ArrowLeft, Info, Lock } from "lucide-react";
+import { ArrowLeft, Check, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import cooqLogo from "@/assets/cooq-logo.png";
 import type { User } from "@supabase/supabase-js";
+import { Lock } from "lucide-react";
 
-const steps = ["Preferences", "Match", "Profile", "Details", "Confirm"];
+/* ─── CONSTANTS ─── */
+const WIZARD_STEPS = ["Tier", "Frequency", "Dates", "Details", "Confirm"];
 
 const PRICES: Record<string, Record<string, number>> = {
   "one-time": { duo: 350, family: 420, large: 550 },
@@ -18,11 +20,7 @@ const PRICES: Record<string, Record<string, number>> = {
 };
 
 const SESSIONS: Record<string, number> = {
-  "one-time": 1,
-  "first-cook": 1,
-  weekly: 4,
-  twice: 8,
-  three: 12,
+  "one-time": 1, "first-cook": 1, weekly: 4, twice: 8, three: 12,
 };
 
 const SAVINGS: Record<string, Record<string, number>> = {
@@ -31,159 +29,72 @@ const SAVINGS: Record<string, Record<string, number>> = {
   three: { duo: 630, family: 760, large: 990 },
 };
 
-const TIER_LIMITS: Record<string, { min: number; max: number }> = {
-  duo: { min: 1, max: 2 },
-  family: { min: 3, max: 4 },
-  large: { min: 5, max: 6 },
-};
-
-const TIER_HINTS: Record<string, string> = {
-  duo: "Duo sessions are for 1–2 people",
-  family: "Family sessions are for 3–4 people",
-  large: "Large sessions are for 5–6 people",
-};
-
 const TIERS = [
-  {
-    key: "duo",
-    label: "Cooq Duo",
-    people: "1–2 people · ~2 hours",
-    detail: "2 proteins · 2 sides · covers 3–4 days",
-    price: 350,
-    discoveryPrice: 299,
-  },
-  {
-    key: "family",
-    label: "Cooq Family",
-    people: "3–4 people · ~3 hours",
-    detail: "2 proteins · 3 sides · covers 3–4 days",
-    price: 420,
-    discoveryPrice: null,
-  },
-  {
-    key: "large",
-    label: "Cooq Large",
-    people: "5–6 people · ~4 hours",
-    detail: "3 proteins · 3 sides · covers 3–4 days",
-    price: 550,
-    discoveryPrice: null,
-  },
+  { key: "duo", label: "Cooq Duo", people: "1–2 people", duration: "~2 hrs", detail: "2 proteins · 2 sides" },
+  { key: "family", label: "Cooq Family", people: "3–4 people", duration: "~3 hrs", detail: "2 proteins · 3 sides" },
+  { key: "large", label: "Cooq Large", people: "5–6 people", duration: "~4 hrs", detail: "3 proteins · 3 sides" },
 ] as const;
 
 const FREQUENCIES = [
-  { key: "one-time", label: "One-time" },
-  { key: "weekly", label: "Weekly · Save 15%" },
-  { key: "twice", label: "Twice a week" },
-  { key: "three", label: "3× a week" },
+  { key: "one-time", label: "One-time", sub: "Single session" },
+  { key: "weekly", label: "Weekly", sub: "Save 15% · 4 sessions/month" },
+  { key: "twice", label: "Twice a week", sub: "Save 15% · 8 sessions/month" },
+  { key: "three", label: "3× a week", sub: "Save 15% · 12 sessions/month" },
 ] as const;
 
-const GROCERY_FEE = 75;
+const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+const TIER_LABELS: Record<string, string> = { duo: "Cooq Duo", family: "Cooq Family", large: "Cooq Large" };
+const FREQ_LABELS: Record<string, string> = { "one-time": "One-time", weekly: "Weekly", twice: "Twice a week", three: "3× a week" };
+const TIER_PARTY: Record<string, number> = { duo: 2, family: 4, large: 6 };
 
 const getTotal = (tier: string, freq: string, first: boolean): number => {
   const key = first && tier === "duo" && freq === "one-time" ? "first-cook" : freq;
   return PRICES[key]?.[tier] ?? 350;
 };
 
-const FREQ_LABELS: Record<string, string> = {
-  "one-time": "One-time",
-  weekly: "Weekly",
-  twice: "Twice a week",
-  three: "3× a week",
-};
-
-const TIER_LABELS: Record<string, string> = {
-  duo: "Cooq Duo",
-  family: "Cooq Family",
-  large: "Cooq Large",
-};
-
-const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-
-const normalizeFrequency = (value: string) => {
-  const key = value.trim().toLowerCase().replace(/\s+/g, " ");
-  if (key.includes("twice")) return "twice";
-  if (key.includes("3x") || key.includes("3×") || key.includes("three")) return "three";
-  if (["weekly", "once a week"].includes(key)) return "weekly";
-  return "one-time";
-};
-
-const FormInput = ({
-  label,
-  value,
-  onChange,
-  placeholder,
-  error,
-  type = "text",
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  placeholder?: string;
-  error?: string;
-  type?: string;
-}) => (
-  <div className="mb-4">
-    <label className="font-body text-sm font-medium text-foreground mb-1 block">{label}</label>
-    <input
-      type={type}
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      placeholder={placeholder}
-      className="w-full p-3 rounded-lg border border-border bg-card font-body text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-    />
-    {error && <p className="font-body text-xs text-destructive mt-1">{error}</p>}
-  </div>
-);
-
+/* ─── COMPONENT ─── */
 const BookingForm = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const routerState = (location.state as any) || {};
   const { booking, updateBooking } = useBooking();
+
+  const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [user, setUser] = useState<User | null>(null);
 
-  const hasTier = false;
-  const hasFreq = false;
+  // Step 1 — Tier
+  const [tier, setTier] = useState("duo");
+  const [isFirstSession, setIsFirstSession] = useState(false);
 
-  // Recurring day selectors for twice/three frequency
+  // Step 2 — Frequency
+  const [frequency, setFrequency] = useState("one-time");
+
+  // Step 3 — Dates
+  const [primaryDate, setPrimaryDate] = useState("");
   const [secondDay, setSecondDay] = useState("");
   const [thirdDay, setThirdDay] = useState("");
-
-  // Secondary session details for twice/week
   const [secondSessionDate, setSecondSessionDate] = useState("");
   const [secondSessionMenuId, setSecondSessionMenuId] = useState("");
   const [availableMenus, setAvailableMenus] = useState<Array<{ id: string; menu_name: string }>>([]);
 
-  const [tier, setTierRaw] = useState<string>(routerState.tier || "duo");
-  const setTier = (newTier: string) => {
-    setTierRaw(newTier);
-    const limits = TIER_LIMITS[newTier];
-    if (limits) updateBooking({ partySize: limits.min });
-    if (newTier !== "duo") setIsFirstSession(false);
-  };
-
-  const [frequency, setFrequencyRaw] = useState<string>(
-    normalizeFrequency(routerState.frequency || booking.frequency || "one-time"),
-  );
-  const setFrequency = (newFrequency: string) => {
-    setFrequencyRaw(normalizeFrequency(newFrequency));
-    setSecondDay("");
-    setThirdDay("");
-    setSecondSessionDate("");
-    setSecondSessionMenuId("");
-    setErrors((prev) => {
-      const next = { ...prev };
-      delete next.secondDay;
-      delete next.thirdDay;
-      delete next.secondSessionDate;
-      delete next.secondSessionMenu;
-      return next;
-    });
-  };
-  const [isFirstSession, setIsFirstSession] = useState(false);
+  // Step 5 — Terms
   const [agreedToTerms, setAgreedToTerms] = useState(false);
-  const [user, setUser] = useState<User | null>(null);
+
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const minDate = useMemo(() => {
+    const d = new Date(); d.setDate(d.getDate() + 2);
+    return d.toISOString().split("T")[0];
+  }, []);
+
+  const primaryMenuName = routerState.selectedMenuName || booking.menuSelected || "Not selected";
+  const secondaryMenuName = availableMenus.find(m => m.id === secondSessionMenuId)?.menu_name || "";
+  const primaryWeekday = primaryDate ? DAY_NAMES[(new Date(primaryDate).getDay() + 6) % 7] : "";
+  const sessionTotal = getTotal(tier, frequency, isFirstSession);
+  const isDiscovery = isFirstSession && tier === "duo";
+  const cookInitials = routerState.cookInitials || "TBD";
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user: u } }) => {
@@ -199,118 +110,72 @@ const BookingForm = () => {
   useEffect(() => {
     const cookId = routerState.cookId || booking.cookId;
     if (!cookId) return;
-
     let active = true;
-    supabase
-      .from("cook_menus")
-      .select("id, menu_name")
-      .eq("cook_id", cookId)
-      .eq("status", "approved")
-      .then(({ data, error }) => {
-        if (!active) return;
-        if (error) {
-          console.error("Failed to load cook menus", error);
-          return;
-        }
-        const menus = (data || []) as Array<{ id: string; menu_name: string }>;
-        setAvailableMenus(menus);
-      });
-
-    return () => {
-      active = false;
-    };
+    supabase.from("cook_menus").select("id, menu_name").eq("cook_id", cookId).eq("status", "approved")
+      .then(({ data }) => { if (active) setAvailableMenus((data || []) as any); });
+    return () => { active = false; };
   }, [routerState.cookId, booking.cookId]);
 
-  const selectedTier = TIERS.find((t) => t.key === tier)!;
-  const isDiscovery = isFirstSession && tier === "duo";
-  const sessionTotal = getTotal(tier, frequency, isFirstSession);
-  const groceryFee = 0; // Grocery shopping removed for now
-  const [primaryBookingDate, setPrimaryBookingDate] = useState(routerState.bookingDate || "");
-  const primaryMenuName = routerState.selectedMenuName || booking.menuSelected || "Not selected";
-  const secondaryMenuName = availableMenus.find((menu) => menu.id === secondSessionMenuId)?.menu_name || "";
-  const minSelectableDate = useMemo(() => {
-    const date = new Date();
-    date.setDate(date.getDate() + 2);
-    return date.toISOString().split("T")[0];
-  }, []);
-
-  // Primary weekday from booking date
-  const primaryWeekday = primaryBookingDate ? DAY_NAMES[(new Date(primaryBookingDate).getDay() + 6) % 7] : "";
-  const secondaryWeekday =
-    frequency === "twice" && secondSessionDate ? DAY_NAMES[(new Date(secondSessionDate).getDay() + 6) % 7] : secondDay;
-  const recurringDays = [primaryWeekday, secondaryWeekday, thirdDay].filter(Boolean);
-
-  const formatBookingDate = (d: string) => {
-    if (!d) return "Not selected";
-    return new Date(d).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
-  };
-
-  const validate = () => {
-    const e: Record<string, string> = {};
-    if (!booking.customerName.trim()) e.customerName = "Required";
-    if (!booking.email.trim() || !/\S+@\S+\.\S+/.test(booking.email)) e.email = "Valid email required";
-    if (!booking.phone.trim()) e.phone = "Required";
-    if (!primaryBookingDate) e.bookingDate = "Please select a session date";
-    if (frequency === "twice" && !secondSessionDate) e.secondSessionDate = "Please choose your second date";
-    if (frequency === "twice" && primaryBookingDate && secondSessionDate === primaryBookingDate) {
-      e.secondSessionDate = "Second date must be different from the first date";
+  /* ─── NAVIGATION ─── */
+  const canNext = (): boolean => {
+    if (step === 0) return true; // tier always has default
+    if (step === 1) return true; // frequency always has default
+    if (step === 2) {
+      if (!primaryDate) return false;
+      if (frequency === "twice" && (!secondSessionDate || !secondSessionMenuId)) return false;
+      if (frequency === "twice" && secondSessionDate === primaryDate) return false;
+      if (frequency === "three" && (!secondDay || !thirdDay)) return false;
+      return true;
     }
-    if (frequency === "twice" && !secondSessionMenuId) e.secondSessionMenu = "Please choose your second menu";
-    if (frequency === "three" && !secondDay) e.secondDay = "Please select a second day";
-    if (frequency === "three" && !thirdDay) e.thirdDay = "Please select a third day";
-    setErrors(e);
-    return Object.keys(e).length === 0;
+    if (step === 3) {
+      return !!(booking.customerName.trim() && booking.email.trim() && booking.phone.trim());
+    }
+    return true;
   };
 
+  const next = () => {
+    if (step < 4) setStep(step + 1);
+  };
+  const back = () => {
+    if (step > 0) setStep(step - 1);
+    else navigate(-1);
+  };
+
+  /* ─── SUBMIT ─── */
   const handleSubmit = async () => {
-    if (!validate()) return;
+    if (!agreedToTerms) return;
     const lastSubmit = sessionStorage.getItem("cooq_last_submit");
     if (lastSubmit && Date.now() - Number(lastSubmit) < 300000) {
       toast({ title: "Please wait 5 minutes before submitting again.", variant: "destructive" });
       return;
     }
-    if (!sessionTotal || sessionTotal < 299 || sessionTotal > 6000) {
-      toast({ title: "Invalid booking amount.", variant: "destructive" });
-      return;
-    }
     setLoading(true);
     try {
-      const sanitisedAllergyNotes = booking.allergyNotes?.replace(/<[^>]*>/g, "").trim() || "";
       sessionStorage.setItem("cooq_last_submit", String(Date.now()));
-      const sessionType = isDiscovery ? "discovery" : "standard";
-      const areaField = booking.location || routerState.cookArea || "";
-      const sessionNotes =
-        frequency === "twice"
-          ? JSON.stringify({
-              recurring_days: recurringDays,
-              secondary_session: {
-                date: secondSessionDate,
-                menu_id: secondSessionMenuId || null,
-                menu_name: secondaryMenuName || null,
-              },
-            })
-          : recurringDays.length > 1
-            ? JSON.stringify({ recurring_days: recurringDays })
-            : null;
+      const recurringDays = [primaryWeekday, frequency === "twice" && secondSessionDate ? DAY_NAMES[(new Date(secondSessionDate).getDay() + 6) % 7] : secondDay, thirdDay].filter(Boolean);
+      const sessionNotes = frequency === "twice"
+        ? JSON.stringify({ recurring_days: recurringDays, secondary_session: { date: secondSessionDate, menu_id: secondSessionMenuId || null, menu_name: secondaryMenuName || null } })
+        : recurringDays.length > 1 ? JSON.stringify({ recurring_days: recurringDays }) : null;
+
       const insertData: any = {
         customer_name: booking.customerName,
         email: booking.email,
         phone: booking.phone,
-        area: areaField,
+        area: booking.location || routerState.cookArea || "",
         address: booking.address,
         cook_id: routerState.cookId || booking.cookId || "unassigned",
         cook_name: routerState.cookInitials || booking.cookName || "To be assigned",
         menu_selected: primaryMenuName,
-        booking_date: primaryBookingDate || null,
+        booking_date: primaryDate || null,
         frequency,
-        party_size: booking.partySize,
+        party_size: TIER_PARTY[tier] || 2,
         dietary: booking.dietary,
-        allergies_notes: sanitisedAllergyNotes,
+        allergies_notes: booking.allergyNotes?.replace(/<[^>]*>/g, "").trim() || "",
         session_notes: sessionNotes,
         grocery_addon: false,
         grocery_fee: 0,
         tier,
-        session_type: sessionType,
+        session_type: isDiscovery ? "discovery" : "standard",
         total_aed: sessionTotal,
         status: "pending",
         customer_user_id: user?.id || null,
@@ -319,520 +184,300 @@ const BookingForm = () => {
       const { data: newBooking, error } = await supabase.from("bookings").insert(insertData).select().single();
       if (error || !newBooking) throw error || new Error("Booking creation failed");
       updateBooking({ totalAed: sessionTotal });
+      const recurringDaysArr = [primaryWeekday, frequency === "twice" && secondSessionDate ? DAY_NAMES[(new Date(secondSessionDate).getDay() + 6) % 7] : secondDay, thirdDay].filter(Boolean);
       navigate("/payment", {
         state: {
-          bookingId: newBooking.id,
-          totalAed: sessionTotal,
-          customerName: newBooking.customer_name,
-          customerEmail: newBooking.email,
-          area: areaField,
-          bookingDate: primaryBookingDate,
-          bookingTime: routerState.bookingTime,
-          menuSelected: primaryMenuName,
-          cookName: newBooking.cook_name || null,
-          cookId: routerState.cookId,
+          bookingId: newBooking.id, totalAed: sessionTotal,
+          customerName: newBooking.customer_name, customerEmail: newBooking.email,
+          area: booking.location || routerState.cookArea || "",
+          bookingDate: primaryDate, menuSelected: primaryMenuName,
+          cookName: newBooking.cook_name || null, cookId: routerState.cookId,
           selectedMenuName: primaryMenuName,
           secondaryBookingDate: frequency === "twice" ? secondSessionDate : null,
           secondaryMenuName: frequency === "twice" ? secondaryMenuName : null,
-          recurringDays: JSON.stringify(recurringDays),
-          frequency,
+          recurringDays: JSON.stringify(recurringDaysArr), frequency,
         },
       });
     } catch (err) {
       console.error("Booking error:", err);
-      toast({
-        title: "Booking failed",
-        description: "Something went wrong. Please try again or contact hello@cooq.ae",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
+      toast({ title: "Booking failed", description: "Please try again or contact hello@cooq.ae", variant: "destructive" });
+    } finally { setLoading(false); }
   };
 
-  return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <nav className="flex items-center gap-3 px-6 py-4">
-        <button onClick={() => navigate(-1)} className="text-foreground">
-          <ArrowLeft className="w-5 h-5" />
-        </button>
-        <img src={cooqLogo} alt="Cooq" className="h-7" />
-      </nav>
+  /* ─── PROGRESS BAR ─── */
+  const ProgressBar = () => (
+    <div className="px-6 mb-6">
+      <div className="flex gap-1">
+        {WIZARD_STEPS.map((_, i) => (
+          <div key={i} className={`h-1.5 rounded-full flex-1 transition-colors ${i <= step ? "bg-primary" : "bg-border"}`} />
+        ))}
+      </div>
+      <div className="flex justify-between mt-1.5">
+        {WIZARD_STEPS.map((s, i) => (
+          <span key={s} className={`font-body text-[10px] ${i <= step ? "text-primary font-medium" : "text-muted-foreground"}`}>{s}</span>
+        ))}
+      </div>
+    </div>
+  );
 
-      <div className="px-6 mb-4">
-        <div className="flex gap-1">
-          {steps.map((s, i) => (
-            <div key={s} className={`h-1.5 rounded-full flex-1 ${i <= 3 ? "bg-primary" : "bg-border"}`} />
-          ))}
-        </div>
-        <div className="flex justify-between mt-1">
-          {steps.map((s, i) => (
-            <span key={s} className={`font-body text-[10px] ${i <= 3 ? "text-primary" : "text-muted-foreground"}`}>
-              {s}
-            </span>
-          ))}
-        </div>
+  /* ─── STEP 1: TIER ─── */
+  const StepTier = () => (
+    <div className="space-y-4">
+      <h2 className="font-display italic text-xl text-foreground">Choose your session size</h2>
+      <div className="space-y-3">
+        {TIERS.map(t => {
+          const selected = tier === t.key;
+          return (
+            <button key={t.key} type="button" onClick={() => { setTier(t.key); if (t.key !== "duo") setIsFirstSession(false); }}
+              className={`w-full text-left rounded-xl p-5 border-2 transition ${selected ? "border-primary bg-primary/5" : "border-border bg-card"}`}>
+              <p className="font-body text-base font-bold text-foreground">{t.label}</p>
+              <p className="font-body text-sm text-muted-foreground mt-1">{t.people} · {t.duration}</p>
+              <p className="font-body text-xs text-muted-foreground mt-0.5">{t.detail}</p>
+              {selected && <Check className="w-5 h-5 text-primary mt-2" />}
+            </button>
+          );
+        })}
+      </div>
+      <label className={`flex items-center gap-2.5 mt-2 ${tier !== "duo" ? "opacity-40 pointer-events-none" : "cursor-pointer"}`}>
+        <input type="checkbox" checked={isFirstSession} onChange={e => setIsFirstSession(e.target.checked)}
+          disabled={tier !== "duo"} className="w-4 h-4 rounded border-border accent-primary" />
+        <span className="font-body text-sm text-foreground">This is my first Cooq session</span>
+      </label>
+      {tier !== "duo" && <p className="font-body text-xs text-muted-foreground italic ml-6">First Cook trial is Duo only</p>}
+      {isFirstSession && tier === "duo" && <p className="font-body text-xs text-accent ml-6">AED 299 discovery rate applied</p>}
+    </div>
+  );
+
+  /* ─── STEP 2: FREQUENCY ─── */
+  const StepFrequency = () => (
+    <div className="space-y-4">
+      <h2 className="font-display italic text-xl text-foreground">How often?</h2>
+      <div className="space-y-3">
+        {FREQUENCIES.map(f => {
+          const selected = frequency === f.key;
+          return (
+            <button key={f.key} type="button" onClick={() => { setFrequency(f.key); setSecondDay(""); setThirdDay(""); setSecondSessionDate(""); setSecondSessionMenuId(""); }}
+              className={`w-full text-left rounded-xl p-5 border-2 transition ${selected ? "border-primary bg-primary/5" : "border-border bg-card"}`}>
+              <p className="font-body text-base font-bold text-foreground">{f.label}</p>
+              <p className="font-body text-xs text-muted-foreground mt-0.5">{f.sub}</p>
+              {selected && <Check className="w-5 h-5 text-primary mt-2" />}
+            </button>
+          );
+        })}
+      </div>
+      {/* Dynamic price summary */}
+      <div className="bg-card rounded-xl border border-border p-4 mt-2">
+        <p className="font-body text-sm text-muted-foreground">{TIER_LABELS[tier]} · {FREQ_LABELS[frequency]}</p>
+        <p className="font-display text-xl font-bold text-accent mt-1">
+          AED {sessionTotal.toLocaleString()}{frequency !== "one-time" ? " /mo" : ""}
+        </p>
+        {frequency !== "one-time" && SAVINGS[frequency] && (
+          <p className="font-body text-xs text-primary mt-1">
+            You save AED {SAVINGS[frequency]?.[tier]} per month vs one-time · {SESSIONS[frequency]} sessions
+          </p>
+        )}
+        {isDiscovery && <p className="font-body text-xs text-accent mt-1">First Cook trial: AED 299</p>}
+      </div>
+    </div>
+  );
+
+  /* ─── STEP 3: DATES ─── */
+  const StepDates = () => (
+    <div className="space-y-5">
+      <h2 className="font-display italic text-xl text-foreground">Choose your session date{frequency !== "one-time" ? "s" : ""}</h2>
+
+      <div>
+        <label className="font-body text-sm font-medium text-foreground mb-1.5 block">
+          {frequency === "weekly" ? "Session date (recurring weekly on this day)" : "First session date"}
+        </label>
+        <input type="date" min={minDate} value={primaryDate} onChange={e => setPrimaryDate(e.target.value)}
+          className="w-full p-3 rounded-lg border border-border bg-card font-body text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary" />
+        {primaryDate && frequency === "weekly" && (
+          <p className="font-body text-xs text-muted-foreground mt-1">Recurring every {primaryWeekday}</p>
+        )}
       </div>
 
-      <div className="px-6 pb-6 flex-1">
-        {/* ── SUMMARY CARD ── */}
-        <div className="bg-[#86A383]/10 rounded-xl p-4 mb-5">
-          <p className="font-body text-[14px] font-bold text-foreground">
-            Cook: {routerState.cookInitials || "To be matched"}
-            {routerState.cookArea ? ` · ${routerState.cookArea}` : ""}
-          </p>
-          <p className="font-body text-[12px] text-muted-foreground italic">Menu: {primaryMenuName}</p>
-          <p className="font-body text-[12px] text-muted-foreground">Date: {formatBookingDate(primaryBookingDate)}</p>
-          {frequency === "twice" && secondSessionDate && (
-            <>
-              <p className="font-body text-[12px] text-gray-500">Second date: {formatBookingDate(secondSessionDate)}</p>
-              <p className="font-body text-[12px] text-gray-500 italic">
-                Second menu: {secondaryMenuName || "Not selected"}
-              </p>
-            </>
-          )}
-          <p className="font-body text-[12px] text-gray-500">
-            Tier: {TIER_LABELS[tier] || tier} · Frequency: {FREQ_LABELS[frequency] || frequency}
-          </p>
-          {recurringDays.length > 1 && (
-            <p className="font-body text-[12px] text-gray-500">Weekly sessions: {recurringDays.join(" + ")}</p>
-          )}
-          <div className="mt-2">
-            {frequency === "one-time" || frequency === "" ? (
-              <p className="font-body text-[14px] font-bold" style={{ color: "#B57E5D" }}>
-                AED {sessionTotal.toLocaleString()}
-              </p>
-            ) : (
-              <p className="font-body text-[14px] font-bold" style={{ color: "#B57E5D" }}>
-                AED {sessionTotal.toLocaleString()} / month
-              </p>
+      {/* Twice a week: 2nd date + 2nd menu */}
+      {frequency === "twice" && (
+        <div className="rounded-xl border border-border bg-card p-4 space-y-3">
+          <p className="font-body text-sm font-semibold text-foreground">Second weekly session</p>
+          <div>
+            <label className="font-body text-xs text-muted-foreground mb-1 block">Second date *</label>
+            <input type="date" min={minDate} value={secondSessionDate} onChange={e => setSecondSessionDate(e.target.value)}
+              className="w-full p-3 rounded-lg border border-border bg-background font-body text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary" />
+            {secondSessionDate && secondSessionDate === primaryDate && (
+              <p className="font-body text-xs text-destructive mt-1">Must be different from first date</p>
             )}
           </div>
-        </div>
-
-        {/* ── TIER SELECTION ── */}
-        {!hasTier && frequency === "one-time" && (
-          <>
-            <p className="font-body text-sm font-bold text-foreground mb-3">Choose your session tier</p>
-            <div className="grid grid-cols-1 gap-3 mb-4">
-              {TIERS.map((t) => {
-                const selected = tier === t.key;
-                const showDiscovery = isFirstSession && t.key === "duo";
-                return (
-                  <button
-                    key={t.key}
-                    type="button"
-                    onClick={() => setTier(t.key)}
-                    className={`text-left rounded-xl p-4 border-2 transition cursor-pointer ${selected ? "border-primary bg-primary/5" : "border-border bg-card"}`}
-                  >
-                    <p className="font-body text-sm font-bold text-foreground">{t.label}</p>
-                    <p className="font-body text-xs text-muted-foreground mt-1">{t.people}</p>
-                    <p className="font-body text-xs text-muted-foreground">{t.detail}</p>
-                    <div className="mt-2">
-                      <p className="font-body text-xs text-muted-foreground">Party of:</p>
-                      <div className="flex items-center gap-2 mt-1">
-                        {Array.from(
-                          { length: TIER_LIMITS[t.key].max - TIER_LIMITS[t.key].min + 1 },
-                          (_, i) => TIER_LIMITS[t.key].min + i,
-                        ).map((n) => (
-                          <button
-                            key={n}
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setTier(t.key);
-                              updateBooking({ partySize: n });
-                            }}
-                            className={`w-8 h-8 rounded-full text-xs font-semibold transition ${selected && booking.partySize === n ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}
-                          >
-                            {n}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="mt-2 text-right">
-                      {showDiscovery ? (
-                        <>
-                          <p className="font-body text-sm font-bold" style={{ color: "#B57E5D" }}>
-                            AED 299
-                          </p>
-                          <span
-                            className="font-body text-[10px] px-1.5 py-0.5 rounded-full"
-                            style={{ backgroundColor: "rgba(181,126,93,0.15)", color: "#B57E5D" }}
-                          >
-                            First Cook trial
-                          </span>
-                        </>
-                      ) : (
-                        <p className="font-body text-sm font-bold text-foreground">AED {t.price}</p>
-                      )}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </>
-        )}
-        {!hasTier && frequency !== "one-time" && frequency !== "" && (
-          <>
-            <p className="font-body text-sm font-bold text-foreground mb-3">Choose your session tier</p>
-            <div className="grid grid-cols-1 gap-3 mb-4">
-              {TIERS.map((t) => {
-                const selected = tier === t.key;
-                return (
-                  <button
-                    key={t.key}
-                    type="button"
-                    onClick={() => setTier(t.key)}
-                    className={`text-left rounded-xl p-4 border-2 transition cursor-pointer ${selected ? "border-primary bg-primary/5" : "border-border bg-card"}`}
-                  >
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <p className="font-body text-sm font-bold text-foreground">
-                          {t.label} <span className="font-normal text-muted-foreground">· {t.people}</span>
-                        </p>
-                        <p className="font-body text-xs text-muted-foreground">{t.detail}</p>
-                      </div>
-                      <p className="font-body text-sm font-bold text-foreground">AED {t.price}</p>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </>
-        )}
-
-        {hasTier && (
-          <div className="mb-4 p-3 rounded-xl bg-card border border-border">
-            <p className="font-body text-sm text-muted-foreground">
-              Tier: <span className="font-semibold text-foreground">{TIER_LABELS[tier]}</span>
-            </p>
-          </div>
-        )}
-
-        {/* First session checkbox */}
-        <div className="mb-6">
-          <label
-            className={`flex items-center gap-2 cursor-pointer ${tier !== "duo" ? "opacity-40 cursor-not-allowed pointer-events-none" : ""}`}
-          >
-            <input
-              type="checkbox"
-              checked={isFirstSession}
-              onChange={(e) => setIsFirstSession(e.target.checked)}
-              disabled={tier !== "duo"}
-              className="w-4 h-4 rounded border-border accent-primary"
-            />
-            <span className="font-body text-xs text-muted-foreground">This is my first Cooq session</span>
-          </label>
-          {tier === "duo" && isFirstSession && (
-            <p className="font-body text-xs mt-1" style={{ color: "#B57E5D" }}>
-              AED 299 · First Cook trial
-            </p>
-          )}
-          {tier !== "duo" && (
-            <p className="font-body text-xs text-gray-400 italic mt-1">
-              First Cook trial is only available for Duo sessions
-            </p>
-          )}
-        </div>
-
-        {/* ── FREQUENCY ── */}
-        {!hasFreq && (
-          <>
-            <p className="font-body text-sm font-bold text-foreground mb-3">How often?</p>
-            <div className="flex flex-wrap gap-2 mb-2">
-              {FREQUENCIES.map((f) => {
-                const selected = frequency === f.key;
-                return (
-                  <button
-                    key={f.key}
-                    type="button"
-                    onClick={() => setFrequency(f.key)}
-                    className={`font-body text-xs px-4 py-2 rounded-full border transition ${selected ? "border-primary bg-primary/10 text-primary font-semibold" : "border-border text-muted-foreground"}`}
-                  >
-                    {f.label}
-                  </button>
-                );
-              })}
-            </div>
-          </>
-        )}
-
-        {hasFreq && (
-          <div className="mb-4 p-3 rounded-xl bg-card border border-border">
-            <p className="font-body text-sm text-muted-foreground">
-              Frequency: <span className="font-semibold text-foreground">{FREQ_LABELS[frequency]}</span>
-            </p>
-          </div>
-        )}
-
-        {/* Savings badge */}
-        {isDiscovery ? (
-          <p
-            className="font-body text-xs mb-4 px-2 py-1 rounded inline-block"
-            style={{ color: "#B57E5D", backgroundColor: "rgba(181,126,93,0.1)" }}
-          >
-            AED 299 · First Cook trial
-          </p>
-        ) : frequency !== "one-time" && SAVINGS[frequency] ? (
-          <div className="mb-4">
-            <p
-              className="font-body text-xs px-2 py-1 rounded inline-block"
-              style={{ color: "#86A383", backgroundColor: "rgba(134,163,131,0.1)" }}
-            >
-              You save AED {SAVINGS[frequency]?.[tier]} per month vs booking one-time
-            </p>
-            <p className="font-body text-[11px] text-muted-foreground mt-1">
-              {SESSIONS[frequency]} sessions per month · 15% off
-            </p>
-          </div>
-        ) : (
-          <p className="font-body text-xs text-muted-foreground mb-4">AED {sessionTotal} per session</p>
-        )}
-
-        {/* ── PRIMARY DATE PICKER ── */}
-        <div className="mb-6">
-          <p className="font-body text-sm font-bold text-foreground mb-2">Session date *</p>
-          <input
-            type="date"
-            min={minSelectableDate}
-            value={primaryBookingDate}
-            onChange={(e) => setPrimaryBookingDate(e.target.value)}
-            className="w-full p-3 rounded-lg border border-border bg-card font-body text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-          />
-          {!primaryBookingDate && errors.bookingDate && (
-            <p className="font-body text-xs text-destructive mt-1">{errors.bookingDate}</p>
-          )}
-        </div>
-
-        {/* ── RECURRING DAY SELECTORS ── */}
-        {frequency === "twice" && (
-          <div className="mb-6 rounded-xl border border-border bg-card p-4 space-y-3">
-            <p className="font-body text-[13px] font-semibold text-foreground">Second weekly session</p>
-
-            <div>
-              <label className="font-body text-xs text-muted-foreground mb-1 block">Second date *</label>
-              <input
-                type="date"
-                min={minSelectableDate}
-                value={secondSessionDate}
-                onChange={(e) => setSecondSessionDate(e.target.value)}
-                className="w-full p-3 rounded-lg border border-border bg-background font-body text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-              />
-              {errors.secondSessionDate && (
-                <p className="font-body text-xs text-destructive mt-1">{errors.secondSessionDate}</p>
-              )}
-            </div>
-
-            <div>
-              <label className="font-body text-xs text-muted-foreground mb-1 block">Second menu *</label>
-              <select
-                value={secondSessionMenuId}
-                onChange={(e) => setSecondSessionMenuId(e.target.value)}
-                className="w-full p-3 rounded-lg border border-border bg-background font-body text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-              >
-                <option value="">Select your second menu</option>
-                {availableMenus.map((menu) => (
-                  <option key={menu.id} value={menu.id}>
-                    {menu.menu_name}
-                  </option>
-                ))}
+          <div>
+            <label className="font-body text-xs text-muted-foreground mb-1 block">Second menu *</label>
+            {availableMenus.length > 0 ? (
+              <select value={secondSessionMenuId} onChange={e => setSecondSessionMenuId(e.target.value)}
+                className="w-full p-3 rounded-lg border border-border bg-background font-body text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary">
+                <option value="">Select menu</option>
+                {availableMenus.map(m => <option key={m.id} value={m.id}>{m.menu_name}</option>)}
               </select>
-              {errors.secondSessionMenu && (
-                <p className="font-body text-xs text-destructive mt-1">{errors.secondSessionMenu}</p>
-              )}
-              {availableMenus.length === 0 && (
-                <input
-                  type="text"
-                  placeholder="Describe your preferred menu (e.g. Keto chicken + rice)"
-                  value={secondSessionMenuId}
-                  onChange={(e) => setSecondSessionMenuId(e.target.value)}
-                  className="w-full p-3 rounded-lg border border-border bg-background font-body text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary mt-2"
-                />
-              )}
-            </div>
-
-            {recurringDays.length > 1 && (
-              <p className="font-body text-xs text-muted-foreground mt-2">
-                Weekly sessions: {recurringDays.join(" + ")}
-              </p>
+            ) : (
+              <input type="text" placeholder="Describe your preferred menu" value={secondSessionMenuId}
+                onChange={e => setSecondSessionMenuId(e.target.value)}
+                className="w-full p-3 rounded-lg border border-border bg-background font-body text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary" />
             )}
           </div>
-        )}
+        </div>
+      )}
 
-        {frequency === "three" && (
-          <div className="mb-6">
-            <p className="font-body text-[13px] font-semibold text-foreground mb-2">
-              Choose your two additional weekly days
-            </p>
+      {/* 3x a week: day-of-week selectors */}
+      {frequency === "three" && (
+        <div className="space-y-4">
+          <div>
             <p className="font-body text-xs text-muted-foreground mb-2">Second day:</p>
-            <div className="flex flex-wrap gap-2 mb-3">
-              {DAY_NAMES.map((day) => {
+            <div className="flex flex-wrap gap-2">
+              {DAY_NAMES.map(day => {
                 const disabled = day === primaryWeekday || day === thirdDay;
                 const selected = secondDay === day;
                 return (
-                  <button
-                    key={day}
-                    type="button"
-                    disabled={disabled}
-                    onClick={() => setSecondDay(day)}
-                    className={`px-4 py-2 rounded-full text-sm transition ${disabled ? "opacity-30 cursor-not-allowed bg-gray-100 text-gray-400" : selected ? "bg-[#86A383] text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
-                  >
+                  <button key={day} type="button" disabled={disabled} onClick={() => setSecondDay(day)}
+                    className={`px-4 py-2 rounded-full text-sm transition ${disabled ? "opacity-30 cursor-not-allowed bg-muted text-muted-foreground" : selected ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}>
                     {day}
                   </button>
                 );
               })}
             </div>
+          </div>
+          <div>
             <p className="font-body text-xs text-muted-foreground mb-2">Third day:</p>
             <div className="flex flex-wrap gap-2">
-              {DAY_NAMES.map((day) => {
+              {DAY_NAMES.map(day => {
                 const disabled = day === primaryWeekday || day === secondDay;
                 const selected = thirdDay === day;
                 return (
-                  <button
-                    key={day}
-                    type="button"
-                    disabled={disabled}
-                    onClick={() => setThirdDay(day)}
-                    className={`px-4 py-2 rounded-full text-sm transition ${disabled ? "opacity-30 cursor-not-allowed bg-gray-100 text-gray-400" : selected ? "bg-[#86A383] text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
-                  >
+                  <button key={day} type="button" disabled={disabled} onClick={() => setThirdDay(day)}
+                    className={`px-4 py-2 rounded-full text-sm transition ${disabled ? "opacity-30 cursor-not-allowed bg-muted text-muted-foreground" : selected ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}>
                     {day}
                   </button>
                 );
               })}
             </div>
-            {recurringDays.length > 1 && (
-              <p className="font-body text-xs text-muted-foreground mt-2">
-                Weekly sessions: {recurringDays.join(" + ")}
-              </p>
-            )}
-            {errors.secondDay && <p className="font-body text-xs text-destructive mt-2">{errors.secondDay}</p>}
-            {errors.thirdDay && <p className="font-body text-xs text-destructive mt-2">{errors.thirdDay}</p>}
           </div>
+        </div>
+      )}
+    </div>
+  );
+
+  /* ─── STEP 4: DETAILS ─── */
+  const StepDetails = () => (
+    <div className="space-y-4">
+      <h2 className="font-display italic text-xl text-foreground">Your details</h2>
+
+      <FieldInput label="Full name *" value={booking.customerName} readOnly={!!user?.user_metadata?.full_name}
+        onChange={v => updateBooking({ customerName: v })} />
+      <FieldInput label="Email *" type="email" value={booking.email} readOnly={!!user?.email}
+        onChange={v => updateBooking({ email: v })} />
+      <FieldInput label="Phone (+971) *" value={booking.phone} onChange={v => updateBooking({ phone: v })} placeholder="+971" />
+      <FieldInput label="Dubai area / community" value={booking.location} onChange={v => updateBooking({ location: v })} />
+      <FieldInput label="Full address / building name" value={booking.address} onChange={v => updateBooking({ address: v })} />
+
+      <div>
+        <label className="font-body text-sm font-medium text-foreground mb-1 block">Allergies or special notes</label>
+        <textarea value={booking.allergyNotes} onChange={e => updateBooking({ allergyNotes: e.target.value })}
+          className="w-full p-3 rounded-lg border border-border bg-card font-body text-sm resize-none h-20 focus:outline-none focus:ring-2 focus:ring-primary" />
+      </div>
+    </div>
+  );
+
+  /* ─── STEP 5: CONFIRM ─── */
+  const recurringDays = [primaryWeekday, frequency === "twice" && secondSessionDate ? DAY_NAMES[(new Date(secondSessionDate).getDay() + 6) % 7] : secondDay, thirdDay].filter(Boolean);
+  const formatDate = (d: string) => d ? new Date(d).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" }) : "—";
+
+  const StepConfirm = () => (
+    <div className="space-y-5">
+      <h2 className="font-display italic text-xl text-foreground">Review your booking</h2>
+
+      <div className="bg-card rounded-xl border border-border p-5 space-y-3">
+        <SummaryRow label="Cook" value={`${cookInitials}${routerState.cookArea ? " · " + routerState.cookArea : ""}`} />
+        <SummaryRow label="Menu" value={primaryMenuName} />
+        <SummaryRow label="Tier" value={TIER_LABELS[tier] || tier} />
+        <SummaryRow label="Frequency" value={FREQ_LABELS[frequency] || frequency} />
+        <SummaryRow label="Date" value={formatDate(primaryDate)} />
+        {frequency === "twice" && secondSessionDate && (
+          <>
+            <SummaryRow label="2nd Date" value={formatDate(secondSessionDate)} />
+            <SummaryRow label="2nd Menu" value={secondaryMenuName || "—"} />
+          </>
         )}
+        {recurringDays.length > 1 && <SummaryRow label="Weekly days" value={recurringDays.join(" + ")} />}
+        <SummaryRow label="Address" value={booking.address || booking.location || "—"} />
 
-        <div className="mb-6" />
-
-        {/* ── FORM FIELDS ── */}
-        <div className="mb-4">
-          <label className="font-body text-sm font-medium text-foreground mb-1 block">Full name *</label>
-          <div className="relative">
-            <input
-              type="text"
-              value={booking.customerName}
-              readOnly={!!user?.user_metadata?.full_name}
-              onChange={(e) => updateBooking({ customerName: e.target.value })}
-              className="w-full p-3 rounded-lg border border-border bg-card font-body text-sm focus:outline-none focus:ring-2 focus:ring-primary pr-10"
-            />
-            {user?.user_metadata?.full_name && (
-              <Lock className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            )}
-          </div>
-          {errors.customerName && <p className="font-body text-xs text-destructive mt-1">{errors.customerName}</p>}
-        </div>
-        <div className="mb-4">
-          <label className="font-body text-sm font-medium text-foreground mb-1 block">Email address *</label>
-          <div className="relative">
-            <input
-              type="email"
-              value={booking.email}
-              readOnly={!!user?.email}
-              onChange={(e) => updateBooking({ email: e.target.value })}
-              className="w-full p-3 rounded-lg border border-border bg-card font-body text-sm focus:outline-none focus:ring-2 focus:ring-primary pr-10"
-            />
-            {user?.email && (
-              <Lock className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            )}
-          </div>
-          {errors.email && <p className="font-body text-xs text-destructive mt-1">{errors.email}</p>}
-        </div>
-        <FormInput
-          label="Phone number *"
-          value={booking.phone}
-          onChange={(v) => updateBooking({ phone: v })}
-          placeholder="+971"
-          error={errors.phone}
-        />
-        <FormInput
-          label="Dubai area / community"
-          value={booking.location}
-          onChange={(v) => updateBooking({ location: v })}
-        />
-        <FormInput
-          label="Full address / building name"
-          value={booking.address}
-          onChange={(v) => updateBooking({ address: v })}
-        />
-
-        {/* Party size auto-set by tier — no manual stepper needed */}
-
-        <div className="mb-4">
-          <label className="font-body text-sm font-medium text-foreground mb-1 block">Dietary requirements</label>
-          <p className="font-body text-sm text-muted-foreground">{booking.dietary.join(", ") || "None"}</p>
-        </div>
-
-        <div className="mb-6">
-          <label className="font-body text-sm font-medium text-foreground mb-1 block">Allergies or special notes</label>
-          <textarea
-            value={booking.allergyNotes}
-            onChange={(e) => updateBooking({ allergyNotes: e.target.value })}
-            className="w-full p-3 rounded-lg border border-border bg-card font-body text-sm resize-none h-20 focus:outline-none focus:ring-2 focus:ring-primary"
-          />
-        </div>
-
-        {/* Grocery shopping — coming soon */}
-
-        {/* ── TOTAL ── */}
-        <div className="space-y-1 mb-6">
-          <div className="flex justify-between font-body text-sm text-muted-foreground">
-            <span>
-              {selectedTier.label} {isDiscovery ? "(First Cook)" : ""} {frequency !== "one-time" ? "/mo" : ""}
-            </span>
-            <span>AED {sessionTotal.toLocaleString()}</span>
-          </div>
-          <div className="h-px bg-border my-2" />
-          <div className="flex justify-between items-center">
-            <span className="font-body text-base font-semibold text-foreground">Total</span>
-            {frequency === "one-time" || frequency === "" ? (
-              <span className="font-display text-xl font-bold" style={{ color: "#B57E5D" }}>
-                AED {sessionTotal.toLocaleString()}
-              </span>
-            ) : (
-              <span className="font-display text-xl font-bold" style={{ color: "#B57E5D" }}>
-                AED {sessionTotal.toLocaleString()} /mo
-              </span>
-            )}
-          </div>
-        </div>
-
-        {/* ── T&C ── */}
-        <label className="flex items-start gap-2 text-sm text-gray-600 mt-4 mb-4">
-          <input
-            type="checkbox"
-            checked={agreedToTerms}
-            onChange={(e) => setAgreedToTerms(e.target.checked)}
-            className="mt-0.5"
-          />
-          <span>
-            I agree to Cooq's{" "}
-            <a href="/terms" target="_blank" className="text-[#86A383] underline">
-              Terms &amp; Conditions
-            </a>{" "}
-            and{" "}
-            <a href="/privacy" target="_blank" className="text-[#86A383] underline">
-              Privacy Policy
-            </a>
+        <div className="h-px bg-border" />
+        <div className="flex justify-between items-center">
+          <span className="font-body text-base font-semibold text-foreground">Price</span>
+          <span className="font-display text-xl font-bold text-accent">
+            AED {sessionTotal.toLocaleString()}{frequency !== "one-time" ? " /mo" : ""}
           </span>
-        </label>
+        </div>
+      </div>
 
-        <button
-          disabled={loading || !agreedToTerms}
-          onClick={handleSubmit}
-          className="w-full py-4 rounded-lg font-body font-semibold text-base disabled:opacity-40 transition-opacity"
-          style={{ backgroundColor: "#B57E5D", color: "#F9F7F2" }}
-        >
-          {loading ? "Saving..." : "Confirm Booking →"}
-        </button>
+      <label className="flex items-start gap-2.5 text-sm text-muted-foreground">
+        <input type="checkbox" checked={agreedToTerms} onChange={e => setAgreedToTerms(e.target.checked)} className="mt-0.5" />
+        <span>
+          I agree to Cooq's{" "}
+          <a href="/terms" target="_blank" className="text-primary underline">Terms & Conditions</a>{" "}and{" "}
+          <a href="/privacy" target="_blank" className="text-primary underline">Privacy Policy</a>
+        </span>
+      </label>
+    </div>
+  );
+
+  const SummaryRow = ({ label, value }: { label: string; value: string }) => (
+    <div className="flex justify-between py-1.5">
+      <span className="font-body text-sm text-muted-foreground">{label}</span>
+      <span className="font-body text-sm font-medium text-foreground text-right max-w-[60%] truncate">{value}</span>
+    </div>
+  );
+
+  const FieldInput = ({ label, value, onChange, readOnly, type = "text", placeholder }: {
+    label: string; value: string; onChange: (v: string) => void; readOnly?: boolean; type?: string; placeholder?: string;
+  }) => (
+    <div>
+      <label className="font-body text-sm font-medium text-foreground mb-1 block">{label}</label>
+      <div className="relative">
+        <input type={type} value={value} readOnly={readOnly} onChange={e => onChange(e.target.value)} placeholder={placeholder}
+          className="w-full p-3 rounded-lg border border-border bg-card font-body text-sm focus:outline-none focus:ring-2 focus:ring-primary pr-10" />
+        {readOnly && <Lock className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />}
+      </div>
+    </div>
+  );
+
+  /* ─── RENDER ─── */
+  const stepContent = [<StepTier key={0} />, <StepFrequency key={1} />, <StepDates key={2} />, <StepDetails key={3} />, <StepConfirm key={4} />];
+
+  return (
+    <div className="min-h-screen bg-background flex flex-col">
+      {/* Nav */}
+      <nav className="flex items-center gap-3 px-6 py-4">
+        <button onClick={back} className="text-foreground"><ArrowLeft className="w-5 h-5" /></button>
+        <img src={cooqLogo} alt="Cooq" className="h-7" />
+      </nav>
+
+      <ProgressBar />
+
+      <div className="px-6 pb-6 flex-1">
+        {stepContent[step]}
+      </div>
+
+      {/* Bottom button */}
+      <div className="sticky bottom-0 bg-background border-t border-border px-6 py-4">
+        {step < 4 ? (
+          <button disabled={!canNext()} onClick={next}
+            className="w-full py-4 rounded-xl bg-accent text-accent-foreground font-body font-semibold text-base disabled:opacity-40 transition-opacity flex items-center justify-center gap-2">
+            Next <ChevronRight className="w-4 h-4" />
+          </button>
+        ) : (
+          <button disabled={loading || !agreedToTerms} onClick={handleSubmit}
+            className="w-full py-4 rounded-xl bg-accent text-accent-foreground font-body font-semibold text-base disabled:opacity-40 transition-opacity">
+            {loading ? "Saving..." : "Confirm Booking →"}
+          </button>
+        )}
       </div>
     </div>
   );
