@@ -138,7 +138,7 @@ const Search = () => {
   const [frequency, setFrequency] = useState("");
   const [tier, setTier] = useState("");
 
-  const totalSteps = 5;
+  const totalSteps = 3;
 
   const toggleArr = (arr: string[], val: string) => (arr.includes(val) ? arr.filter((v) => v !== val) : [...arr, val]);
 
