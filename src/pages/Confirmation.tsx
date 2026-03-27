@@ -8,7 +8,7 @@ const Confirmation = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const state = (location.state as any) || {};
-  const { bookingId, cookId, totalPaid, bookingDate, bookingTime, area, selectedMenuName } = state;
+  const { bookingId, cookId, totalPaid, bookingDate, bookingTime, area, selectedMenuName, secondaryBookingDate, secondaryMenuName } = state;
 
   const [cookData, setCookData] = useState<any>(null);
   const [fallbackTotal, setFallbackTotal] = useState<number>(0);
@@ -82,6 +82,20 @@ const Confirmation = () => {
             <div className="flex justify-between">
               <span className="text-gray-500">Date</span>
               <span className="font-medium text-[#2D312E]">{formattedDate}</span>
+            </div>
+          )}
+          {secondaryBookingDate && (
+            <div className="flex justify-between">
+              <span className="text-gray-500">2nd Date</span>
+              <span className="font-medium text-[#2D312E]">
+                {new Date(secondaryBookingDate).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+              </span>
+            </div>
+          )}
+          {secondaryMenuName && (
+            <div className="flex justify-between">
+              <span className="text-gray-500">2nd Menu</span>
+              <span className="font-medium text-[#2D312E]">{secondaryMenuName}</span>
             </div>
           )}
           {bookingTime && (
