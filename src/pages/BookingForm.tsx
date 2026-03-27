@@ -143,8 +143,8 @@ const BookingForm = () => {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const hasTier = !!routerState.tier;
-  const hasFreq = !!routerState.frequency;
+  const hasTier = false;
+  const hasFreq = false;
 
   // Recurring day selectors for twice/three frequency
   const [secondDay, setSecondDay] = useState("");
@@ -225,7 +225,7 @@ const BookingForm = () => {
   const isDiscovery = isFirstSession && tier === "duo";
   const sessionTotal = getTotal(tier, frequency, isFirstSession);
   const groceryFee = 0; // Grocery shopping removed for now
-  const primaryBookingDate = routerState.bookingDate || "";
+  const [primaryBookingDate, setPrimaryBookingDate] = useState(routerState.bookingDate || "");
   const primaryMenuName = routerState.selectedMenuName || booking.menuSelected || "Not selected";
   const secondaryMenuName = availableMenus.find((menu) => menu.id === secondSessionMenuId)?.menu_name || "";
   const minSelectableDate = useMemo(() => {
@@ -250,6 +250,7 @@ const BookingForm = () => {
     if (!booking.customerName.trim()) e.customerName = "Required";
     if (!booking.email.trim() || !/\S+@\S+\.\S+/.test(booking.email)) e.email = "Valid email required";
     if (!booking.phone.trim()) e.phone = "Required";
+    if (!primaryBookingDate) e.bookingDate = "Please select a session date";
     if (frequency === "twice" && !secondSessionDate) e.secondSessionDate = "Please choose your second date";
     if (frequency === "twice" && primaryBookingDate && secondSessionDate === primaryBookingDate) {
       e.secondSessionDate = "Second date must be different from the first date";
@@ -380,9 +381,8 @@ const BookingForm = () => {
             Cook: {routerState.cookInitials || "To be matched"}
             {routerState.cookArea ? ` · ${routerState.cookArea}` : ""}
           </p>
-          <p className="font-body text-[12px] text-gray-500 italic">Menu: {primaryMenuName}</p>
-          <p className="font-body text-[12px] text-gray-500">Date: {formatBookingDate(primaryBookingDate)}</p>
-          <p className="font-body text-[12px] text-gray-500">Time: {routerState.bookingTime || "Not selected"}</p>
+          <p className="font-body text-[12px] text-muted-foreground italic">Menu: {primaryMenuName}</p>
+          <p className="font-body text-[12px] text-muted-foreground">Date: {formatBookingDate(primaryBookingDate)}</p>
           {frequency === "twice" && secondSessionDate && (
             <>
               <p className="font-body text-[12px] text-gray-500">Second date: {formatBookingDate(secondSessionDate)}</p>
@@ -589,6 +589,21 @@ const BookingForm = () => {
         ) : (
           <p className="font-body text-xs text-muted-foreground mb-4">AED {sessionTotal} per session</p>
         )}
+
+        {/* ── PRIMARY DATE PICKER ── */}
+        <div className="mb-6">
+          <p className="font-body text-sm font-bold text-foreground mb-2">Session date *</p>
+          <input
+            type="date"
+            min={minSelectableDate}
+            value={primaryBookingDate}
+            onChange={(e) => setPrimaryBookingDate(e.target.value)}
+            className="w-full p-3 rounded-lg border border-border bg-card font-body text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+          />
+          {!primaryBookingDate && errors.bookingDate && (
+            <p className="font-body text-xs text-destructive mt-1">{errors.bookingDate}</p>
+          )}
+        </div>
 
         {/* ── RECURRING DAY SELECTORS ── */}
         {frequency === "twice" && (
