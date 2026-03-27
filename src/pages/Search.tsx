@@ -157,7 +157,7 @@ const Search = () => {
 
   const handleFinal = () => {
     navigate("/results", {
-      state: { neighborhood, cuisines: selectedCuisines, dietary: selectedDietary, frequency, tier },
+      state: { neighborhood, cuisines: selectedCuisines, dietary: selectedDietary },
     });
   };
 
