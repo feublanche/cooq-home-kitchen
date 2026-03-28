@@ -514,22 +514,7 @@ const BookingForm = () => {
     </div>
   );
 
-  const FieldInput = ({ label, value, onChange, readOnly, type = "text", placeholder }: {
-    label: string; value: string; onChange: (v: string) => void; readOnly?: boolean; type?: string; placeholder?: string;
-  }) => (
-    <div>
-      <label className="font-body text-sm font-medium text-foreground mb-1 block">{label}</label>
-      <div className="relative">
-        <input type={type} value={value} readOnly={readOnly} onChange={e => onChange(e.target.value)} placeholder={placeholder}
-          className="w-full p-3 rounded-lg border border-border bg-card font-body text-sm focus:outline-none focus:ring-2 focus:ring-primary pr-10" />
-        {readOnly && <Lock className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />}
-      </div>
-    </div>
-  );
-
   /* ─── RENDER ─── */
-  const stepContent = [<StepTier key={0} />, <StepFrequency key={1} />, <StepDates key={2} />, <StepDetails key={3} />, <StepConfirm key={4} />];
-
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <nav className="flex items-center gap-3 px-6 py-4">
@@ -540,7 +525,67 @@ const BookingForm = () => {
       <ProgressBar />
 
       <div className="px-6 pb-6 flex-1">
-        {stepContent[step]}
+        {step === 0 && <StepTier />}
+        {step === 1 && <StepFrequency />}
+        {step === 2 && <StepDates />}
+        {step === 3 && (
+          <div className="space-y-4">
+            <h2 className="font-display italic text-xl text-foreground">Your details</h2>
+
+            <div>
+              <label className="font-body text-sm font-medium text-foreground mb-1 block">Full name *</label>
+              <div className="relative">
+                <input type="text" value={booking.customerName} readOnly={!!user?.user_metadata?.full_name}
+                  onChange={e => updateBooking({ customerName: e.target.value })}
+                  className="w-full p-3 rounded-lg border border-border bg-card font-body text-sm focus:outline-none focus:ring-2 focus:ring-primary pr-10" />
+                {!!user?.user_metadata?.full_name && <Lock className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />}
+              </div>
+            </div>
+
+            <div>
+              <label className="font-body text-sm font-medium text-foreground mb-1 block">Email *</label>
+              <div className="relative">
+                <input type="email" value={booking.email} readOnly={!!user?.email}
+                  onChange={e => updateBooking({ email: e.target.value })}
+                  className="w-full p-3 rounded-lg border border-border bg-card font-body text-sm focus:outline-none focus:ring-2 focus:ring-primary pr-10" />
+                {!!user?.email && <Lock className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />}
+              </div>
+            </div>
+
+            <div>
+              <label className="font-body text-sm font-medium text-foreground mb-1 block">Phone *</label>
+              <div className="flex">
+                <span className="inline-flex items-center px-3 rounded-l-lg border border-r-0 border-border bg-muted font-body text-sm text-muted-foreground">+971</span>
+                <input
+                  type="tel"
+                  value={booking.phone.replace(/^\+971\s?/, "")}
+                  onChange={e => updateBooking({ phone: "+971 " + e.target.value.replace(/[^0-9]/g, "") })}
+                  placeholder="50 123 4567"
+                  className="flex-1 p-3 rounded-r-lg border border-border bg-card font-body text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="font-body text-sm font-medium text-foreground mb-1 block">Dubai area / community</label>
+              <input type="text" value={booking.location} onChange={e => updateBooking({ location: e.target.value })}
+                className="w-full p-3 rounded-lg border border-border bg-card font-body text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
+            </div>
+
+            <div>
+              <label className="font-body text-sm font-medium text-foreground mb-1 block">Full address / building name</label>
+              <input type="text" value={booking.address} onChange={e => updateBooking({ address: e.target.value })}
+                className="w-full p-3 rounded-lg border border-border bg-card font-body text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
+            </div>
+
+            <div>
+              <label className="font-body text-sm font-medium text-foreground mb-1 block">Allergies or special notes</label>
+              <textarea value={booking.allergyNotes} onChange={e => updateBooking({ allergyNotes: e.target.value })}
+                className="w-full p-3 rounded-lg border border-border bg-card font-body text-sm resize-none h-20 focus:outline-none focus:ring-2 focus:ring-primary" />
+            </div>
+          </div>
+        )}
+        {step === 4 && <StepConfirm />}
       </div>
 
       <div className="sticky bottom-0 bg-background border-t border-border px-6 py-4">
