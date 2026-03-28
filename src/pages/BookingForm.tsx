@@ -442,41 +442,7 @@ const BookingForm = () => {
     );
   };
 
-  /* ─── STEP 4: DETAILS ─── */
-  const StepDetails = () => (
-    <div className="space-y-4">
-      <h2 className="font-display italic text-xl text-foreground">Your details</h2>
-
-      <FieldInput label="Full name *" value={booking.customerName} readOnly={!!user?.user_metadata?.full_name}
-        onChange={v => updateBooking({ customerName: v })} />
-      <FieldInput label="Email *" type="email" value={booking.email} readOnly={!!user?.email}
-        onChange={v => updateBooking({ email: v })} />
-
-      {/* Phone field — single controlled input with +971 prefix */}
-      <div>
-        <label className="font-body text-sm font-medium text-foreground mb-1 block">Phone *</label>
-        <div className="flex">
-          <span className="inline-flex items-center px-3 rounded-l-lg border border-r-0 border-border bg-muted font-body text-sm text-muted-foreground">+971</span>
-          <input
-            type="tel"
-            value={booking.phone.replace(/^\+971\s?/, "")}
-            onChange={e => updateBooking({ phone: "+971 " + e.target.value.replace(/[^0-9]/g, "") })}
-            placeholder="50 123 4567"
-            className="flex-1 p-3 rounded-r-lg border border-border bg-card font-body text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-          />
-        </div>
-      </div>
-
-      <FieldInput label="Dubai area / community" value={booking.location} onChange={v => updateBooking({ location: v })} />
-      <FieldInput label="Full address / building name" value={booking.address} onChange={v => updateBooking({ address: v })} />
-
-      <div>
-        <label className="font-body text-sm font-medium text-foreground mb-1 block">Allergies or special notes</label>
-        <textarea value={booking.allergyNotes} onChange={e => updateBooking({ allergyNotes: e.target.value })}
-          className="w-full p-3 rounded-lg border border-border bg-card font-body text-sm resize-none h-20 focus:outline-none focus:ring-2 focus:ring-primary" />
-      </div>
-    </div>
-  );
+  /* ─── STEP 4: DETAILS — rendered inline below ─── */
 
   /* ─── STEP 5: CONFIRM ─── */
   const formatDateDisplay = (d: Date | undefined) => d ? format(d, "EEEE, d MMMM yyyy") : "—";
