@@ -1,128 +1,27 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { dubaiNeighborhoods } from "@/data/dubaiNeighborhoods";
 import cooqLogo from "@/assets/cooq-logo.png";
-import { ChevronDown } from "lucide-react";
 
-const PRICING = {
-  "one-time": { duo: 350, family: 420, large: 550 },
-  "first-cook": { duo: 299, family: 420, large: 550 },
-  weekly: { duo: 1190, family: 1430, large: 1870 },
-  twice: { duo: 2380, family: 2860, large: 3740 },
-  three: { duo: 3570, family: 4280, large: 5610 },
-};
-
-const SESSIONS = {
-  "one-time": 1,
-  "first-cook": 1,
-  weekly: 4,
-  twice: 8,
-  three: 12,
-};
-
-const SAVINGS = {
-  weekly: { duo: 210, family: 250, large: 330 },
-  twice: { duo: 420, family: 500, large: 660 },
-  three: { duo: 630, family: 760, large: 990 },
-};
-
-const cuisineOptions = [
-  "Arabic",
-  "Lebanese",
-  "Emirati",
-  "Moroccan",
-  "Indian",
-  "Pakistani",
-  "Filipino",
-  "Mediterranean",
-  "Asian",
-  "Italian",
-  "Greek",
-  "Japanese",
-  "Sushi",
-  "Spanish",
+const cuisineOptions = ["Lebanese", "Indian", "Mediterranean", "Continental", "Emirati", "Keto", "Vegan"];
+const dietaryOptions = ["Gluten-free", "Dairy-free", "Nut-free", "No restrictions"];
+const frequencyOptions = [
+  { key: "weekly", label: "Once a week" },
+  { key: "twice", label: "Twice a week" },
+  { key: "three", label: "3× a week" },
 ];
-const dietaryOptions = ["Vegetarian", "Vegan", "Gluten-Free", "Dairy-Free", "Nut-Free", "Kid-Friendly", "Keto", "Low-carb"];
 
-const freqOptions = [
-  {
-    key: "one-time",
-    label: "One-time",
-    subtitle: "Single session, no commitment",
-    badge: null,
-    rows: [
-      { tier: "Duo", people: "1–2 people", price: "AED 350 / session", saving: null },
-      { tier: "Family", people: "3–4 people", price: "AED 420 / session", saving: null },
-      { tier: "Large", people: "5–6 people", price: "AED 550 / session", saving: null },
-    ],
-  },
-  {
-    key: "weekly",
-    label: "Weekly",
-    subtitle: "4 sessions per month",
-    badge: "Save 15%",
-    rows: [
-      { tier: "Duo", people: "1–2 people", price: "AED 1,190 / mo", saving: "210" },
-      { tier: "Family", people: "3–4 people", price: "AED 1,430 / mo", saving: "250" },
-      { tier: "Large", people: "5–6 people", price: "AED 1,870 / mo", saving: "330" },
-    ],
-  },
-  {
-    key: "twice",
-    label: "Twice a week",
-    subtitle: "8 sessions per month",
-    badge: "Save 15%",
-    rows: [
-      { tier: "Duo", people: "1–2 people", price: "AED 2,380 / mo", saving: "420" },
-      { tier: "Family", people: "3–4 people", price: "AED 2,860 / mo", saving: "500" },
-      { tier: "Large", people: "5–6 people", price: "AED 3,740 / mo", saving: "660" },
-    ],
-  },
-  {
-    key: "three",
-    label: "3× a week",
-    subtitle: "12 sessions per month · Full week coverage",
-    badge: "Save 15%",
-    rows: [
-      { tier: "Duo", people: "1–2 people", price: "AED 3,570 / mo", saving: "630" },
-      { tier: "Family", people: "3–4 people", price: "AED 4,280 / mo", saving: "760" },
-      { tier: "Large", people: "5–6 people", price: "AED 5,610 / mo", saving: "990" },
-    ],
-  },
-];
-const tierOptions = [
-  {
-    key: "duo",
-    label: "Cooq Duo",
-    desc: "1–2 people · ~2 hours · AED 350",
-    detail: "2 proteins · 2 sides · covers 3–4 days",
-    price: "AED 350",
-  },
-  {
-    key: "family",
-    label: "Cooq Family",
-    desc: "3–4 people · ~3 hours · AED 420",
-    detail: "2 proteins · 3 sides · covers 3–4 days",
-    price: "AED 420",
-  },
-  {
-    key: "large",
-    label: "Cooq Large",
-    desc: "5–6 people · ~4 hours · AED 550",
-    detail: "3 proteins · 3 sides · covers 3–4 days",
-    price: "AED 550",
-  },
-];
+const SESSION_KEY = "cooq_search_state";
 
 const Pill = ({ label, selected, onClick }: { label: string; selected: boolean; onClick: () => void }) => (
   <button
     type="button"
     onClick={onClick}
-    className={`px-4 py-2 rounded-full text-sm cursor-pointer border transition-all ${
+    className={`px-4 py-2.5 rounded-full text-sm cursor-pointer border transition-all ${
       selected
-        ? "border-[#86A383] bg-[#86A383]/10 text-[#86A383] font-semibold"
-        : "border-gray-200 bg-white text-gray-600"
+        ? "border-primary bg-primary/10 text-primary font-semibold"
+        : "border-border bg-card text-foreground"
     }`}
   >
     {label}
@@ -130,148 +29,121 @@ const Pill = ({ label, selected, onClick }: { label: string; selected: boolean; 
 );
 
 const SectionLabel = ({ children }: { children: string }) => (
-  <p className="font-body text-xs font-semibold tracking-[0.15em] uppercase text-copper mb-4">{children}</p>
+  <p className="font-body text-xs font-semibold tracking-[0.15em] uppercase text-copper mb-3">{children}</p>
 );
 
 const Search = () => {
   const navigate = useNavigate();
-  const [step, setStep] = useState(1);
-  const [neighborhood, setNeighborhood] = useState("");
-  const [selectedCuisines, setSelectedCuisines] = useState<string[]>([]);
-  const [selectedDietary, setSelectedDietary] = useState<string[]>([]);
-  const [frequency, setFrequency] = useState("");
-  const [tier, setTier] = useState("");
 
-  const totalSteps = 3;
+  // Restore state from session storage
+  const saved = (() => {
+    try { return JSON.parse(sessionStorage.getItem(SESSION_KEY) || "{}"); } catch { return {}; }
+  })();
 
-  const toggleArr = (arr: string[], val: string) => (arr.includes(val) ? arr.filter((v) => v !== val) : [...arr, val]);
+  const [neighborhood, setNeighborhood] = useState<string>(saved.neighborhood || "");
+  const [selectedCuisine, setSelectedCuisine] = useState<string>(saved.cuisine || "");
+  const [selectedDietary, setSelectedDietary] = useState<string>(saved.dietary || "");
+  const [frequency, setFrequency] = useState<string>(saved.frequency || "");
 
-  const canNext = () => {
-    switch (step) {
-      case 1:
-        return !!neighborhood;
-      case 2:
-        return true;
-      case 3:
-        return true;
-      default:
-        return false;
-    }
-  };
+  // Save state to session
+  useEffect(() => {
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify({
+      neighborhood, cuisine: selectedCuisine, dietary: selectedDietary, frequency,
+    }));
+  }, [neighborhood, selectedCuisine, selectedDietary, frequency]);
 
   const handleFinal = () => {
     navigate("/results", {
-      state: { neighborhood, cuisines: selectedCuisines, dietary: selectedDietary },
+      state: { neighborhood, cuisines: selectedCuisine ? [selectedCuisine] : [], dietary: selectedDietary ? [selectedDietary] : [], frequency },
     });
   };
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <nav className="flex items-center gap-3 px-6 py-4">
-        <button onClick={() => (step > 1 ? setStep(step - 1) : navigate("/"))} className="text-foreground">
+        <button onClick={() => navigate("/")} className="text-foreground">
           <ArrowLeft className="w-5 h-5" />
         </button>
         <img src={cooqLogo} alt="Cooq" className="h-7" />
       </nav>
 
-      <div className="px-6 mb-6">
-        <div className="flex gap-2">
-          {Array.from({ length: totalSteps }, (_, i) => (
-            <div
-              key={i}
-              className={`h-1.5 rounded-full flex-1 transition-colors ${i < step ? "bg-primary" : "bg-border"}`}
-            />
-          ))}
-        </div>
-        <p className="font-body text-xs text-muted-foreground mt-2">
-          Step {step} of {totalSteps}
-        </p>
-      </div>
-
-      <div className="flex-1 px-6 pb-6">
-        {step === 1 && (
-          <div>
-            <SectionLabel>Where are you based?</SectionLabel>
-            <div className="relative">
-              <select
-                value={neighborhood}
-                onChange={(e) => setNeighborhood(e.target.value)}
-                className="w-full p-4 pr-10 rounded-lg border border-border bg-card font-body text-sm text-foreground appearance-none focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer"
-                style={{ boxShadow: "var(--shadow-card)" }}
-              >
-                <option value="">Select your neighborhood...</option>
-                {dubaiNeighborhoods.map((loc) => (
-                  <option key={loc} value={loc}>
-                    {loc}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground pointer-events-none" />
-            </div>
+      <div className="flex-1 px-6 pb-6 space-y-8 overflow-y-auto">
+        {/* SECTION 1: Neighbourhood */}
+        <div>
+          <SectionLabel>Where are you based?</SectionLabel>
+          <div className="flex flex-wrap gap-2 max-h-[260px] overflow-y-auto pr-1">
+            {dubaiNeighborhoods.map((loc) => (
+              <Pill
+                key={loc}
+                label={loc}
+                selected={neighborhood === loc}
+                onClick={() => setNeighborhood(neighborhood === loc ? "" : loc)}
+              />
+            ))}
           </div>
-        )}
+        </div>
 
-        {step === 2 && (
-          <div>
+        {/* SECTION 2: Cuisine — visible after neighbourhood */}
+        {neighborhood && (
+          <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
             <SectionLabel>What cuisine are you looking for?</SectionLabel>
             <div className="flex flex-wrap gap-2">
-              <Pill
-                label="Any cuisine"
-                selected={selectedCuisines.length === 0}
-                onClick={() => setSelectedCuisines([])}
-              />
               {cuisineOptions.map((c) => (
                 <Pill
                   key={c}
                   label={c}
-                  selected={selectedCuisines.includes(c)}
-                  onClick={() => setSelectedCuisines(toggleArr(selectedCuisines, c))}
+                  selected={selectedCuisine === c}
+                  onClick={() => setSelectedCuisine(selectedCuisine === c ? "" : c)}
                 />
               ))}
             </div>
           </div>
         )}
 
-        {step === 3 && (
-          <div>
+        {/* SECTION 3: Dietary — visible after cuisine */}
+        {neighborhood && selectedCuisine && (
+          <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
             <SectionLabel>Any dietary requirements?</SectionLabel>
             <div className="flex flex-wrap gap-2">
-              <Pill
-                label="No preference"
-                selected={selectedDietary.length === 0}
-                onClick={() => setSelectedDietary([])}
-              />
               {dietaryOptions.map((d) => (
                 <Pill
                   key={d}
                   label={d}
-                  selected={selectedDietary.includes(d)}
-                  onClick={() => setSelectedDietary(toggleArr(selectedDietary, d))}
+                  selected={selectedDietary === d}
+                  onClick={() => setSelectedDietary(selectedDietary === d ? "" : d)}
                 />
               ))}
             </div>
           </div>
         )}
 
-      </div>
+        {/* SECTION 4: Frequency — visible after dietary */}
+        {neighborhood && selectedCuisine && selectedDietary && (
+          <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <SectionLabel>How often?</SectionLabel>
+            <div className="flex flex-wrap gap-2">
+              {frequencyOptions.map((f) => (
+                <Pill
+                  key={f.key}
+                  label={f.label}
+                  selected={frequency === f.key}
+                  onClick={() => setFrequency(frequency === f.key ? "" : f.key)}
+                />
+              ))}
+            </div>
+          </div>
+        )}
 
-      <div className="px-6 pb-6">
-        {step < totalSteps ? (
-          <button
-            disabled={!canNext()}
-            onClick={() => setStep(step + 1)}
-            className="w-full py-4 rounded-lg font-body font-semibold text-base bg-primary text-primary-foreground disabled:opacity-40 transition-opacity"
-          >
-            Next →
-          </button>
-        ) : (
-          <button
-            disabled={!canNext()}
-            onClick={handleFinal}
-            className="w-full py-4 rounded-lg font-body font-semibold text-base bg-copper text-accent-foreground disabled:opacity-40 transition-opacity"
-          >
-            Find My Cook →
-          </button>
+        {/* CTA — visible after frequency */}
+        {neighborhood && selectedCuisine && selectedDietary && frequency && (
+          <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 pb-4">
+            <button
+              onClick={handleFinal}
+              className="w-full py-4 rounded-lg font-body font-semibold text-base bg-copper text-accent-foreground transition-opacity hover:opacity-90"
+            >
+              Find My Cook →
+            </button>
+          </div>
         )}
       </div>
     </div>
