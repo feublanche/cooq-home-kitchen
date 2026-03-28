@@ -7,6 +7,7 @@ import { BookingProvider } from "@/context/BookingContext";
 import { CookProvider } from "@/context/CookContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import CookProtectedRoute from "@/components/CookProtectedRoute";
+import CustomerProtectedRoute from "@/components/CustomerProtectedRoute";
 import Home from "./pages/Home";
 import Search from "./pages/Search";
 import Results from "./pages/Results";
@@ -16,6 +17,8 @@ import Confirmation from "./pages/Confirmation";
 import Admin from "./pages/Admin";
 import Login from "./pages/Login";
 import MyBookings from "./pages/MyBookings";
+import Bookings from "./pages/Bookings";
+import AccountPage from "./pages/Account";
 import NotFound from "./pages/NotFound";
 import CookLogin from "./pages/cook/CookLogin";
 import CookDashboard from "./pages/cook/CookDashboard";
@@ -27,7 +30,6 @@ import CookAvailability from "./pages/cook/CookAvailability";
 import Payment from "./pages/Payment";
 import RateSession from "./pages/RateSession";
 import CustomerAuth from "./pages/CustomerAuth";
-import CustomerProtectedRoute from "@/components/CustomerProtectedRoute";
 import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
 import CookAgreement from "./pages/CookAgreement";
@@ -52,6 +54,8 @@ const App = () => (
               <Route path="/book" element={<CustomerProtectedRoute><BookingForm /></CustomerProtectedRoute>} />
               <Route path="/confirmation" element={<Confirmation />} />
               <Route path="/account" element={<CustomerAuth />} />
+              <Route path="/account-page" element={<CustomerProtectedRoute><AccountPage /></CustomerProtectedRoute>} />
+              <Route path="/bookings" element={<CustomerProtectedRoute><Bookings /></CustomerProtectedRoute>} />
               <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
               <Route path="/login" element={<Login />} />
               <Route path="/my-bookings" element={<CustomerProtectedRoute><MyBookings /></CustomerProtectedRoute>} />

@@ -1,12 +1,13 @@
 import { useNavigate } from "react-router-dom";
 import { Shield, Clock, Snowflake } from "lucide-react";
 import cooqLogo from "@/assets/cooq-logo.png";
+import BottomNav from "@/components/BottomNav";
 
 const Home = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-screen bg-background flex flex-col pb-20">
       {/* Nav */}
       <nav className="flex items-center justify-between px-6 py-4">
         <img src={cooqLogo} alt="Cooq" className="h-8" />
@@ -69,6 +70,8 @@ const Home = () => {
           <a href="mailto:hello@cooq.ae" className="hover:text-foreground transition-colors">hello@cooq.ae</a>
         </div>
       </footer>
+
+      <BottomNav />
     </div>
   );
 };

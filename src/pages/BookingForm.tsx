@@ -1,21 +1,16 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useBooking } from "@/context/BookingContext";
-import { ArrowLeft, Check, ChevronRight, Lock } from "lucide-react";
+import { ArrowLeft, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import cooqLogo from "@/assets/cooq-logo.png";
 import type { User } from "@supabase/supabase-js";
 import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Button } from "@/components/ui/button";
-import { CalendarIcon } from "lucide-react";
 import { format, addDays, getDay } from "date-fns";
 import { cn } from "@/lib/utils";
 
 /* ─── CONSTANTS ─── */
-const WIZARD_STEPS = ["Tier", "Frequency", "Dates", "Details", "Confirm"];
-
 const PRICES: Record<string, Record<string, number>> = {
   "one-time": { duo: 350, family: 420, large: 550 },
   "first-cook": { duo: 299, family: 420, large: 550 },
@@ -24,31 +19,21 @@ const PRICES: Record<string, Record<string, number>> = {
   three: { duo: 3570, family: 4280, large: 5610 },
 };
 
-const SESSIONS: Record<string, number> = {
-  "one-time": 1, "first-cook": 1, weekly: 4, twice: 8, three: 12,
-};
-
-const SAVINGS: Record<string, Record<string, number>> = {
-  weekly: { duo: 210, family: 250, large: 330 },
-  twice: { duo: 420, family: 500, large: 660 },
-  three: { duo: 630, family: 760, large: 990 },
-};
-
 const TIERS = [
-  { key: "duo", label: "Cooq Duo", people: "1–2 people", duration: "~2 hrs", detail: "2 proteins · 2 sides" },
-  { key: "family", label: "Cooq Family", people: "3–4 people", duration: "~3 hrs", detail: "2 proteins · 3 sides" },
-  { key: "large", label: "Cooq Large", people: "5–6 people", duration: "~4 hrs", detail: "3 proteins · 3 sides" },
+  { key: "duo", label: "Cooq Duo", people: "1–2 people", duration: "~2 hrs", detail: "2 proteins · 2 sides", price: 350 },
+  { key: "family", label: "Cooq Family", people: "3–4 people", duration: "~3 hrs", detail: "2 proteins · 3 sides", price: 420 },
+  { key: "large", label: "Cooq Large", people: "5–6 people", duration: "~4 hrs", detail: "3 proteins · 3 sides", price: 550 },
 ] as const;
 
 const FREQUENCIES = [
-  { key: "one-time", label: "One-time", sub: "Single session" },
-  { key: "weekly", label: "Weekly", sub: "Save 15% · 4 sessions/month" },
-  { key: "twice", label: "Twice a week", sub: "Save 15% · 8 sessions/month" },
-  { key: "three", label: "3× a week", sub: "Save 15% · 12 sessions/month" },
+  { key: "one-time", label: "Once", sub: "Single session" },
+  { key: "weekly", label: "Weekly", sub: "Save 15% · 4/mo" },
+  { key: "twice", label: "Twice a week", sub: "Save 15% · 8/mo" },
+  { key: "three", label: "3× a week", sub: "Save 15% · 12/mo" },
 ] as const;
 
+const TIME_SLOTS = ["9:00 AM", "11:00 AM", "2:00 PM", "4:00 PM"];
 const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-// JS getDay(): 0=Sun,1=Mon,...6=Sat → to our index: Mon=0..Sun=6
 const jsDayToIdx = (jsDay: number) => (jsDay + 6) % 7;
 
 const TIER_LABELS: Record<string, string> = { duo: "Cooq Duo", family: "Cooq Family", large: "Cooq Large" };
@@ -60,13 +45,6 @@ const getTotal = (tier: string, freq: string, first: boolean): number => {
   return PRICES[key]?.[tier] ?? 350;
 };
 
-const requiredDayCount = (freq: string) => {
-  if (freq === "twice") return 2;
-  if (freq === "three") return 3;
-  if (freq === "weekly") return 1;
-  return 0; // one-time uses date picker only
-};
-
 /* ─── COMPONENT ─── */
 const BookingForm = () => {
   const navigate = useNavigate();
@@ -74,38 +52,45 @@ const BookingForm = () => {
   const routerState = (location.state as any) || {};
   const { booking, updateBooking } = useBooking();
 
-  const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [user, setUser] = useState<User | null>(null);
 
-  // Step 1 — Tier
-  const [tier, setTier] = useState("duo");
+  // Selections
+  const [tier, setTier] = useState("");
   const [isFirstSession, setIsFirstSession] = useState(false);
-
-  // Step 2 — Frequency
-  const [frequency, setFrequency] = useState("one-time");
-
-  // Step 3 — Dates
-  const [startDate, setStartDate] = useState<Date | undefined>();
-  const [selectedDays, setSelectedDays] = useState<string[]>([]);
-  const [secondSessionMenuId, setSecondSessionMenuId] = useState("");
+  const [frequency, setFrequency] = useState("");
+  const [dates, setDates] = useState<(Date | undefined)[]>([undefined, undefined, undefined]);
+  const [timeSlots, setTimeSlots] = useState<string[]>(["", "", ""]);
+  const [streetNumber, setStreetNumber] = useState("");
+  const [streetName, setStreetName] = useState("");
+  const [building, setBuilding] = useState("");
+  const [phone, setPhone] = useState("");
+  const [dietaryNotes, setDietaryNotes] = useState("");
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [secondMenuId, setSecondMenuId] = useState("");
   const [availableMenus, setAvailableMenus] = useState<Array<{ id: string; menu_name: string }>>([]);
 
   // Cook availability
-  const [cookAvailableDays, setCookAvailableDays] = useState<number[]>([]); // 0=Mon..6=Sun
+  const [cookAvailableDays, setCookAvailableDays] = useState<number[]>([]);
   const [cookAvailableLoaded, setCookAvailableLoaded] = useState(false);
 
-  // Step 5 — Terms
-  const [agreedToTerms, setAgreedToTerms] = useState(false);
+  // Refs for scroll
+  const freqRef = useRef<HTMLDivElement>(null);
+  const dateRef = useRef<HTMLDivElement>(null);
+  const addressRef = useRef<HTMLDivElement>(null);
 
   const minDate = useMemo(() => addDays(new Date(), 2), []);
-
   const primaryMenuName = routerState.selectedMenuName || booking.menuSelected || "Not selected";
-  const secondaryMenuName = availableMenus.find(m => m.id === secondSessionMenuId)?.menu_name || "";
-  const sessionTotal = getTotal(tier, frequency, isFirstSession);
-  const isDiscovery = isFirstSession && tier === "duo";
   const cookInitials = routerState.cookInitials || "TBD";
+
+  const numCalendars = frequency === "twice" ? 2 : frequency === "three" ? 3 : 1;
+  const sessionTotal = tier ? getTotal(tier, frequency || "one-time", isFirstSession) : 0;
+
+  // Pre-fill area from search session
+  const searchState = (() => {
+    try { return JSON.parse(sessionStorage.getItem("cooq_search_state") || "{}"); } catch { return {}; }
+  })();
 
   // Fetch user
   useEffect(() => {
@@ -138,11 +123,8 @@ const BookingForm = () => {
       .then(({ data }) => {
         if (!active) return;
         if (data && data.length > 0) {
-          // day_of_week in DB: 0=Mon..6=Sun (matching our index)
-          const available = data.filter(d => d.available !== false).map(d => d.day_of_week);
-          setCookAvailableDays(available);
+          setCookAvailableDays(data.filter(d => d.available !== false).map(d => d.day_of_week));
         } else {
-          // No availability records = all days available
           setCookAvailableDays([0, 1, 2, 3, 4, 5, 6]);
         }
         setCookAvailableLoaded(true);
@@ -150,42 +132,33 @@ const BookingForm = () => {
     return () => { active = false; };
   }, [routerState.cookId, booking.cookId]);
 
-  // Check if a JS Date falls on an available cook day
   const isDateAvailable = (date: Date): boolean => {
     if (!cookAvailableLoaded) return true;
-    const idx = jsDayToIdx(getDay(date));
-    return cookAvailableDays.includes(idx);
+    return cookAvailableDays.includes(jsDayToIdx(getDay(date)));
   };
 
-  // Available day names for day-of-week selectors
-  const availableDayNames = cookAvailableDays.map(i => DAY_NAMES[i]);
+  // Scroll helpers
+  useEffect(() => {
+    if (tier && freqRef.current) freqRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [tier]);
+  useEffect(() => {
+    if (frequency && dateRef.current) dateRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [frequency]);
 
-  /* ─── NAVIGATION ─── */
-  const neededDays = requiredDayCount(frequency);
+  // Address complete check
+  const addressComplete = streetNumber.trim() && streetName.trim() && building.trim() && phone.replace(/[^0-9]/g, "").length >= 7;
 
-  const canNext = (): boolean => {
-    if (step === 0) return true;
-    if (step === 1) return true;
-    if (step === 2) {
-      if (frequency === "one-time") return !!startDate;
-      // recurring: need start date + correct number of days
-      if (!startDate) return false;
-      if (selectedDays.length < neededDays) return false;
-      if (frequency === "twice" && !secondSessionMenuId) return false;
-      return true;
-    }
-    if (step === 3) {
-      return !!(booking.customerName.trim() && booking.email.trim() && booking.phone.trim());
-    }
-    return true;
-  };
+  // Can submit
+  const allDatesSelected = dates.slice(0, numCalendars).every(d => !!d);
+  const allTimesSelected = timeSlots.slice(0, numCalendars).every(t => !!t);
+  const canSubmit = tier && frequency && allDatesSelected && allTimesSelected && addressComplete && agreedToTerms &&
+    (numCalendars <= 1 || secondMenuId);
 
-  const next = () => { if (step < 4) setStep(step + 1); };
-  const back = () => { if (step > 0) setStep(step - 1); else navigate(-1); };
+  const secondaryMenuName = availableMenus.find(m => m.id === secondMenuId)?.menu_name || "";
 
   /* ─── SUBMIT ─── */
   const handleSubmit = async () => {
-    if (!agreedToTerms) return;
+    if (!canSubmit) return;
     setSubmitError("");
     const lastSubmit = sessionStorage.getItem("cooq_last_submit");
     if (lastSubmit && Date.now() - Number(lastSubmit) < 300000) {
@@ -195,32 +168,39 @@ const BookingForm = () => {
     setLoading(true);
     try {
       sessionStorage.setItem("cooq_last_submit", String(Date.now()));
-      const recurringDays = selectedDays.length > 0 ? selectedDays : (startDate ? [DAY_NAMES[jsDayToIdx(getDay(startDate))]] : []);
-      const sessionNotes = frequency === "twice"
-        ? JSON.stringify({ recurring_days: recurringDays, secondary_session: { menu_id: secondSessionMenuId || null, menu_name: secondaryMenuName || null } })
-        : recurringDays.length > 1 ? JSON.stringify({ recurring_days: recurringDays }) : null;
+      const bookingDate = dates[0] ? format(dates[0], "yyyy-MM-dd") : null;
+      const recurringDays = dates.slice(0, numCalendars).filter(Boolean).map(d => DAY_NAMES[jsDayToIdx(getDay(d!))]);
+      const sessionNotes = numCalendars > 1
+        ? JSON.stringify({
+          recurring_days: recurringDays,
+          time_slots: timeSlots.slice(0, numCalendars),
+          secondary_session: numCalendars >= 2 ? { menu_id: secondMenuId || null, menu_name: secondaryMenuName || null } : undefined,
+          dates: dates.slice(0, numCalendars).map(d => d ? format(d, "yyyy-MM-dd") : null),
+        })
+        : JSON.stringify({ time_slot: timeSlots[0] });
 
-      const bookingDate = startDate ? format(startDate, "yyyy-MM-dd") : null;
+      const fullAddress = [streetNumber, streetName, building].filter(Boolean).join(", ");
+      const fullPhone = "+971 " + phone.replace(/[^0-9]/g, "");
 
       const insertData: any = {
         customer_name: booking.customerName,
         email: booking.email,
-        phone: booking.phone,
-        area: booking.location || routerState.cookArea || "",
-        address: booking.address,
+        phone: fullPhone,
+        area: searchState.neighborhood || booking.location || routerState.cookArea || "",
+        address: fullAddress,
         cook_id: routerState.cookId || booking.cookId || "unassigned",
         cook_name: routerState.cookInitials || booking.cookName || "To be assigned",
         menu_selected: primaryMenuName,
         booking_date: bookingDate,
-        frequency,
+        frequency: frequency || "one-time",
         party_size: TIER_PARTY[tier] || 2,
         dietary: booking.dietary,
-        allergies_notes: booking.allergyNotes?.replace(/<[^>]*>/g, "").trim() || "",
+        allergies_notes: dietaryNotes.trim() || "",
         session_notes: sessionNotes,
         grocery_addon: false,
         grocery_fee: 0,
         tier,
-        session_type: isDiscovery ? "discovery" : "standard",
+        session_type: isFirstSession && tier === "duo" ? "discovery" : "standard",
         total_aed: sessionTotal,
         status: "pending",
         customer_user_id: user?.id || null,
@@ -230,16 +210,23 @@ const BookingForm = () => {
       const { data: newBooking, error } = await supabase.from("bookings").insert(insertData).select().single();
       if (error || !newBooking) throw error || new Error("Booking creation failed");
 
-      updateBooking({ totalAed: sessionTotal });
-      navigate("/confirmation", {
+      // Navigate to payment
+      navigate("/payment", {
         state: {
           bookingId: newBooking.id,
           totalAed: sessionTotal,
           customerName: newBooking.customer_name,
           customerEmail: newBooking.email,
+          area: newBooking.area,
           bookingDate,
+          bookingTime: timeSlots[0],
           menuSelected: primaryMenuName,
-          cookName: newBooking.cook_name || null,
+          cookName: newBooking.cook_name,
+          cookId: routerState.cookId || booking.cookId,
+          selectedMenuName: primaryMenuName,
+          secondaryBookingDate: dates[1] ? format(dates[1], "yyyy-MM-dd") : null,
+          secondaryMenuName: secondaryMenuName || null,
+          recurringDays: JSON.stringify(recurringDays),
           frequency,
         },
       });
@@ -251,359 +238,272 @@ const BookingForm = () => {
     }
   };
 
-  /* ─── PROGRESS BAR ─── */
-  const ProgressBar = () => (
-    <div className="px-6 mb-6">
-      <div className="flex gap-1">
-        {WIZARD_STEPS.map((_, i) => (
-          <div key={i} className={`h-1.5 rounded-full flex-1 transition-colors ${i <= step ? "bg-primary" : "bg-border"}`} />
-        ))}
-      </div>
-      <div className="flex justify-between mt-1.5">
-        {WIZARD_STEPS.map((s, i) => (
-          <span key={s} className={`font-body text-[10px] ${i <= step ? "text-primary font-medium" : "text-muted-foreground"}`}>{s}</span>
-        ))}
-      </div>
-    </div>
-  );
-
-  /* ─── STEP 1: TIER ─── */
-  const StepTier = () => (
-    <div className="space-y-4">
-      <h2 className="font-display italic text-xl text-foreground">Choose your session size</h2>
-      <div className="space-y-3">
-        {TIERS.map(t => {
-          const selected = tier === t.key;
-          return (
-            <button key={t.key} type="button" onClick={() => { setTier(t.key); if (t.key !== "duo") setIsFirstSession(false); }}
-              className={`w-full text-left rounded-xl p-5 border-2 transition ${selected ? "border-primary bg-primary/5" : "border-border bg-card"}`}>
-              <p className="font-body text-base font-bold text-foreground">{t.label}</p>
-              <p className="font-body text-sm text-muted-foreground mt-1">{t.people} · {t.duration}</p>
-              <p className="font-body text-xs text-muted-foreground mt-0.5">{t.detail}</p>
-              {selected && <Check className="w-5 h-5 text-primary mt-2" />}
-            </button>
-          );
-        })}
-      </div>
-      <label className={`flex items-center gap-2.5 mt-2 ${tier !== "duo" ? "opacity-40 pointer-events-none" : "cursor-pointer"}`}>
-        <input type="checkbox" checked={isFirstSession} onChange={e => setIsFirstSession(e.target.checked)}
-          disabled={tier !== "duo"} className="w-4 h-4 rounded border-border accent-primary" />
-        <span className="font-body text-sm text-foreground">This is my first Cooq session</span>
-      </label>
-      {tier !== "duo" && <p className="font-body text-xs text-muted-foreground italic ml-6">First Cook trial is Duo only</p>}
-      {isDiscovery && <p className="font-body text-xs text-accent ml-6">AED 299 discovery rate applied</p>}
-    </div>
-  );
-
-  /* ─── STEP 2: FREQUENCY ─── */
-  const StepFrequency = () => (
-    <div className="space-y-4">
-      <h2 className="font-display italic text-xl text-foreground">How often?</h2>
-      <div className="space-y-3">
-        {FREQUENCIES.map(f => {
-          const selected = frequency === f.key;
-          return (
-            <button key={f.key} type="button" onClick={() => { setFrequency(f.key); setSelectedDays([]); setSecondSessionMenuId(""); }}
-              className={`w-full text-left rounded-xl p-5 border-2 transition ${selected ? "border-primary bg-primary/5" : "border-border bg-card"}`}>
-              <p className="font-body text-base font-bold text-foreground">{f.label}</p>
-              <p className="font-body text-xs text-muted-foreground mt-0.5">{f.sub}</p>
-              {selected && <Check className="w-5 h-5 text-primary mt-2" />}
-            </button>
-          );
-        })}
-      </div>
-      <div className="bg-card rounded-xl border border-border p-4 mt-2">
-        <p className="font-body text-sm text-muted-foreground">{TIER_LABELS[tier]} · {FREQ_LABELS[frequency]}</p>
-        <p className="font-display text-xl font-bold text-accent mt-1">
-          AED {sessionTotal.toLocaleString()}{frequency !== "one-time" ? " /mo" : ""}
-        </p>
-        {frequency !== "one-time" && SAVINGS[frequency] && (
-          <p className="font-body text-xs text-primary mt-1">
-            You save AED {SAVINGS[frequency]?.[tier]} per month vs one-time · {SESSIONS[frequency]} sessions
-          </p>
-        )}
-        {isDiscovery && <p className="font-body text-xs text-accent mt-1">First Cook trial: AED 299</p>}
-      </div>
-    </div>
-  );
-
-  /* ─── STEP 3: DATES ─── */
-  const toggleDay = (day: string) => {
-    if (selectedDays.includes(day)) {
-      setSelectedDays(selectedDays.filter(d => d !== day));
-    } else if (selectedDays.length < neededDays) {
-      setSelectedDays([...selectedDays, day]);
-    }
-  };
-
-  const StepDates = () => {
-    const isRecurring = frequency !== "one-time";
-
-    return (
-      <div className="space-y-5">
-        <h2 className="font-display italic text-xl text-foreground">
-          Choose your session date{isRecurring ? "s" : ""}
-        </h2>
-
-        {/* For recurring: day-of-week selector */}
-        {isRecurring && (
-          <div>
-            <p className="font-body text-sm font-medium text-foreground mb-2">
-              Select {neededDays} day{neededDays > 1 ? "s" : ""} of the week
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {DAY_NAMES.map((day, idx) => {
-                const available = cookAvailableDays.includes(idx);
-                const selected = selectedDays.includes(day);
-                return (
-                  <button key={day} type="button" disabled={!available}
-                    onClick={() => toggleDay(day)}
-                    className={`px-4 py-2.5 rounded-full text-sm font-medium transition ${
-                      !available ? "opacity-25 cursor-not-allowed bg-muted text-muted-foreground" :
-                      selected ? "bg-primary text-primary-foreground" :
-                      "bg-muted text-muted-foreground hover:bg-muted/80"
-                    }`}>
-                    {day}
-                  </button>
-                );
-              })}
-            </div>
-            {selectedDays.length < neededDays && (
-              <p className="font-body text-xs text-muted-foreground mt-1.5">
-                {selectedDays.length}/{neededDays} selected
-              </p>
-            )}
-          </div>
-        )}
-
-        {/* Start date / session date picker */}
-        <div>
-          <label className="font-body text-sm font-medium text-foreground mb-1.5 block">
-            {isRecurring ? "Start date" : "Session date"}
-          </label>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline"
-                className={cn("w-full justify-start text-left font-normal font-body", !startDate && "text-muted-foreground")}>
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {startDate ? format(startDate, "EEEE, d MMMM yyyy") : "Pick a date"}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <Calendar
-                mode="single"
-                selected={startDate}
-                onSelect={setStartDate}
-                disabled={(date) => {
-                  if (date < minDate) return true;
-                  if (!isDateAvailable(date)) return true;
-                  // For recurring, only allow dates on selected days
-                  if (isRecurring && selectedDays.length > 0) {
-                    const dayName = DAY_NAMES[jsDayToIdx(getDay(date))];
-                    if (!selectedDays.includes(dayName)) return true;
-                  }
-                  return false;
-                }}
-                initialFocus
-                className={cn("p-3 pointer-events-auto")}
-              />
-            </PopoverContent>
-          </Popover>
-        </div>
-
-        {/* Recurring summary label */}
-        {isRecurring && startDate && selectedDays.length === neededDays && (
-          <div className="bg-primary/5 border border-primary/20 rounded-lg p-3">
-            <p className="font-body text-sm text-foreground">
-              Every <span className="font-semibold">{selectedDays.slice(0, -1).join(", ")}{selectedDays.length > 1 ? " + " : ""}{selectedDays[selectedDays.length - 1]}</span>, starting{" "}
-              <span className="font-semibold">{format(startDate, "d MMMM yyyy")}</span>
-            </p>
-          </div>
-        )}
-
-        {/* Second menu selector for 2x or 3x */}
-        {(frequency === "twice" || frequency === "three") && (
-          <div className="rounded-xl border border-border bg-card p-4 space-y-3">
-            <p className="font-body text-sm font-semibold text-foreground">Second menu (for alternate sessions)</p>
-            {availableMenus.length > 0 ? (
-              <select value={secondSessionMenuId} onChange={e => setSecondSessionMenuId(e.target.value)}
-                className="w-full p-3 rounded-lg border border-border bg-background font-body text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary">
-                <option value="">Select menu</option>
-                {availableMenus.map(m => <option key={m.id} value={m.id}>{m.menu_name}</option>)}
-              </select>
-            ) : (
-              <input type="text" placeholder="Describe your preferred menu" value={secondSessionMenuId}
-                onChange={e => setSecondSessionMenuId(e.target.value)}
-                className="w-full p-3 rounded-lg border border-border bg-background font-body text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary" />
-            )}
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  /* ─── STEP 4: DETAILS — rendered inline below ─── */
-
-  /* ─── STEP 5: CONFIRM ─── */
-  const formatDateDisplay = (d: Date | undefined) => d ? format(d, "EEEE, d MMMM yyyy") : "—";
-
-  const StepConfirm = () => (
-    <div className="space-y-5">
-      <h2 className="font-display italic text-xl text-foreground">Review your booking</h2>
-
-      <div className="bg-card rounded-2xl shadow-md border border-border/50 overflow-hidden">
-        <div className="p-5 space-y-0">
-          <SummaryRow label="Cook" value={`${cookInitials}${routerState.cookArea ? " · " + routerState.cookArea : ""}`} />
-          <Divider />
-          <SummaryRow label="Menu" value={primaryMenuName} />
-          {(frequency === "twice" || frequency === "three") && secondaryMenuName && (
-            <>
-              <Divider />
-              <SummaryRow label="2nd Menu" value={secondaryMenuName} />
-            </>
-          )}
-          <Divider />
-          <SummaryRow label="Tier" value={TIER_LABELS[tier] || tier} />
-          <Divider />
-          <SummaryRow label="Frequency" value={FREQ_LABELS[frequency] || frequency} />
-          <Divider />
-          {frequency === "one-time" ? (
-            <SummaryRow label="Date" value={formatDateDisplay(startDate)} />
-          ) : (
-            <>
-              <SummaryRow label="Days" value={selectedDays.join(" + ")} />
-              <Divider />
-              <SummaryRow label="Starting" value={formatDateDisplay(startDate)} />
-            </>
-          )}
-          <Divider />
-          <SummaryRow label="Address" value={[booking.address, booking.location].filter(Boolean).join(", ") || "—"} />
-          <Divider />
-          <div className="flex justify-between items-center py-3">
-            <span className="font-body text-base font-semibold text-muted-foreground">Price</span>
-            <span className="font-display text-xl font-bold" style={{ color: "#B57E5D" }}>
-              AED {sessionTotal.toLocaleString()}{frequency !== "one-time" ? " /mo" : ""}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      <label className="flex items-start gap-2.5 text-sm text-muted-foreground">
-        <input type="checkbox" checked={agreedToTerms} onChange={e => setAgreedToTerms(e.target.checked)} className="mt-0.5" />
-        <span>
-          I agree to Cooq's{" "}
-          <a href="/terms" target="_blank" className="text-primary underline">Terms & Conditions</a>{" "}and{" "}
-          <a href="/privacy" target="_blank" className="text-primary underline">Privacy Policy</a>
-        </span>
-      </label>
-
-      {submitError && (
-        <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-3">
-          <p className="font-body text-sm text-destructive">{submitError}</p>
-        </div>
-      )}
-    </div>
-  );
-
-  const Divider = () => <div className="h-px bg-border/60" />;
-
-  const SummaryRow = ({ label, value }: { label: string; value: string }) => (
-    <div className="flex justify-between py-2.5">
-      <span className="font-body text-sm text-muted-foreground">{label}</span>
-      <span className="font-body text-sm font-medium text-foreground text-right max-w-[60%]">{value}</span>
-    </div>
-  );
-
   /* ─── RENDER ─── */
   return (
     <div className="min-h-screen bg-background flex flex-col">
+      {/* Header */}
       <nav className="flex items-center gap-3 px-6 py-4">
-        <button onClick={back} className="text-foreground"><ArrowLeft className="w-5 h-5" /></button>
+        <button onClick={() => navigate(-1)} className="text-foreground"><ArrowLeft className="w-5 h-5" /></button>
         <img src={cooqLogo} alt="Cooq" className="h-7" />
       </nav>
 
-      <ProgressBar />
+      {/* Sticky summary bar */}
+      <div className="sticky top-0 z-20 bg-card border-b border-border px-6 py-3">
+        <p className="font-body text-sm text-foreground">
+          Booking with <span className="font-semibold">{cookInitials}</span> · <span className="text-copper font-medium">{primaryMenuName}</span>
+        </p>
+      </div>
 
-      <div className="px-6 pb-6 flex-1">
-        {step === 0 && <StepTier />}
-        {step === 1 && <StepFrequency />}
-        {step === 2 && <StepDates />}
-        {step === 3 && (
-          <div className="space-y-4">
-            <h2 className="font-display italic text-xl text-foreground">Your details</h2>
+      <div className="flex-1 px-6 pb-32 space-y-8 pt-4">
+        {/* SECTION 1: Tier */}
+        <div>
+          <p className="font-body text-xs font-semibold tracking-[0.15em] uppercase text-copper mb-3">Session size</p>
+          <div className="space-y-3">
+            {TIERS.map(t => {
+              const selected = tier === t.key;
+              const price = getTotal(t.key, frequency || "one-time", isFirstSession && t.key === "duo");
+              return (
+                <button key={t.key} type="button" onClick={() => { setTier(t.key); if (t.key !== "duo") setIsFirstSession(false); }}
+                  className={`w-full text-left rounded-xl p-5 border-2 transition ${selected ? "border-primary bg-primary/5" : "border-border bg-card"}`}>
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="font-body text-base font-bold text-foreground">{t.label}</p>
+                      <p className="font-body text-sm text-muted-foreground mt-0.5">{t.people} · {t.duration}</p>
+                      <p className="font-body text-xs text-muted-foreground mt-0.5">{t.detail}</p>
+                    </div>
+                    <p className="font-display text-lg font-bold text-accent">AED {price}</p>
+                  </div>
+                  {selected && <Check className="w-5 h-5 text-primary mt-2" />}
+                </button>
+              );
+            })}
+          </div>
+          {tier === "duo" && (
+            <label className="flex items-center gap-2.5 mt-3 cursor-pointer">
+              <input type="checkbox" checked={isFirstSession} onChange={e => setIsFirstSession(e.target.checked)}
+                className="w-4 h-4 rounded border-border accent-primary" />
+              <span className="font-body text-sm text-foreground">This is my first Cooq session</span>
+            </label>
+          )}
+          {isFirstSession && tier === "duo" && (
+            <p className="font-body text-xs text-accent ml-6 mt-1">AED 299 discovery rate applied</p>
+          )}
+        </div>
+
+        {/* SECTION 2: Frequency */}
+        {tier && (
+          <div ref={freqRef} className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <p className="font-body text-xs font-semibold tracking-[0.15em] uppercase text-copper mb-3">How often?</p>
+            <div className="flex flex-wrap gap-2">
+              {FREQUENCIES.map(f => (
+                <button key={f.key} type="button"
+                  onClick={() => { setFrequency(f.key); setDates([undefined, undefined, undefined]); setTimeSlots(["", "", ""]); setSecondMenuId(""); }}
+                  className={`px-4 py-2.5 rounded-full text-sm font-medium transition border ${
+                    frequency === f.key ? "border-primary bg-primary/10 text-primary font-semibold" : "border-border bg-card text-foreground"
+                  }`}>
+                  {f.label}
+                </button>
+              ))}
+            </div>
+            {frequency && sessionTotal > 0 && (
+              <div className="bg-card rounded-xl border border-border p-4 mt-3">
+                <p className="font-body text-sm text-muted-foreground">{TIER_LABELS[tier]} · {FREQ_LABELS[frequency]}</p>
+                <p className="font-display text-xl font-bold text-accent mt-1">
+                  AED {sessionTotal.toLocaleString()}{frequency !== "one-time" ? " /mo" : ""}
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* SECTION 3: Dates + Times */}
+        {tier && frequency && (
+          <div ref={dateRef} className="animate-in fade-in slide-in-from-bottom-2 duration-300 space-y-6">
+            <p className="font-body text-xs font-semibold tracking-[0.15em] uppercase text-copper mb-1">
+              Choose your date{numCalendars > 1 ? "s" : ""} & time{numCalendars > 1 ? "s" : ""}
+            </p>
+            {Array.from({ length: numCalendars }).map((_, idx) => (
+              <div key={idx} className="space-y-3">
+                {numCalendars > 1 && (
+                  <p className="font-body text-sm font-semibold text-foreground">Session {idx + 1}</p>
+                )}
+                <Calendar
+                  mode="single"
+                  selected={dates[idx]}
+                  onSelect={(d) => {
+                    const next = [...dates];
+                    next[idx] = d;
+                    setDates(next);
+                  }}
+                  disabled={(date) => {
+                    if (date < minDate) return true;
+                    if (!isDateAvailable(date)) return true;
+                    return false;
+                  }}
+                  className={cn("p-3 pointer-events-auto rounded-xl border border-border bg-card")}
+                />
+                <div>
+                  <p className="font-body text-xs text-muted-foreground mb-2">Time slot</p>
+                  <div className="flex flex-wrap gap-2">
+                    {TIME_SLOTS.map(slot => (
+                      <button key={slot} type="button" onClick={() => {
+                        const next = [...timeSlots];
+                        next[idx] = slot;
+                        setTimeSlots(next);
+                      }}
+                        className={`px-4 py-2 rounded-full text-sm transition border ${
+                          timeSlots[idx] === slot ? "border-primary bg-primary/10 text-primary font-semibold" : "border-border bg-card text-foreground"
+                        }`}>
+                        {slot}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ))}
+
+            {/* Second menu for 2x or 3x */}
+            {numCalendars >= 2 && (
+              <div className="rounded-xl border border-border bg-card p-4 space-y-2">
+                <p className="font-body text-sm font-semibold text-foreground">Second menu (for alternate sessions)</p>
+                {availableMenus.length > 0 ? (
+                  <select value={secondMenuId} onChange={e => setSecondMenuId(e.target.value)}
+                    className="w-full p-3 rounded-lg border border-border bg-background font-body text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary">
+                    <option value="">Select menu</option>
+                    {availableMenus.map(m => <option key={m.id} value={m.id}>{m.menu_name}</option>)}
+                  </select>
+                ) : (
+                  <input type="text" placeholder="Describe your preferred menu" value={secondMenuId}
+                    onChange={e => setSecondMenuId(e.target.value)}
+                    className="w-full p-3 rounded-lg border border-border bg-background font-body text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary" />
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* SECTION 4: Address */}
+        {tier && frequency && allDatesSelected && allTimesSelected && (
+          <div ref={addressRef} className="animate-in fade-in slide-in-from-bottom-2 duration-300 space-y-4">
+            <p className="font-body text-xs font-semibold tracking-[0.15em] uppercase text-copper mb-1">Your address</p>
+
+            {/* Pre-filled area */}
+            {searchState.neighborhood && (
+              <div className="bg-primary/5 border border-primary/20 rounded-lg p-3">
+                <p className="font-body text-sm text-foreground">📍 {searchState.neighborhood}</p>
+              </div>
+            )}
 
             <div>
-              <label className="font-body text-sm font-medium text-foreground mb-1 block">Full name *</label>
-              <div className="relative">
-                <input type="text" value={booking.customerName} readOnly={!!user?.user_metadata?.full_name}
-                  onChange={e => updateBooking({ customerName: e.target.value })}
-                  className="w-full p-3 rounded-lg border border-border bg-card font-body text-sm focus:outline-none focus:ring-2 focus:ring-primary pr-10" />
-                {!!user?.user_metadata?.full_name && <Lock className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />}
-              </div>
+              <label className="font-body text-sm font-medium text-foreground mb-1 block">Street Number *</label>
+              <input type="text" value={streetNumber} onChange={e => setStreetNumber(e.target.value)}
+                className="w-full p-3 rounded-lg border border-border bg-card font-body text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary" />
+              {!streetNumber.trim() && tier && <p className="text-xs text-destructive mt-1">Required</p>}
             </div>
 
             <div>
-              <label className="font-body text-sm font-medium text-foreground mb-1 block">Email *</label>
-              <div className="relative">
-                <input type="email" value={booking.email} readOnly={!!user?.email}
-                  onChange={e => updateBooking({ email: e.target.value })}
-                  className="w-full p-3 rounded-lg border border-border bg-card font-body text-sm focus:outline-none focus:ring-2 focus:ring-primary pr-10" />
-                {!!user?.email && <Lock className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />}
-              </div>
+              <label className="font-body text-sm font-medium text-foreground mb-1 block">Street Name *</label>
+              <input type="text" value={streetName} onChange={e => setStreetName(e.target.value)}
+                className="w-full p-3 rounded-lg border border-border bg-card font-body text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary" />
+              {!streetName.trim() && tier && <p className="text-xs text-destructive mt-1">Required</p>}
             </div>
 
             <div>
-              <label className="font-body text-sm font-medium text-foreground mb-1 block">Phone *</label>
+              <label className="font-body text-sm font-medium text-foreground mb-1 block">Building / Villa / Floor / Apt *</label>
+              <input type="text" value={building} onChange={e => setBuilding(e.target.value)}
+                className="w-full p-3 rounded-lg border border-border bg-card font-body text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary" />
+              {!building.trim() && tier && <p className="text-xs text-destructive mt-1">Required</p>}
+            </div>
+
+            <div>
+              <label className="font-body text-sm font-medium text-foreground mb-1 block">Phone number *</label>
               <div className="flex">
                 <span className="inline-flex items-center px-3 rounded-l-lg border border-r-0 border-border bg-muted font-body text-sm text-muted-foreground">+971</span>
-                <input
-                  type="tel"
-                  value={booking.phone.replace(/^\+971\s?/, "")}
-                  onChange={e => updateBooking({ phone: "+971 " + e.target.value.replace(/[^0-9]/g, "") })}
+                <input type="tel" value={phone} onChange={e => setPhone(e.target.value.replace(/[^0-9]/g, ""))}
                   placeholder="50 123 4567"
-                  className="flex-1 p-3 rounded-r-lg border border-border bg-card font-body text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                />
+                  className="flex-1 p-3 rounded-r-lg border border-border bg-card font-body text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary" />
               </div>
-            </div>
-
-            <div>
-              <label className="font-body text-sm font-medium text-foreground mb-1 block">Dubai area / community</label>
-              <input type="text" value={booking.location} onChange={e => updateBooking({ location: e.target.value })}
-                className="w-full p-3 rounded-lg border border-border bg-card font-body text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
-            </div>
-
-            <div>
-              <label className="font-body text-sm font-medium text-foreground mb-1 block">Full address / building name</label>
-              <input type="text" value={booking.address} onChange={e => updateBooking({ address: e.target.value })}
-                className="w-full p-3 rounded-lg border border-border bg-card font-body text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
-            </div>
-
-            <div>
-              <label className="font-body text-sm font-medium text-foreground mb-1 block">Allergies or special notes</label>
-              <textarea value={booking.allergyNotes} onChange={e => updateBooking({ allergyNotes: e.target.value })}
-                className="w-full p-3 rounded-lg border border-border bg-card font-body text-sm resize-none h-20 focus:outline-none focus:ring-2 focus:ring-primary" />
+              {phone.replace(/[^0-9]/g, "").length < 7 && tier && <p className="text-xs text-destructive mt-1">Required</p>}
             </div>
           </div>
         )}
-        {step === 4 && <StepConfirm />}
+
+        {/* SECTION 5: Summary + Confirm */}
+        <div className="space-y-4">
+          {tier && frequency && (
+            <div className="bg-card rounded-2xl shadow-md border border-border/50 overflow-hidden p-5 space-y-0">
+              <p className="font-body text-xs font-semibold tracking-[0.15em] uppercase text-copper mb-3">Booking summary</p>
+              <SummaryRow label="Cook" value={cookInitials} />
+              <Divider />
+              <SummaryRow label="Menu" value={primaryMenuName} />
+              {secondaryMenuName && (<><Divider /><SummaryRow label="2nd Menu" value={secondaryMenuName} /></>)}
+              <Divider />
+              <SummaryRow label="Tier" value={TIER_LABELS[tier] || tier} />
+              <Divider />
+              <SummaryRow label="Frequency" value={FREQ_LABELS[frequency] || frequency} />
+              {dates[0] && (<><Divider /><SummaryRow label="Date" value={format(dates[0], "EEE, d MMM yyyy")} /></>)}
+              {dates[1] && (<><Divider /><SummaryRow label="Date 2" value={format(dates[1], "EEE, d MMM yyyy")} /></>)}
+              {dates[2] && (<><Divider /><SummaryRow label="Date 3" value={format(dates[2], "EEE, d MMM yyyy")} /></>)}
+              <Divider />
+              <div className="flex justify-between items-center py-3">
+                <span className="font-body text-base font-semibold text-muted-foreground">Total</span>
+                <span className="font-display text-xl font-bold text-accent">
+                  AED {sessionTotal.toLocaleString()}{frequency !== "one-time" ? " /mo" : ""}
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Dietary notes */}
+          <div>
+            <label className="font-body text-sm font-medium text-foreground mb-1 block">Dietary notes (optional)</label>
+            <textarea value={dietaryNotes} onChange={e => setDietaryNotes(e.target.value)}
+              placeholder="Any allergies, preferences, or special requests..."
+              className="w-full p-3 rounded-lg border border-border bg-card font-body text-sm text-foreground resize-none h-20 focus:outline-none focus:ring-2 focus:ring-primary" />
+          </div>
+
+          {/* T&C */}
+          <label className="flex items-start gap-2.5 text-sm text-muted-foreground cursor-pointer">
+            <input type="checkbox" checked={agreedToTerms} onChange={e => setAgreedToTerms(e.target.checked)} className="mt-0.5" />
+            <span>
+              I agree to Cooq's{" "}
+              <a href="/terms" target="_blank" className="text-primary underline">Terms & Conditions</a>{" "}and{" "}
+              <a href="/privacy" target="_blank" className="text-primary underline">Privacy Policy</a>
+            </span>
+          </label>
+
+          {/* Trust line */}
+          <p className="font-body text-xs text-muted-foreground leading-relaxed">
+            🔒 Secure payment · Cooq Vetted cook · Free reschedule anytime · Cancellation with full refund if requested 48hrs+ before session
+          </p>
+
+          {submitError && (
+            <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-3">
+              <p className="font-body text-sm text-destructive">{submitError}</p>
+            </div>
+          )}
+        </div>
       </div>
 
-      <div className="sticky bottom-0 bg-background border-t border-border px-6 py-4">
-        {step < 4 ? (
-          <button disabled={!canNext()} onClick={next}
-            className="w-full py-4 rounded-xl bg-accent text-accent-foreground font-body font-semibold text-base disabled:opacity-40 transition-opacity flex items-center justify-center gap-2">
-            Next <ChevronRight className="w-4 h-4" />
+      {/* Sticky CTA */}
+      <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border px-6 py-4 z-30">
+        <div className="max-w-[430px] mx-auto">
+          <button disabled={loading || !canSubmit} onClick={handleSubmit}
+            className="w-full py-4 rounded-xl font-body font-semibold text-base disabled:opacity-40 transition-opacity text-accent-foreground bg-copper">
+            {loading ? "Processing..." : `Confirm & Pay · AED ${sessionTotal.toLocaleString()}`}
           </button>
-        ) : (
-          <button disabled={loading || !agreedToTerms} onClick={handleSubmit}
-            className="w-full py-4 rounded-xl font-body font-semibold text-base disabled:opacity-40 transition-opacity text-white"
-            style={{ backgroundColor: "#B57E5D" }}>
-            {loading ? "Saving..." : "Confirm Booking →"}
-          </button>
-        )}
+        </div>
       </div>
     </div>
   );
 };
+
+const Divider = () => <div className="h-px bg-border/60" />;
+const SummaryRow = ({ label, value }: { label: string; value: string }) => (
+  <div className="flex justify-between py-2.5">
+    <span className="font-body text-sm text-muted-foreground">{label}</span>
+    <span className="font-body text-sm font-medium text-foreground text-right max-w-[60%]">{value}</span>
+  </div>
+);
 
 export default BookingForm;

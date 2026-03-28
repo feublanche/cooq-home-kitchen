@@ -33,9 +33,7 @@ const CookProfile = () => {
     return (
       <div className="min-h-screen bg-background flex flex-col">
         <nav className="flex items-center gap-3 px-6 py-4">
-          <button onClick={() => navigate("/results")} className="text-foreground">
-            <ArrowLeft className="w-5 h-5" />
-          </button>
+          <button onClick={() => navigate("/results")} className="text-foreground"><ArrowLeft className="w-5 h-5" /></button>
           <img src={cooqLogo} alt="Cooq" className="h-7" />
         </nav>
         <div className="px-6 animate-pulse space-y-4">
@@ -52,18 +50,12 @@ const CookProfile = () => {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6">
         <p className="font-body text-lg text-foreground mb-4">Cook not found</p>
-        <button onClick={() => navigate("/results")} className="font-body text-sm text-copper underline">
-          ← Back to cooks
-        </button>
+        <button onClick={() => navigate("/results")} className="font-body text-sm text-copper underline">← Back to cooks</button>
       </div>
     );
   }
 
-  const initials =
-    cook.name
-      .split(" ")
-      .map((n: string) => n[0])
-      .join(".") + ".";
+  const initials = cook.name.split(" ").map((n: string) => n[0]).join(".") + ".";
 
   const handleBook = async () => {
     if (!selectedMenu) return;
@@ -77,9 +69,7 @@ const CookProfile = () => {
       tier: (location.state as any)?.tier,
       frequency: (location.state as any)?.frequency,
     };
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
+    const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
       sessionStorage.setItem("cooq_pending_booking", JSON.stringify(bookingState));
       navigate("/account", { state: { returnTo: "/cook/" + id } });
@@ -102,34 +92,23 @@ const CookProfile = () => {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <nav className="flex items-center gap-3 px-6 py-4">
-        <button onClick={() => navigate("/results")} className="text-foreground">
-          <ArrowLeft className="w-5 h-5" />
-        </button>
+        <button onClick={() => navigate("/results")} className="text-foreground"><ArrowLeft className="w-5 h-5" /></button>
         <img src={cooqLogo} alt="Cooq" className="h-7" />
       </nav>
 
       <div className="px-6 pb-6">
-        {/* Profile header */}
         <div className="flex flex-col items-center text-center mb-8">
           {cook.photo_url ? (
-            <img
-              src={cook.photo_url}
-              alt=""
-              className="w-24 h-24 rounded-full object-cover mb-4"
-              style={{ filter: "blur(12px)" }}
-            />
+            <img src={cook.photo_url} alt="" className="w-24 h-24 rounded-full object-cover mb-4" style={{ filter: "blur(12px)" }} />
           ) : (
-            <div
-              className="w-24 h-24 rounded-full mb-4 flex items-center justify-center bg-copper"
-              style={{ filter: "blur(12px)" }}
-            >
+            <div className="w-24 h-24 rounded-full mb-4 flex items-center justify-center bg-copper" style={{ filter: "blur(12px)" }}>
               <span className="font-display text-3xl text-primary-foreground">{initials}</span>
             </div>
           )}
           <h1 className="font-display italic text-2xl text-foreground">{initials}</h1>
           <p className="italic text-[10px] text-muted-foreground mt-1">Full name &amp; photo revealed after booking</p>
           <p className="font-body text-sm text-muted-foreground mt-2">
-            {cook.cuisine?.join(" · ")} · {cook.area} · {cook.years_experience} years
+            {cook.cuisine?.join(" · ")} · {cook.years_experience} years
           </p>
           <div className="flex items-center gap-2 mt-3">
             {cook.health_card && (
@@ -152,6 +131,8 @@ const CookProfile = () => {
             <div className="space-y-2">
               {menus.map((menu: any) => {
                 const isSelected = selectedMenu?.id === menu.id;
+                // Filter out "Halal" from dietary tags
+                const dietaryFiltered = (menu.dietary || []).filter((d: string) => d.toLowerCase() !== "halal");
                 return (
                   <button
                     key={menu.id}
@@ -166,21 +147,14 @@ const CookProfile = () => {
                     {menu.meals?.length > 0 && (
                       <div className="mt-1 space-y-0.5">
                         {menu.meals.map((meal: string, i: number) => (
-                          <p key={i} className="font-body text-[12px] text-muted-foreground">
-                            ● {meal}
-                          </p>
+                          <p key={i} className="font-body text-[12px] text-muted-foreground">● {meal}</p>
                         ))}
                       </div>
                     )}
-                    {menu.dietary?.length > 0 && (
+                    {dietaryFiltered.length > 0 && (
                       <div className="flex flex-wrap gap-1 mt-2">
-                        {menu.dietary.map((d: string, i: number) => (
-                          <span
-                            key={i}
-                            className="px-2 py-0.5 rounded-full bg-primary/10 font-body text-[9px] text-foreground"
-                          >
-                            {d}
-                          </span>
+                        {dietaryFiltered.map((d: string, i: number) => (
+                          <span key={i} className="px-2 py-0.5 rounded-full bg-primary/10 font-body text-[9px] text-foreground">{d}</span>
                         ))}
                       </div>
                     )}
@@ -191,7 +165,6 @@ const CookProfile = () => {
           )}
         </div>
 
-        {/* Book CTA */}
         <button
           type="button"
           disabled={!selectedMenu}
