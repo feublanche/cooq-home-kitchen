@@ -115,7 +115,7 @@ const Search = () => {
                   key={d}
                   label={d}
                   selected={selectedDietary === d}
-                  onClick={() => setSelectedDietary(selectedDietary === d ? "" : d)}
+                  onClick={() => { if (selectedDietary === d) { setSelectedDietary(""); setFrequency(""); } else { setSelectedDietary(d); } }}
                 />
               ))}
             </div>
