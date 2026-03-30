@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 
 /* ─── CONSTANTS ─── */
 const TIER_PRICE: Record<string, number> = { duo: 350, family: 420, large: 550 };
-const FIRST_COOK_DUO = 299;
+
 
 const TIERS = [
   { key: "duo", label: "Cooq Duo", people: "1–2 people", duration: "~2 hrs", detail: "2 proteins · 2 sides" },
