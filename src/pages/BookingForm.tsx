@@ -48,9 +48,9 @@ const BookingForm = () => {
   const { booking, updateBooking } = useBooking();
 
   // Redirect if no cook/menu passed
-  const cookId = routerState.cookId || booking.cookId;
+  const cookId = routerState.cookId;
   const cookInitials = routerState.cookInitials || "TBD";
-  const primaryMenuName = routerState.selectedMenuName || booking.menuSelected || "";
+  const primaryMenuName = routerState.selectedMenuName || "";
 
   useEffect(() => {
     if (!cookId || !primaryMenuName) {
