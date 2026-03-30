@@ -34,8 +34,8 @@ const TIER_LABELS: Record<string, string> = { duo: "Cooq Duo", family: "Cooq Fam
 const FREQ_LABELS: Record<string, string> = { weekly: "Once a week", twice: "Twice a week", three: "3× a week" };
 const TIER_PARTY: Record<string, number> = { duo: 2, family: 4, large: 6 };
 
-const getTotal = (tier: string, freq: string, firstSession: boolean): number => {
-  const base = (firstSession && tier === "duo") ? FIRST_COOK_DUO : (TIER_PRICE[tier] ?? 350);
+const getTotal = (tier: string, freq: string): number => {
+  const base = TIER_PRICE[tier] ?? 350;
   const sessions = freq === "twice" ? 8 : freq === "three" ? 12 : 4;
   return base * sessions;
 };
