@@ -523,7 +523,7 @@ const BookingForm = () => {
 
           {/* Trust line */}
           <p className="font-body text-xs text-muted-foreground leading-relaxed">
-            🔒 Secure payment · Cooq Vetted cook · Free reschedule anytime · Cancellation with full refund if requested 48hrs+ before session
+            🔒 Secure payment · Cooq Certified cook · Free reschedule anytime · Cancellation with full refund if requested 48hrs+ before session
           </p>
 
           {submitError && (
