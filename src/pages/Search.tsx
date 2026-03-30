@@ -219,7 +219,7 @@ const Search = () => {
         )}
 
         {/* CTA */}
-        {neighborhood && selectedCuisines.length > 0 && selectedDietaries.length > 0 && frequency && (
+        {neighborhood && selectedCuisines.length > 0 && frequency && (
           <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 pb-4">
             <button
               onClick={handleFinal}

@@ -12,7 +12,7 @@ const Account = () => {
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) { navigate("/account"); return; }
+      if (!user) { navigate("/"); return; }
       setName(user.user_metadata?.full_name || "");
       setEmail(user.email || "");
     });

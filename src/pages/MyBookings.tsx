@@ -152,8 +152,27 @@ const MyBookings = () => {
 
                 <div className="flex items-center justify-between mt-3 pt-3 border-t border-border">
                   <span className="font-body text-xs text-muted-foreground">Booked {new Date(b.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}</span>
-                  <span className="font-display text-base font-bold text-copper">AED {b.total_aed || 0}</span>
+                  <div className="text-right">
+                    <span className="font-display text-base font-bold text-copper">
+                      AED {b.frequency === "weekly" ? Math.round((b.total_aed || 0) / 4)
+                        : b.frequency === "twice" ? Math.round((b.total_aed || 0) / 8)
+                        : b.frequency === "three" ? Math.round((b.total_aed || 0) / 12)
+                        : b.total_aed || 0} per session
+                    </span>
+                    {b.frequency && (
+                      <p className="font-body text-[10px] text-muted-foreground mt-0.5">
+                        {b.frequency === "weekly" ? "once a week" : b.frequency === "twice" ? "twice a week" : b.frequency === "three" ? "3× a week" : b.frequency}
+                      </p>
+                    )}
+                  </div>
                 </div>
+
+                {(b.status === "pending" || b.status === "confirmed") && (
+                  <a href={`mailto:hello@cooq.ae?subject=Reschedule request - ${b.id}`}
+                    className="mt-3 w-full py-2.5 rounded-lg border border-copper text-copper font-body text-sm font-medium flex items-center justify-center gap-1.5 hover:bg-copper/5 transition-colors">
+                    Reschedule →
+                  </a>
+                )}
 
                 {b.status === "completed" && !b.rating && (
                   <button onClick={() => navigate(`/rate/${b.id}`)}

@@ -223,7 +223,7 @@ const BookingForm = () => {
         grocery_addon: false,
         grocery_fee: 0,
         tier,
-        session_type: isFirstSession && tier === "duo" ? "discovery" : "standard",
+        session_type: "standard",
         total_aed: sessionTotal,
         status: "pending",
         customer_user_id: user?.id || null,
