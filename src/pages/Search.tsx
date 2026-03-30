@@ -79,7 +79,7 @@ const Search = () => {
                   key={loc}
                   label={loc}
                   selected={neighborhood === loc}
-                  onClick={() => setNeighborhood(neighborhood === loc ? "" : loc)}
+                  onClick={() => { if (neighborhood === loc) { setNeighborhood(""); setSelectedCuisine(""); setSelectedDietary(""); setFrequency(""); } else { setNeighborhood(loc); } }}
                 />
               ))}
             </div>
@@ -98,7 +98,7 @@ const Search = () => {
                   key={c}
                   label={c}
                   selected={selectedCuisine === c}
-                  onClick={() => setSelectedCuisine(selectedCuisine === c ? "" : c)}
+                  onClick={() => { if (selectedCuisine === c) { setSelectedCuisine(""); setSelectedDietary(""); setFrequency(""); } else { setSelectedCuisine(c); } }}
                 />
               ))}
             </div>
@@ -115,7 +115,7 @@ const Search = () => {
                   key={d}
                   label={d}
                   selected={selectedDietary === d}
-                  onClick={() => setSelectedDietary(selectedDietary === d ? "" : d)}
+                  onClick={() => { if (selectedDietary === d) { setSelectedDietary(""); setFrequency(""); } else { setSelectedDietary(d); } }}
                 />
               ))}
             </div>

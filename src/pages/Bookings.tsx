@@ -107,13 +107,18 @@ const Bookings = () => {
                       <Calendar className="w-3.5 h-3.5" />
                       <span>{b.booking_date ? new Date(b.booking_date).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" }) : "TBC"}</span>
                     </div>
+                    {b.booking_date && (
+                      <p className="font-body text-xs text-muted-foreground">
+                        {new Date(b.booking_date).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}
+                      </p>
+                    )}
                     {b.tier && (
                       <p className="font-body text-xs text-muted-foreground">{TIER_LABELS[b.tier] || b.tier}</p>
                     )}
                   </div>
 
                   <div className="flex items-center justify-between mt-3 pt-3 border-t border-border">
-                    <span className="font-display text-base font-bold text-accent">AED {b.total_aed || 0}</span>
+                    <span className="font-display text-base font-bold text-accent">AED {b.tier === "large" ? 550 : b.tier === "family" ? 420 : 350}/session</span>
                     {isUpcoming(b.status) && (
                       <button onClick={() => navigate("/book", {
                         state: {
