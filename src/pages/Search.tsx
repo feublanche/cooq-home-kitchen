@@ -193,7 +193,7 @@ const Search = () => {
         )}
 
         {/* SECTION 4: Frequency */}
-        {neighborhood && selectedCuisines.length > 0 && selectedDietaries.length > 0 && (
+        {neighborhood && selectedCuisines.length > 0 && (
           <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
             <SectionLabel>How often?</SectionLabel>
             <div className="flex flex-wrap gap-2">
