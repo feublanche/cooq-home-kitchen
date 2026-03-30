@@ -52,9 +52,9 @@ const Search = () => {
 
   useEffect(() => {
     sessionStorage.setItem(SESSION_KEY, JSON.stringify({
-      neighborhood, cuisine: selectedCuisine, dietary: selectedDietary, frequency,
+      neighborhood, cuisines: selectedCuisines, dietaries: selectedDietaries, frequency,
     }));
-  }, [neighborhood, selectedCuisine, selectedDietary, frequency]);
+  }, [neighborhood, selectedCuisines, selectedDietaries, frequency]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
