@@ -23,10 +23,12 @@ const Home = () => {
       <main className="flex-1 flex flex-col items-center justify-center px-6 text-center">
         <div className="max-w-md mx-auto">
           <h1 className="font-display italic text-4xl md:text-5xl text-foreground leading-tight mb-4">
-            Home Cooked.<br />The way it should be.
+            Home Cooked.
+            <br />
+            The way it should be.
           </h1>
           <p className="font-body text-muted-foreground text-lg mb-8 leading-relaxed">
-            Vetted personal cooks for Dubai families. Fresh meals, labelled containers, your fridge sorted.
+            Certified personal cooks for Dubai families. Fresh meals, labelled containers, your fridge sorted.
           </p>
           <button
             onClick={() => navigate("/search")}
@@ -63,11 +65,17 @@ const Home = () => {
       <footer className="text-center py-6 font-body text-xs text-muted-foreground tracking-wide space-y-2">
         <p>cooq.ae · Dubai · 2026</p>
         <div className="flex flex-wrap justify-center gap-3">
-          <a href="/terms" className="hover:text-foreground transition-colors">Terms &amp; Conditions</a>
+          <a href="/terms" className="hover:text-foreground transition-colors">
+            Terms &amp; Conditions
+          </a>
           <span>·</span>
-          <a href="/privacy" className="hover:text-foreground transition-colors">Privacy Policy</a>
+          <a href="/privacy" className="hover:text-foreground transition-colors">
+            Privacy Policy
+          </a>
           <span>·</span>
-          <a href="mailto:hello@cooq.ae" className="hover:text-foreground transition-colors">hello@cooq.ae</a>
+          <a href="mailto:hello@cooq.ae" className="hover:text-foreground transition-colors">
+            hello@cooq.ae
+          </a>
         </div>
       </footer>
 
