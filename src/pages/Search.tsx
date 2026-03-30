@@ -73,7 +73,7 @@ const Search = () => {
 
   const handleFinal = () => {
     navigate("/results", {
-      state: { neighborhood, cuisines: selectedCuisine ? [selectedCuisine] : [], dietary: selectedDietary ? [selectedDietary] : [], frequency },
+      state: { neighborhood, cuisines: selectedCuisines, dietary: selectedDietaries, frequency },
     });
   };
 
