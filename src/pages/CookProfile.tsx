@@ -108,7 +108,7 @@ const CookProfile = () => {
           <h1 className="font-display italic text-2xl text-foreground">{initials}</h1>
           <p className="italic text-[10px] text-muted-foreground mt-1">Full name &amp; photo revealed after booking</p>
           <p className="font-body text-sm text-muted-foreground mt-2">
-            {cook.cuisine?.join(" · ")} · {cook.years_experience} years
+            {cook.cuisine?.join(" · ")} · {cook.years_experience} years experience
           </p>
           <div className="flex items-center gap-2 mt-3">
             {cook.health_card && (
