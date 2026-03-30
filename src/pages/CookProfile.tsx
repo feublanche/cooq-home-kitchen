@@ -111,11 +111,14 @@ const CookProfile = () => {
           <p className="font-body text-sm text-muted-foreground mt-2">
             {cook.cuisine?.join(" · ")} · {cook.years_experience} years experience
           </p>
-          <div className="flex items-center gap-2 mt-3">
-            {cook.health_card && (
+          <div className="flex flex-col items-center gap-1.5 mt-3">
+            {cook.status === "approved" && (
               <span className="flex items-center gap-1 px-3 py-1 rounded-full bg-primary/10 text-primary font-body text-xs font-medium">
-                <ShieldCheck className="w-3.5 h-3.5" /> Cooq Vetted
+                <ShieldCheck className="w-3.5 h-3.5" /> ✦ Cooq Certified
               </span>
+            )}
+            {cook.health_card && (
+              <span className="font-body text-[10px] text-muted-foreground">Health Card ✓</span>
             )}
           </div>
           {cook.bio && (

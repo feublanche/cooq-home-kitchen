@@ -143,18 +143,17 @@ const Results = () => {
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2 mt-3">
-                    {cook.health_card && (
+                    {cook.status === "approved" && (
                       <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 border border-primary/20 font-body text-xs font-semibold text-primary">
                         <ShieldCheck className="w-4 h-4" />
-                        Cooq Vetted
+                        ✦ Cooq Certified
                       </span>
                     )}
                   </div>
 
                   {cook.health_card && (
                     <p className="font-body text-[10px] text-muted-foreground mt-2 leading-snug">
-                      <ShieldCheck className="w-3 h-3 inline text-primary mr-0.5 -mt-0.5" />
-                      Visa verified · Health certificate · Taste-tested
+                      Health Card ✓
                     </p>
                   )}
 

@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 
 /* ─── CONSTANTS ─── */
 const TIER_PRICE: Record<string, number> = { duo: 350, family: 420, large: 550 };
-const FIRST_COOK_DUO = 299;
+
 
 const TIERS = [
   { key: "duo", label: "Cooq Duo", people: "1–2 people", duration: "~2 hrs", detail: "2 proteins · 2 sides" },
@@ -34,8 +34,8 @@ const TIER_LABELS: Record<string, string> = { duo: "Cooq Duo", family: "Cooq Fam
 const FREQ_LABELS: Record<string, string> = { weekly: "Once a week", twice: "Twice a week", three: "3× a week" };
 const TIER_PARTY: Record<string, number> = { duo: 2, family: 4, large: 6 };
 
-const getTotal = (tier: string, freq: string, firstSession: boolean): number => {
-  const base = (firstSession && tier === "duo") ? FIRST_COOK_DUO : (TIER_PRICE[tier] ?? 350);
+const getTotal = (tier: string, freq: string): number => {
+  const base = TIER_PRICE[tier] ?? 350;
   const sessions = freq === "twice" ? 8 : freq === "three" ? 12 : 4;
   return base * sessions;
 };
@@ -48,9 +48,9 @@ const BookingForm = () => {
   const { booking, updateBooking } = useBooking();
 
   // Redirect if no cook/menu passed
-  const cookId = routerState.cookId || booking.cookId;
+  const cookId = routerState.cookId;
   const cookInitials = routerState.cookInitials || "TBD";
-  const primaryMenuName = routerState.selectedMenuName || booking.menuSelected || "";
+  const primaryMenuName = routerState.selectedMenuName || "";
 
   useEffect(() => {
     if (!cookId || !primaryMenuName) {
@@ -65,7 +65,6 @@ const BookingForm = () => {
 
   // Selections
   const [tier, setTier] = useState("");
-  const [isFirstSession, setIsFirstSession] = useState(false);
   const [frequency, setFrequency] = useState("");
 
   // Day-of-week selections (indices 0-6 = Mon-Sun)
@@ -93,7 +92,7 @@ const BookingForm = () => {
   const addressRef = useRef<HTMLDivElement>(null);
 
   const minDate = useMemo(() => addDays(new Date(), 2), []);
-  const sessionTotal = tier ? getTotal(tier, frequency || "weekly", isFirstSession) : 0;
+  const sessionTotal = tier ? getTotal(tier, frequency || "weekly") : 0;
 
   // Pre-fill area from search session
   const searchNeighborhood = (() => {
@@ -224,7 +223,7 @@ const BookingForm = () => {
         grocery_addon: false,
         grocery_fee: 0,
         tier,
-        session_type: isFirstSession && tier === "duo" ? "discovery" : "standard",
+        session_type: "standard",
         total_aed: sessionTotal,
         status: "pending",
         customer_user_id: user?.id || null,
@@ -286,7 +285,7 @@ const BookingForm = () => {
               const selected = tier === t.key;
               const price = TIER_PRICE[t.key];
               return (
-                <button key={t.key} type="button" onClick={() => { setTier(t.key); if (t.key !== "duo") setIsFirstSession(false); }}
+                <button key={t.key} type="button" onClick={() => setTier(t.key)}
                   className={`w-full text-left rounded-xl p-5 border-2 transition ${selected ? "border-primary bg-primary/5" : "border-border bg-card"}`}>
                   <div className="flex justify-between items-start">
                     <div>
@@ -301,16 +300,6 @@ const BookingForm = () => {
               );
             })}
           </div>
-          {tier === "duo" && (
-            <label className="flex items-center gap-2.5 mt-3 cursor-pointer">
-              <input type="checkbox" checked={isFirstSession} onChange={e => setIsFirstSession(e.target.checked)}
-                className="w-4 h-4 rounded border-border accent-primary" />
-              <span className="font-body text-sm text-foreground">This is my first Cooq session</span>
-            </label>
-          )}
-          {isFirstSession && tier === "duo" && (
-            <p className="font-body text-xs text-copper ml-6 mt-1">AED 299 discovery rate applied per session</p>
-          )}
         </div>
 
         {/* SECTION 2: Frequency */}
@@ -523,7 +512,7 @@ const BookingForm = () => {
 
           {/* Trust line */}
           <p className="font-body text-xs text-muted-foreground leading-relaxed">
-            🔒 Secure payment · Cooq Vetted cook · Free reschedule anytime · Cancellation with full refund if requested 48hrs+ before session
+            🔒 Secure payment · Cooq Certified cook · Free reschedule anytime · Cancellation with full refund if requested 48hrs+ before session
           </p>
 
           {submitError && (
