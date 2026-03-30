@@ -65,7 +65,6 @@ const BookingForm = () => {
 
   // Selections
   const [tier, setTier] = useState("");
-  const [isFirstSession, setIsFirstSession] = useState(false);
   const [frequency, setFrequency] = useState("");
 
   // Day-of-week selections (indices 0-6 = Mon-Sun)
