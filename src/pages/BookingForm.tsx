@@ -54,6 +54,7 @@ const BookingForm = () => {
 
   useEffect(() => {
     if (!cookId || !primaryMenuName) {
+      toast({ title: "Please select a cook first.", variant: "destructive" });
       navigate("/search", { replace: true });
     }
   }, [cookId, primaryMenuName, navigate]);
