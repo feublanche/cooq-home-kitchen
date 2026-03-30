@@ -11,38 +11,33 @@ import { format, addDays, getDay } from "date-fns";
 import { cn } from "@/lib/utils";
 
 /* ─── CONSTANTS ─── */
-const PRICES: Record<string, Record<string, number>> = {
-  "one-time": { duo: 350, family: 420, large: 550 },
-  "first-cook": { duo: 299, family: 420, large: 550 },
-  weekly: { duo: 1190, family: 1430, large: 1870 },
-  twice: { duo: 2380, family: 2860, large: 3740 },
-  three: { duo: 3570, family: 4280, large: 5610 },
-};
+const TIER_PRICE: Record<string, number> = { duo: 350, family: 420, large: 550 };
+const FIRST_COOK_DUO = 299;
 
 const TIERS = [
-  { key: "duo", label: "Cooq Duo", people: "1–2 people", duration: "~2 hrs", detail: "2 proteins · 2 sides", price: 350 },
-  { key: "family", label: "Cooq Family", people: "3–4 people", duration: "~3 hrs", detail: "2 proteins · 3 sides", price: 420 },
-  { key: "large", label: "Cooq Large", people: "5–6 people", duration: "~4 hrs", detail: "3 proteins · 3 sides", price: 550 },
+  { key: "duo", label: "Cooq Duo", people: "1–2 people", duration: "~2 hrs", detail: "2 proteins · 2 sides" },
+  { key: "family", label: "Cooq Family", people: "3–4 people", duration: "~3 hrs", detail: "2 proteins · 3 sides" },
+  { key: "large", label: "Cooq Large", people: "5–6 people", duration: "~4 hrs", detail: "3 proteins · 3 sides" },
 ] as const;
 
 const FREQUENCIES = [
-  { key: "one-time", label: "Once", sub: "Single session" },
-  { key: "weekly", label: "Weekly", sub: "Save 15% · 4/mo" },
-  { key: "twice", label: "Twice a week", sub: "Save 15% · 8/mo" },
-  { key: "three", label: "3× a week", sub: "Save 15% · 12/mo" },
+  { key: "weekly", label: "Once a week", sessions: 4 },
+  { key: "twice", label: "Twice a week", sessions: 8 },
+  { key: "three", label: "3× a week", sessions: 12 },
 ] as const;
 
-const TIME_SLOTS = ["9:00 AM", "11:00 AM", "2:00 PM", "4:00 PM"];
+const TIME_SLOTS = ["8:00 AM", "10:00 AM", "12:00 PM", "2:00 PM", "4:00 PM", "6:00 PM"];
 const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const jsDayToIdx = (jsDay: number) => (jsDay + 6) % 7;
 
 const TIER_LABELS: Record<string, string> = { duo: "Cooq Duo", family: "Cooq Family", large: "Cooq Large" };
-const FREQ_LABELS: Record<string, string> = { "one-time": "One-time", weekly: "Weekly", twice: "Twice a week", three: "3× a week" };
+const FREQ_LABELS: Record<string, string> = { weekly: "Once a week", twice: "Twice a week", three: "3× a week" };
 const TIER_PARTY: Record<string, number> = { duo: 2, family: 4, large: 6 };
 
-const getTotal = (tier: string, freq: string, first: boolean): number => {
-  const key = first && tier === "duo" && freq === "one-time" ? "first-cook" : freq;
-  return PRICES[key]?.[tier] ?? 350;
+const getTotal = (tier: string, freq: string, firstSession: boolean): number => {
+  const base = (firstSession && tier === "duo") ? FIRST_COOK_DUO : (TIER_PRICE[tier] ?? 350);
+  const sessions = freq === "twice" ? 8 : freq === "three" ? 12 : 4;
+  return base * sessions;
 };
 
 /* ─── COMPONENT ─── */
@@ -52,6 +47,17 @@ const BookingForm = () => {
   const routerState = (location.state as any) || {};
   const { booking, updateBooking } = useBooking();
 
+  // Redirect if no cook/menu passed
+  const cookId = routerState.cookId || booking.cookId;
+  const cookInitials = routerState.cookInitials || "TBD";
+  const primaryMenuName = routerState.selectedMenuName || booking.menuSelected || "";
+
+  useEffect(() => {
+    if (!cookId || !primaryMenuName) {
+      navigate("/search", { replace: true });
+    }
+  }, [cookId, primaryMenuName, navigate]);
+
   const [loading, setLoading] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [user, setUser] = useState<User | null>(null);
@@ -60,8 +66,13 @@ const BookingForm = () => {
   const [tier, setTier] = useState("");
   const [isFirstSession, setIsFirstSession] = useState(false);
   const [frequency, setFrequency] = useState("");
-  const [dates, setDates] = useState<(Date | undefined)[]>([undefined, undefined, undefined]);
-  const [timeSlots, setTimeSlots] = useState<string[]>(["", "", ""]);
+
+  // Day-of-week selections (indices 0-6 = Mon-Sun)
+  const numDayPicks = frequency === "twice" ? 2 : frequency === "three" ? 3 : 1;
+  const [selectedDays, setSelectedDays] = useState<number[]>([]);
+  const [selectedTimes, setSelectedTimes] = useState<string[]>([]);
+  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
+
   const [streetNumber, setStreetNumber] = useState("");
   const [streetName, setStreetName] = useState("");
   const [building, setBuilding] = useState("");
@@ -81,15 +92,11 @@ const BookingForm = () => {
   const addressRef = useRef<HTMLDivElement>(null);
 
   const minDate = useMemo(() => addDays(new Date(), 2), []);
-  const primaryMenuName = routerState.selectedMenuName || booking.menuSelected || "Not selected";
-  const cookInitials = routerState.cookInitials || "TBD";
-
-  const numCalendars = frequency === "twice" ? 2 : frequency === "three" ? 3 : 1;
-  const sessionTotal = tier ? getTotal(tier, frequency || "one-time", isFirstSession) : 0;
+  const sessionTotal = tier ? getTotal(tier, frequency || "weekly", isFirstSession) : 0;
 
   // Pre-fill area from search session
-  const searchState = (() => {
-    try { return JSON.parse(sessionStorage.getItem("cooq_search_state") || "{}"); } catch { return {}; }
+  const searchNeighborhood = (() => {
+    try { return JSON.parse(sessionStorage.getItem("cooq_search_state") || "{}").neighborhood || ""; } catch { return ""; }
   })();
 
   // Fetch user
@@ -106,17 +113,15 @@ const BookingForm = () => {
 
   // Fetch cook menus
   useEffect(() => {
-    const cookId = routerState.cookId || booking.cookId;
     if (!cookId) return;
     let active = true;
     supabase.from("cook_menus").select("id, menu_name").eq("cook_id", cookId).eq("status", "approved")
       .then(({ data }) => { if (active) setAvailableMenus((data || []) as any); });
     return () => { active = false; };
-  }, [routerState.cookId, booking.cookId]);
+  }, [cookId]);
 
   // Fetch cook availability
   useEffect(() => {
-    const cookId = routerState.cookId || booking.cookId;
     if (!cookId) return;
     let active = true;
     supabase.from("cook_availability").select("day_of_week, available").eq("cook_id", cookId)
@@ -130,7 +135,7 @@ const BookingForm = () => {
         setCookAvailableLoaded(true);
       });
     return () => { active = false; };
-  }, [routerState.cookId, booking.cookId]);
+  }, [cookId]);
 
   const isDateAvailable = (date: Date): boolean => {
     if (!cookAvailableLoaded) return true;
@@ -145,16 +150,36 @@ const BookingForm = () => {
     if (frequency && dateRef.current) dateRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
   }, [frequency]);
 
+  // Toggle day selection
+  const toggleDay = (dayIdx: number) => {
+    setSelectedDays(prev => {
+      if (prev.includes(dayIdx)) return prev.filter(d => d !== dayIdx);
+      if (prev.length >= numDayPicks) return [...prev.slice(1), dayIdx];
+      return [...prev, dayIdx];
+    });
+  };
+
   // Address complete check
   const addressComplete = streetNumber.trim() && streetName.trim() && building.trim() && phone.replace(/[^0-9]/g, "").length >= 7;
 
+  // Days + times complete
+  const daysComplete = selectedDays.length === numDayPicks;
+  const timesComplete = selectedTimes.length === numDayPicks && selectedTimes.every(t => !!t);
+  const dateComplete = daysComplete && timesComplete && !!startDate;
+
   // Can submit
-  const allDatesSelected = dates.slice(0, numCalendars).every(d => !!d);
-  const allTimesSelected = timeSlots.slice(0, numCalendars).every(t => !!t);
-  const canSubmit = tier && frequency && allDatesSelected && allTimesSelected && addressComplete && agreedToTerms &&
-    (numCalendars <= 1 || secondMenuId);
+  const canSubmit = tier && frequency && dateComplete && addressComplete && agreedToTerms &&
+    (numDayPicks <= 1 || secondMenuId);
 
   const secondaryMenuName = availableMenus.find(m => m.id === secondMenuId)?.menu_name || "";
+
+  // Day labels for summary
+  const dayLabels = selectedDays.map(d => DAY_NAMES[d]);
+  const summaryDaysText = dayLabels.length === 1
+    ? `Every ${dayLabels[0]}`
+    : dayLabels.length === 2
+    ? `Every ${dayLabels[0]} + ${dayLabels[1]}`
+    : `Every ${dayLabels[0]}, ${dayLabels[1]} + ${dayLabels[2]}`;
 
   /* ─── SUBMIT ─── */
   const handleSubmit = async () => {
@@ -168,16 +193,14 @@ const BookingForm = () => {
     setLoading(true);
     try {
       sessionStorage.setItem("cooq_last_submit", String(Date.now()));
-      const bookingDate = dates[0] ? format(dates[0], "yyyy-MM-dd") : null;
-      const recurringDays = dates.slice(0, numCalendars).filter(Boolean).map(d => DAY_NAMES[jsDayToIdx(getDay(d!))]);
-      const sessionNotes = numCalendars > 1
-        ? JSON.stringify({
-          recurring_days: recurringDays,
-          time_slots: timeSlots.slice(0, numCalendars),
-          secondary_session: numCalendars >= 2 ? { menu_id: secondMenuId || null, menu_name: secondaryMenuName || null } : undefined,
-          dates: dates.slice(0, numCalendars).map(d => d ? format(d, "yyyy-MM-dd") : null),
-        })
-        : JSON.stringify({ time_slot: timeSlots[0] });
+      const bookingDate = startDate ? format(startDate, "yyyy-MM-dd") : null;
+      const recurringDays = dayLabels;
+      const sessionNotes = JSON.stringify({
+        recurring_days: recurringDays,
+        time_slots: selectedTimes.slice(0, numDayPicks),
+        start_date: bookingDate,
+        secondary_session: numDayPicks >= 2 ? { menu_id: secondMenuId || null, menu_name: secondaryMenuName || null } : undefined,
+      });
 
       const fullAddress = [streetNumber, streetName, building].filter(Boolean).join(", ");
       const fullPhone = "+971 " + phone.replace(/[^0-9]/g, "");
@@ -186,13 +209,13 @@ const BookingForm = () => {
         customer_name: booking.customerName,
         email: booking.email,
         phone: fullPhone,
-        area: searchState.neighborhood || booking.location || routerState.cookArea || "",
+        area: searchNeighborhood || booking.location || routerState.cookArea || "",
         address: fullAddress,
-        cook_id: routerState.cookId || booking.cookId || "unassigned",
-        cook_name: routerState.cookInitials || booking.cookName || "To be assigned",
+        cook_id: cookId || "unassigned",
+        cook_name: cookInitials,
         menu_selected: primaryMenuName,
         booking_date: bookingDate,
-        frequency: frequency || "one-time",
+        frequency: frequency || "weekly",
         party_size: TIER_PARTY[tier] || 2,
         dietary: booking.dietary,
         allergies_notes: dietaryNotes.trim() || "",
@@ -210,7 +233,6 @@ const BookingForm = () => {
       const { data: newBooking, error } = await supabase.from("bookings").insert(insertData).select().single();
       if (error || !newBooking) throw error || new Error("Booking creation failed");
 
-      // Navigate to payment
       navigate("/payment", {
         state: {
           bookingId: newBooking.id,
@@ -219,14 +241,12 @@ const BookingForm = () => {
           customerEmail: newBooking.email,
           area: newBooking.area,
           bookingDate,
-          bookingTime: timeSlots[0],
+          bookingTime: selectedTimes[0],
           menuSelected: primaryMenuName,
-          cookName: newBooking.cook_name,
-          cookId: routerState.cookId || booking.cookId,
+          cookName: cookInitials,
+          cookId,
           selectedMenuName: primaryMenuName,
-          secondaryBookingDate: dates[1] ? format(dates[1], "yyyy-MM-dd") : null,
-          secondaryMenuName: secondaryMenuName || null,
-          recurringDays: JSON.stringify(recurringDays),
+          recurringDays: JSON.stringify(dayLabels),
           frequency,
         },
       });
@@ -237,6 +257,8 @@ const BookingForm = () => {
       setLoading(false);
     }
   };
+
+  if (!cookId || !primaryMenuName) return null;
 
   /* ─── RENDER ─── */
   return (
@@ -261,7 +283,7 @@ const BookingForm = () => {
           <div className="space-y-3">
             {TIERS.map(t => {
               const selected = tier === t.key;
-              const price = getTotal(t.key, frequency || "one-time", isFirstSession && t.key === "duo");
+              const price = TIER_PRICE[t.key];
               return (
                 <button key={t.key} type="button" onClick={() => { setTier(t.key); if (t.key !== "duo") setIsFirstSession(false); }}
                   className={`w-full text-left rounded-xl p-5 border-2 transition ${selected ? "border-primary bg-primary/5" : "border-border bg-card"}`}>
@@ -271,7 +293,7 @@ const BookingForm = () => {
                       <p className="font-body text-sm text-muted-foreground mt-0.5">{t.people} · {t.duration}</p>
                       <p className="font-body text-xs text-muted-foreground mt-0.5">{t.detail}</p>
                     </div>
-                    <p className="font-display text-lg font-bold text-accent">AED {price}</p>
+                    <p className="font-display text-lg font-bold text-copper">AED {price}</p>
                   </div>
                   {selected && <Check className="w-5 h-5 text-primary mt-2" />}
                 </button>
@@ -286,7 +308,7 @@ const BookingForm = () => {
             </label>
           )}
           {isFirstSession && tier === "duo" && (
-            <p className="font-body text-xs text-accent ml-6 mt-1">AED 299 discovery rate applied</p>
+            <p className="font-body text-xs text-copper ml-6 mt-1">AED 299 discovery rate applied per session</p>
           )}
         </div>
 
@@ -297,7 +319,7 @@ const BookingForm = () => {
             <div className="flex flex-wrap gap-2">
               {FREQUENCIES.map(f => (
                 <button key={f.key} type="button"
-                  onClick={() => { setFrequency(f.key); setDates([undefined, undefined, undefined]); setTimeSlots(["", "", ""]); setSecondMenuId(""); }}
+                  onClick={() => { setFrequency(f.key); setSelectedDays([]); setSelectedTimes([]); setStartDate(undefined); setSecondMenuId(""); }}
                   className={`px-4 py-2.5 rounded-full text-sm font-medium transition border ${
                     frequency === f.key ? "border-primary bg-primary/10 text-primary font-semibold" : "border-border bg-card text-foreground"
                   }`}>
@@ -305,54 +327,59 @@ const BookingForm = () => {
                 </button>
               ))}
             </div>
-            {frequency && sessionTotal > 0 && (
-              <div className="bg-card rounded-xl border border-border p-4 mt-3">
-                <p className="font-body text-sm text-muted-foreground">{TIER_LABELS[tier]} · {FREQ_LABELS[frequency]}</p>
-                <p className="font-display text-xl font-bold text-accent mt-1">
-                  AED {sessionTotal.toLocaleString()}{frequency !== "one-time" ? " /mo" : ""}
-                </p>
-              </div>
-            )}
           </div>
         )}
 
-        {/* SECTION 3: Dates + Times */}
+        {/* SECTION 3: Day + Time pickers */}
         {tier && frequency && (
           <div ref={dateRef} className="animate-in fade-in slide-in-from-bottom-2 duration-300 space-y-6">
             <p className="font-body text-xs font-semibold tracking-[0.15em] uppercase text-copper mb-1">
-              Choose your date{numCalendars > 1 ? "s" : ""} & time{numCalendars > 1 ? "s" : ""}
+              Choose your day{numDayPicks > 1 ? "s" : ""} & time{numDayPicks > 1 ? "s" : ""}
             </p>
-            {Array.from({ length: numCalendars }).map((_, idx) => (
+
+            {/* Day-of-week selectors */}
+            {Array.from({ length: numDayPicks }).map((_, idx) => (
               <div key={idx} className="space-y-3">
-                {numCalendars > 1 && (
+                {numDayPicks > 1 && (
                   <p className="font-body text-sm font-semibold text-foreground">Session {idx + 1}</p>
                 )}
-                <Calendar
-                  mode="single"
-                  selected={dates[idx]}
-                  onSelect={(d) => {
-                    const next = [...dates];
-                    next[idx] = d;
-                    setDates(next);
-                  }}
-                  disabled={(date) => {
-                    if (date < minDate) return true;
-                    if (!isDateAvailable(date)) return true;
-                    return false;
-                  }}
-                  className={cn("p-3 pointer-events-auto rounded-xl border border-border bg-card")}
-                />
+                <div className="flex flex-wrap gap-2">
+                  {DAY_NAMES.map((name, dayIdx) => {
+                    const available = cookAvailableDays.includes(dayIdx);
+                    const isSelected = selectedDays[idx] === dayIdx;
+                    const takenByOther = selectedDays.includes(dayIdx) && selectedDays[idx] !== dayIdx;
+                    return (
+                      <button key={name} type="button" disabled={!available || takenByOther}
+                        onClick={() => {
+                          setSelectedDays(prev => {
+                            const next = [...prev];
+                            next[idx] = dayIdx;
+                            return next.slice(0, numDayPicks);
+                          });
+                        }}
+                        className={`px-4 py-2.5 rounded-full text-sm transition border ${
+                          isSelected ? "border-primary bg-primary/10 text-primary font-semibold"
+                          : !available || takenByOther ? "border-border bg-muted text-muted-foreground opacity-40 cursor-not-allowed"
+                          : "border-border bg-card text-foreground"
+                        }`}>
+                        {name}
+                      </button>
+                    );
+                  })}
+                </div>
                 <div>
                   <p className="font-body text-xs text-muted-foreground mb-2">Time slot</p>
                   <div className="flex flex-wrap gap-2">
                     {TIME_SLOTS.map(slot => (
                       <button key={slot} type="button" onClick={() => {
-                        const next = [...timeSlots];
-                        next[idx] = slot;
-                        setTimeSlots(next);
+                        setSelectedTimes(prev => {
+                          const next = [...prev];
+                          next[idx] = slot;
+                          return next.slice(0, numDayPicks);
+                        });
                       }}
                         className={`px-4 py-2 rounded-full text-sm transition border ${
-                          timeSlots[idx] === slot ? "border-primary bg-primary/10 text-primary font-semibold" : "border-border bg-card text-foreground"
+                          selectedTimes[idx] === slot ? "border-primary bg-primary/10 text-primary font-semibold" : "border-border bg-card text-foreground"
                         }`}>
                         {slot}
                       </button>
@@ -362,8 +389,31 @@ const BookingForm = () => {
               </div>
             ))}
 
+            {/* Start date picker */}
+            {daysComplete && timesComplete && (
+              <div className="space-y-2">
+                <p className="font-body text-sm font-semibold text-foreground">Starting from</p>
+                <Calendar
+                  mode="single"
+                  selected={startDate}
+                  onSelect={setStartDate}
+                  disabled={(date) => {
+                    if (date < minDate) return true;
+                    if (!isDateAvailable(date)) return true;
+                    return false;
+                  }}
+                  className={cn("p-3 pointer-events-auto rounded-xl border border-border bg-card")}
+                />
+                {startDate && (
+                  <p className="font-body text-sm text-primary font-medium mt-1">
+                    {summaryDaysText}, starting {format(startDate, "d MMM yyyy")}
+                  </p>
+                )}
+              </div>
+            )}
+
             {/* Second menu for 2x or 3x */}
-            {numCalendars >= 2 && (
+            {numDayPicks >= 2 && (
               <div className="rounded-xl border border-border bg-card p-4 space-y-2">
                 <p className="font-body text-sm font-semibold text-foreground">Second menu (for alternate sessions)</p>
                 {availableMenus.length > 0 ? (
@@ -383,14 +433,13 @@ const BookingForm = () => {
         )}
 
         {/* SECTION 4: Address */}
-        {tier && frequency && allDatesSelected && allTimesSelected && (
+        {tier && frequency && dateComplete && (
           <div ref={addressRef} className="animate-in fade-in slide-in-from-bottom-2 duration-300 space-y-4">
             <p className="font-body text-xs font-semibold tracking-[0.15em] uppercase text-copper mb-1">Your address</p>
 
-            {/* Pre-filled area */}
-            {searchState.neighborhood && (
+            {searchNeighborhood && (
               <div className="bg-primary/5 border border-primary/20 rounded-lg p-3">
-                <p className="font-body text-sm text-foreground">📍 {searchState.neighborhood}</p>
+                <p className="font-body text-sm text-foreground">📍 {searchNeighborhood}</p>
               </div>
             )}
 
@@ -398,21 +447,21 @@ const BookingForm = () => {
               <label className="font-body text-sm font-medium text-foreground mb-1 block">Street Number *</label>
               <input type="text" value={streetNumber} onChange={e => setStreetNumber(e.target.value)}
                 className="w-full p-3 rounded-lg border border-border bg-card font-body text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary" />
-              {!streetNumber.trim() && tier && <p className="text-xs text-destructive mt-1">Required</p>}
+              {!streetNumber.trim() && <p className="text-xs text-destructive mt-1">Required</p>}
             </div>
 
             <div>
               <label className="font-body text-sm font-medium text-foreground mb-1 block">Street Name *</label>
               <input type="text" value={streetName} onChange={e => setStreetName(e.target.value)}
                 className="w-full p-3 rounded-lg border border-border bg-card font-body text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary" />
-              {!streetName.trim() && tier && <p className="text-xs text-destructive mt-1">Required</p>}
+              {!streetName.trim() && <p className="text-xs text-destructive mt-1">Required</p>}
             </div>
 
             <div>
               <label className="font-body text-sm font-medium text-foreground mb-1 block">Building / Villa / Floor / Apt *</label>
               <input type="text" value={building} onChange={e => setBuilding(e.target.value)}
                 className="w-full p-3 rounded-lg border border-border bg-card font-body text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary" />
-              {!building.trim() && tier && <p className="text-xs text-destructive mt-1">Required</p>}
+              {!building.trim() && <p className="text-xs text-destructive mt-1">Required</p>}
             </div>
 
             <div>
@@ -423,7 +472,7 @@ const BookingForm = () => {
                   placeholder="50 123 4567"
                   className="flex-1 p-3 rounded-r-lg border border-border bg-card font-body text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary" />
               </div>
-              {phone.replace(/[^0-9]/g, "").length < 7 && tier && <p className="text-xs text-destructive mt-1">Required</p>}
+              {phone.replace(/[^0-9]/g, "").length < 7 && <p className="text-xs text-destructive mt-1">Required</p>}
             </div>
           </div>
         )}
@@ -441,14 +490,13 @@ const BookingForm = () => {
               <SummaryRow label="Tier" value={TIER_LABELS[tier] || tier} />
               <Divider />
               <SummaryRow label="Frequency" value={FREQ_LABELS[frequency] || frequency} />
-              {dates[0] && (<><Divider /><SummaryRow label="Date" value={format(dates[0], "EEE, d MMM yyyy")} /></>)}
-              {dates[1] && (<><Divider /><SummaryRow label="Date 2" value={format(dates[1], "EEE, d MMM yyyy")} /></>)}
-              {dates[2] && (<><Divider /><SummaryRow label="Date 3" value={format(dates[2], "EEE, d MMM yyyy")} /></>)}
+              {selectedDays.length > 0 && (<><Divider /><SummaryRow label="Days" value={summaryDaysText} /></>)}
+              {startDate && (<><Divider /><SummaryRow label="Starting" value={format(startDate, "EEE, d MMM yyyy")} /></>)}
               <Divider />
               <div className="flex justify-between items-center py-3">
                 <span className="font-body text-base font-semibold text-muted-foreground">Total</span>
-                <span className="font-display text-xl font-bold text-accent">
-                  AED {sessionTotal.toLocaleString()}{frequency !== "one-time" ? " /mo" : ""}
+                <span className="font-display text-xl font-bold text-copper">
+                  AED {sessionTotal.toLocaleString()} /month
                 </span>
               </div>
             </div>
@@ -490,7 +538,7 @@ const BookingForm = () => {
         <div className="max-w-[430px] mx-auto">
           <button disabled={loading || !canSubmit} onClick={handleSubmit}
             className="w-full py-4 rounded-xl font-body font-semibold text-base disabled:opacity-40 transition-opacity text-accent-foreground bg-copper">
-            {loading ? "Processing..." : `Confirm & Pay · AED ${sessionTotal.toLocaleString()}`}
+            {loading ? "Processing..." : `Confirm & Pay · AED ${sessionTotal.toLocaleString()}/month`}
           </button>
         </div>
       </div>
