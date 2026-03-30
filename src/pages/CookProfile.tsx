@@ -138,10 +138,15 @@ const CookProfile = () => {
                     key={menu.id}
                     type="button"
                     onClick={() => setSelectedMenu(menu)}
-                    className={`w-full text-left p-4 rounded-xl border-2 transition-colors cursor-pointer ${
+                    className={`w-full text-left p-4 rounded-xl border-2 transition-colors cursor-pointer relative ${
                       isSelected ? "border-green-500 bg-green-50 dark:bg-green-950/20" : "border-border bg-card"
                     }`}
                   >
+                    {isSelected && (
+                      <div className="absolute top-3 right-3 w-6 h-6 rounded-full bg-green-500 flex items-center justify-center">
+                        <Check className="w-4 h-4 text-white" />
+                      </div>
+                    )}
                     <p className="font-body text-[13px] font-bold text-foreground">{menu.menu_name}</p>
                     {menu.cuisine && <p className="font-body text-[11px] text-copper mt-0.5">{menu.cuisine}</p>}
                     {menu.meals?.length > 0 && (
