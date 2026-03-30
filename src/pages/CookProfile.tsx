@@ -108,7 +108,7 @@ const CookProfile = () => {
           <h1 className="font-display italic text-2xl text-foreground">{initials}</h1>
           <p className="italic text-[10px] text-muted-foreground mt-1">Full name &amp; photo revealed after booking</p>
           <p className="font-body text-sm text-muted-foreground mt-2">
-            {cook.cuisine?.join(" · ")} · {cook.years_experience} years
+            {cook.cuisine?.join(" · ")} · {cook.years_experience} years experience
           </p>
           <div className="flex items-center gap-2 mt-3">
             {cook.health_card && (
@@ -139,7 +139,7 @@ const CookProfile = () => {
                     type="button"
                     onClick={() => setSelectedMenu(menu)}
                     className={`w-full text-left p-4 rounded-xl border-2 transition-colors cursor-pointer ${
-                      isSelected ? "border-primary bg-primary/5" : "border-border bg-card"
+                      isSelected ? "border-green-500 bg-green-50 dark:bg-green-950/20" : "border-border bg-card"
                     }`}
                   >
                     <p className="font-body text-[13px] font-bold text-foreground">{menu.menu_name}</p>
