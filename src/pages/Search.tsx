@@ -128,7 +128,7 @@ const Search = () => {
                       type="button"
                       onClick={() => {
                         if (neighborhood === loc) {
-                          setNeighborhood(""); setSelectedCuisine(""); setSelectedDietary(""); setFrequency("");
+                          setNeighborhood(""); setSelectedCuisines([]); setSelectedDietaries([]); setFrequency("");
                         } else {
                           setNeighborhood(loc);
                         }
