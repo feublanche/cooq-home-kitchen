@@ -79,7 +79,7 @@ const Search = () => {
                   key={loc}
                   label={loc}
                   selected={neighborhood === loc}
-                  onClick={() => setNeighborhood(neighborhood === loc ? "" : loc)}
+                  onClick={() => { if (neighborhood === loc) { setNeighborhood(""); setSelectedCuisine(""); setSelectedDietary(""); setFrequency(""); } else { setNeighborhood(loc); } }}
                 />
               ))}
             </div>
