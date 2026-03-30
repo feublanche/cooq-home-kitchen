@@ -98,7 +98,7 @@ const Search = () => {
                   key={c}
                   label={c}
                   selected={selectedCuisine === c}
-                  onClick={() => setSelectedCuisine(selectedCuisine === c ? "" : c)}
+                  onClick={() => { if (selectedCuisine === c) { setSelectedCuisine(""); setSelectedDietary(""); setFrequency(""); } else { setSelectedCuisine(c); } }}
                 />
               ))}
             </div>
