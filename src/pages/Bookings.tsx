@@ -107,6 +107,11 @@ const Bookings = () => {
                       <Calendar className="w-3.5 h-3.5" />
                       <span>{b.booking_date ? new Date(b.booking_date).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" }) : "TBC"}</span>
                     </div>
+                    {b.booking_date && (
+                      <p className="font-body text-xs text-muted-foreground">
+                        {new Date(b.booking_date).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}
+                      </p>
+                    )}
                     {b.tier && (
                       <p className="font-body text-xs text-muted-foreground">{TIER_LABELS[b.tier] || b.tier}</p>
                     )}

@@ -62,6 +62,7 @@ const CookProfile = () => {
     const bookingState = {
       cookId: cook.id,
       cookInitials: initials,
+      menuName: selectedMenu.menu_name,
       cookArea: cook.area,
       selectedMenuId: selectedMenu.id,
       selectedMenuName: selectedMenu.menu_name,
