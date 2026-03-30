@@ -92,7 +92,7 @@ const BookingForm = () => {
   const addressRef = useRef<HTMLDivElement>(null);
 
   const minDate = useMemo(() => addDays(new Date(), 2), []);
-  const sessionTotal = tier ? getTotal(tier, frequency || "weekly", isFirstSession) : 0;
+  const sessionTotal = tier ? getTotal(tier, frequency || "weekly") : 0;
 
   // Pre-fill area from search session
   const searchNeighborhood = (() => {
