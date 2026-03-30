@@ -113,7 +113,7 @@ const Bookings = () => {
                   </div>
 
                   <div className="flex items-center justify-between mt-3 pt-3 border-t border-border">
-                    <span className="font-display text-base font-bold text-accent">AED {b.total_aed || 0}</span>
+                    <span className="font-display text-base font-bold text-accent">AED {b.tier === "large" ? 550 : b.tier === "family" ? 420 : 350}/session</span>
                     {isUpcoming(b.status) && (
                       <button onClick={() => navigate("/book", {
                         state: {
