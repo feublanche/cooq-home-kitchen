@@ -285,7 +285,7 @@ const BookingForm = () => {
               const selected = tier === t.key;
               const price = TIER_PRICE[t.key];
               return (
-                <button key={t.key} type="button" onClick={() => { setTier(t.key); if (t.key !== "duo") setIsFirstSession(false); }}
+                <button key={t.key} type="button" onClick={() => setTier(t.key)}
                   className={`w-full text-left rounded-xl p-5 border-2 transition ${selected ? "border-primary bg-primary/5" : "border-border bg-card"}`}>
                   <div className="flex justify-between items-start">
                     <div>
@@ -300,16 +300,6 @@ const BookingForm = () => {
               );
             })}
           </div>
-          {tier === "duo" && (
-            <label className="flex items-center gap-2.5 mt-3 cursor-pointer">
-              <input type="checkbox" checked={isFirstSession} onChange={e => setIsFirstSession(e.target.checked)}
-                className="w-4 h-4 rounded border-border accent-primary" />
-              <span className="font-body text-sm text-foreground">This is my first Cooq session</span>
-            </label>
-          )}
-          {isFirstSession && tier === "duo" && (
-            <p className="font-body text-xs text-copper ml-6 mt-1">AED 299 discovery rate applied per session</p>
-          )}
         </div>
 
         {/* SECTION 2: Frequency */}
