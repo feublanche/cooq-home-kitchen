@@ -150,7 +150,7 @@ const Search = () => {
           )}
         </div>
 
-        {/* SECTION 2: Cuisine */}
+        {/* SECTION 2: Cuisine (multi-select) */}
         {neighborhood && (
           <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
             <SectionLabel>What cuisine are you looking for?</SectionLabel>
@@ -159,16 +159,20 @@ const Search = () => {
                 <Pill
                   key={c}
                   label={c}
-                  selected={selectedCuisine === c}
-                  onClick={() => { if (selectedCuisine === c) { setSelectedCuisine(""); setSelectedDietary(""); setFrequency(""); } else { setSelectedCuisine(c); } }}
+                  selected={selectedCuisines.includes(c)}
+                  onClick={() => {
+                    setSelectedCuisines(prev =>
+                      prev.includes(c) ? prev.filter(x => x !== c) : [...prev, c]
+                    );
+                  }}
                 />
               ))}
             </div>
           </div>
         )}
 
-        {/* SECTION 3: Dietary */}
-        {neighborhood && selectedCuisine && (
+        {/* SECTION 3: Dietary (multi-select) */}
+        {neighborhood && selectedCuisines.length > 0 && (
           <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
             <SectionLabel>Any dietary requirements?</SectionLabel>
             <div className="flex flex-wrap gap-2">
@@ -176,8 +180,12 @@ const Search = () => {
                 <Pill
                   key={d}
                   label={d}
-                  selected={selectedDietary === d}
-                  onClick={() => { if (selectedDietary === d) { setSelectedDietary(""); setFrequency(""); } else { setSelectedDietary(d); } }}
+                  selected={selectedDietaries.includes(d)}
+                  onClick={() => {
+                    setSelectedDietaries(prev =>
+                      prev.includes(d) ? prev.filter(x => x !== d) : [...prev, d]
+                    );
+                  }}
                 />
               ))}
             </div>
@@ -185,24 +193,33 @@ const Search = () => {
         )}
 
         {/* SECTION 4: Frequency */}
-        {neighborhood && selectedCuisine && selectedDietary && (
+        {neighborhood && selectedCuisines.length > 0 && selectedDietaries.length > 0 && (
           <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
             <SectionLabel>How often?</SectionLabel>
             <div className="flex flex-wrap gap-2">
-              {frequencyOptions.map((f) => (
-                <Pill
-                  key={f.key}
-                  label={f.label}
-                  selected={frequency === f.key}
-                  onClick={() => setFrequency(frequency === f.key ? "" : f.key)}
-                />
-              ))}
+              {frequencyOptions.map((f) => {
+                const badge = f.key === "twice" ? "Save 5%" : f.key === "three" ? "Save 10%" : "";
+                return (
+                  <div key={f.key} className="relative">
+                    <Pill
+                      label={f.label}
+                      selected={frequency === f.key}
+                      onClick={() => setFrequency(frequency === f.key ? "" : f.key)}
+                    />
+                    {badge && (
+                      <span className="absolute -top-2 -right-2 px-1.5 py-0.5 rounded-full bg-green-500 text-white text-[9px] font-bold leading-none">
+                        {badge}
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
 
         {/* CTA */}
-        {neighborhood && selectedCuisine && selectedDietary && frequency && (
+        {neighborhood && selectedCuisines.length > 0 && selectedDietaries.length > 0 && frequency && (
           <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 pb-4">
             <button
               onClick={handleFinal}
