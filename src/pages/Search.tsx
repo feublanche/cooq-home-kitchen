@@ -44,8 +44,8 @@ const Search = () => {
   })();
 
   const [neighborhood, setNeighborhood] = useState<string>(saved.neighborhood || "");
-  const [selectedCuisine, setSelectedCuisine] = useState<string>(saved.cuisine || "");
-  const [selectedDietary, setSelectedDietary] = useState<string>(saved.dietary || "");
+  const [selectedCuisines, setSelectedCuisines] = useState<string[]>(saved.cuisines || []);
+  const [selectedDietaries, setSelectedDietaries] = useState<string[]>(saved.dietaries || []);
   const [frequency, setFrequency] = useState<string>(saved.frequency || "");
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
