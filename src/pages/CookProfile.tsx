@@ -139,7 +139,7 @@ const CookProfile = () => {
                     type="button"
                     onClick={() => setSelectedMenu(menu)}
                     className={`w-full text-left p-4 rounded-xl border-2 transition-colors cursor-pointer ${
-                      isSelected ? "border-primary bg-primary/5" : "border-border bg-card"
+                      isSelected ? "border-green-500 bg-green-50 dark:bg-green-950/20" : "border-border bg-card"
                     }`}
                   >
                     <p className="font-body text-[13px] font-bold text-foreground">{menu.menu_name}</p>

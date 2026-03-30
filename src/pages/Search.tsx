@@ -4,8 +4,11 @@ import { ArrowLeft } from "lucide-react";
 import { dubaiNeighborhoods } from "@/data/dubaiNeighborhoods";
 import cooqLogo from "@/assets/cooq-logo.png";
 
-const cuisineOptions = ["Lebanese", "Indian", "Mediterranean", "Continental", "Emirati", "Keto", "Vegan"];
-const dietaryOptions = ["Gluten-free", "Dairy-free", "Nut-free", "No restrictions"];
+const cuisineOptions = [
+  "Lebanese", "Indian", "Mediterranean", "Continental", "Emirati", "Keto", "Vegan",
+  "Filipino", "Pakistani", "Sri Lankan", "Thai", "Chinese", "Japanese", "Mexican", "American", "Italian",
+];
+const dietaryOptions = ["Gluten-free", "Dairy-free", "Nut-free", "Egg-free", "No restrictions"];
 const frequencyOptions = [
   { key: "weekly", label: "Once a week" },
   { key: "twice", label: "Twice a week" },
@@ -35,7 +38,6 @@ const SectionLabel = ({ children }: { children: string }) => (
 const Search = () => {
   const navigate = useNavigate();
 
-  // Restore state from session storage
   const saved = (() => {
     try { return JSON.parse(sessionStorage.getItem(SESSION_KEY) || "{}"); } catch { return {}; }
   })();
@@ -45,7 +47,6 @@ const Search = () => {
   const [selectedDietary, setSelectedDietary] = useState<string>(saved.dietary || "");
   const [frequency, setFrequency] = useState<string>(saved.frequency || "");
 
-  // Save state to session
   useEffect(() => {
     sessionStorage.setItem(SESSION_KEY, JSON.stringify({
       neighborhood, cuisine: selectedCuisine, dietary: selectedDietary, frequency,
@@ -71,19 +72,23 @@ const Search = () => {
         {/* SECTION 1: Neighbourhood */}
         <div>
           <SectionLabel>Where are you based?</SectionLabel>
-          <div className="flex flex-wrap gap-2 max-h-[260px] overflow-y-auto pr-1">
-            {dubaiNeighborhoods.map((loc) => (
-              <Pill
-                key={loc}
-                label={loc}
-                selected={neighborhood === loc}
-                onClick={() => setNeighborhood(neighborhood === loc ? "" : loc)}
-              />
-            ))}
+          <div className="relative">
+            <div className="flex flex-wrap gap-2 max-h-[220px] overflow-y-auto pr-1 pb-2">
+              {dubaiNeighborhoods.map((loc) => (
+                <Pill
+                  key={loc}
+                  label={loc}
+                  selected={neighborhood === loc}
+                  onClick={() => setNeighborhood(neighborhood === loc ? "" : loc)}
+                />
+              ))}
+            </div>
+            {/* Bottom fade to indicate scroll */}
+            <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-6 bg-gradient-to-t from-background to-transparent" />
           </div>
         </div>
 
-        {/* SECTION 2: Cuisine — visible after neighbourhood */}
+        {/* SECTION 2: Cuisine */}
         {neighborhood && (
           <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
             <SectionLabel>What cuisine are you looking for?</SectionLabel>
@@ -100,7 +105,7 @@ const Search = () => {
           </div>
         )}
 
-        {/* SECTION 3: Dietary — visible after cuisine */}
+        {/* SECTION 3: Dietary */}
         {neighborhood && selectedCuisine && (
           <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
             <SectionLabel>Any dietary requirements?</SectionLabel>
@@ -117,7 +122,7 @@ const Search = () => {
           </div>
         )}
 
-        {/* SECTION 4: Frequency — visible after dietary */}
+        {/* SECTION 4: Frequency */}
         {neighborhood && selectedCuisine && selectedDietary && (
           <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
             <SectionLabel>How often?</SectionLabel>
@@ -134,7 +139,7 @@ const Search = () => {
           </div>
         )}
 
-        {/* CTA — visible after frequency */}
+        {/* CTA */}
         {neighborhood && selectedCuisine && selectedDietary && frequency && (
           <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 pb-4">
             <button
