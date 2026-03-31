@@ -22,6 +22,8 @@ export type Database = {
           booking_date: string | null
           cancellation_reason: string | null
           cancelled_by: string | null
+          cleanliness_rating: number | null
+          communication_rating: number | null
           cook_email: string | null
           cook_id: string
           cook_name: string
@@ -42,6 +44,7 @@ export type Database = {
           party_size: number | null
           payment_intent_id: string | null
           phone: string
+          punctuality_rating: number | null
           rated_at: string | null
           rating: number | null
           rating_note: string | null
@@ -50,6 +53,7 @@ export type Database = {
           session_notes: string | null
           session_type: string | null
           status: string | null
+          taste_rating: number | null
           tier: string | null
           total_aed: number | null
         }
@@ -60,6 +64,8 @@ export type Database = {
           booking_date?: string | null
           cancellation_reason?: string | null
           cancelled_by?: string | null
+          cleanliness_rating?: number | null
+          communication_rating?: number | null
           cook_email?: string | null
           cook_id: string
           cook_name: string
@@ -80,6 +86,7 @@ export type Database = {
           party_size?: number | null
           payment_intent_id?: string | null
           phone: string
+          punctuality_rating?: number | null
           rated_at?: string | null
           rating?: number | null
           rating_note?: string | null
@@ -88,6 +95,7 @@ export type Database = {
           session_notes?: string | null
           session_type?: string | null
           status?: string | null
+          taste_rating?: number | null
           tier?: string | null
           total_aed?: number | null
         }
@@ -98,6 +106,8 @@ export type Database = {
           booking_date?: string | null
           cancellation_reason?: string | null
           cancelled_by?: string | null
+          cleanliness_rating?: number | null
+          communication_rating?: number | null
           cook_email?: string | null
           cook_id?: string
           cook_name?: string
@@ -118,6 +128,7 @@ export type Database = {
           party_size?: number | null
           payment_intent_id?: string | null
           phone?: string
+          punctuality_rating?: number | null
           rated_at?: string | null
           rating?: number | null
           rating_note?: string | null
@@ -126,6 +137,7 @@ export type Database = {
           session_notes?: string | null
           session_type?: string | null
           status?: string | null
+          taste_rating?: number | null
           tier?: string | null
           total_aed?: number | null
         }
@@ -454,10 +466,23 @@ export type Database = {
           tier_val: string
         }[]
       }
-      submit_booking_rating: {
-        Args: { booking_uuid: string; p_note?: string; p_rating: number }
-        Returns: undefined
-      }
+      submit_booking_rating:
+        | {
+            Args: { booking_uuid: string; p_note?: string; p_rating: number }
+            Returns: undefined
+          }
+        | {
+            Args: {
+              booking_uuid: string
+              p_cleanliness?: number
+              p_communication?: number
+              p_note?: string
+              p_punctuality?: number
+              p_rating: number
+              p_taste?: number
+            }
+            Returns: undefined
+          }
     }
     Enums: {
       [_ in never]: never
