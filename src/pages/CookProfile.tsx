@@ -2,8 +2,16 @@ import { useState } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, ShieldCheck, Check } from "lucide-react";
+import { ArrowLeft, ShieldCheck, Check, Star } from "lucide-react";
 import cooqLogo from "@/assets/cooq-logo.png";
+import { Progress } from "@/components/ui/progress";
+
+const RATING_CATEGORIES = [
+  { key: "taste_rating", label: "Food taste" },
+  { key: "punctuality_rating", label: "Punctuality" },
+  { key: "cleanliness_rating", label: "Cleanliness" },
+  { key: "communication_rating", label: "Communication" },
+] as const;
 
 const CookProfile = () => {
   const { id } = useParams<{ id: string }>();
@@ -25,6 +33,27 @@ const CookProfile = () => {
     queryFn: async () => {
       const { data } = await supabase.from("cook_menus").select("*").eq("cook_id", id!).eq("status", "approved");
       return data || [];
+    },
+    enabled: !!id,
+  });
+
+  const { data: ratingData } = useQuery({
+    queryKey: ["cook-rating-breakdown", id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("bookings")
+        .select("rating, taste_rating, punctuality_rating, cleanliness_rating, communication_rating")
+        .eq("cook_id", id!)
+        .not("rating", "is", null);
+      if (!data || data.length === 0) return null;
+      const count = data.length;
+      const avgOverall = data.reduce((s, b) => s + (b.rating || 0), 0) / count;
+      const avgs: Record<string, number> = {};
+      for (const cat of RATING_CATEGORIES) {
+        const vals = data.filter(b => (b as any)[cat.key] != null);
+        avgs[cat.key] = vals.length > 0 ? vals.reduce((s, b) => s + ((b as any)[cat.key] || 0), 0) / vals.length : 0;
+      }
+      return { count, avgOverall, avgs };
     },
     enabled: !!id,
   });
@@ -126,6 +155,29 @@ const CookProfile = () => {
           )}
         </div>
 
+        {/* Rating breakdown */}
+        {ratingData && ratingData.count > 0 && (
+          <div className="mb-8 bg-card rounded-xl border border-border p-5" style={{ boxShadow: "var(--shadow-card)" }}>
+            <div className="flex items-center gap-2 mb-4">
+              <Star className="w-5 h-5 fill-amber-400 text-amber-400" />
+              <span className="font-display text-lg font-bold text-foreground">{ratingData.avgOverall.toFixed(1)}</span>
+              <span className="font-body text-sm text-muted-foreground">· {ratingData.count} review{ratingData.count !== 1 ? "s" : ""}</span>
+            </div>
+            <div className="space-y-3">
+              {RATING_CATEGORIES.map(cat => {
+                const avg = ratingData.avgs[cat.key] || 0;
+                return (
+                  <div key={cat.key} className="flex items-center gap-3">
+                    <span className="font-body text-xs text-muted-foreground w-28 flex-shrink-0">{cat.label}</span>
+                    <Progress value={(avg / 5) * 100} className="h-2 flex-1 bg-primary/20" />
+                    <span className="font-body text-xs font-semibold text-foreground w-8 text-right">{avg.toFixed(1)}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* Menu selection */}
         <div className="mb-6">
           <p className="text-[14px] font-semibold text-foreground mb-2">Choose your menu</p>
@@ -135,7 +187,6 @@ const CookProfile = () => {
             <div className="space-y-2">
               {menus.map((menu: any) => {
                 const isSelected = selectedMenu?.id === menu.id;
-                // Filter out "Halal" from dietary tags
                 const dietaryFiltered = (menu.dietary || []).filter((d: string) => d.toLowerCase() !== "halal");
                 return (
                   <button

@@ -10,6 +10,7 @@ const cuisineOptions = [
 ];
 const dietaryOptions = ["Gluten-free", "Dairy-free", "Nut-free", "Egg-free", "No restrictions"];
 const frequencyOptions = [
+  { key: "once", label: "Try once" },
   { key: "weekly", label: "Once a week" },
   { key: "twice", label: "Twice a week" },
   { key: "three", label: "3× a week" },
@@ -171,7 +172,7 @@ const Search = () => {
           </div>
         )}
 
-        {/* SECTION 3: Dietary (multi-select) */}
+        {/* SECTION 3: Dietary (multi-select, optional) */}
         {neighborhood && selectedCuisines.length > 0 && (
           <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
             <SectionLabel>Any dietary requirements?</SectionLabel>
