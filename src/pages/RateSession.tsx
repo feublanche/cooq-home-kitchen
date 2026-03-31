@@ -13,21 +13,30 @@ const starLabels: Record<number, string> = {
   5: "Excellent ✨",
 };
 
+const CATEGORIES = [
+  { key: "taste", label: "Food taste" },
+  { key: "punctuality", label: "Punctuality" },
+  { key: "cleanliness", label: "Kitchen cleanliness" },
+  { key: "communication", label: "Communication" },
+] as const;
+
+type CategoryKey = typeof CATEGORIES[number]["key"];
+
 export default function RateSession() {
   const { bookingId } = useParams<{ bookingId: string }>();
   const navigate = useNavigate();
 
   const [booking, setBooking] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [hoveredStar, setHoveredStar] = useState(0);
-  const [selectedStar, setSelectedStar] = useState(0);
+  const [hoveredStars, setHoveredStars] = useState<Record<CategoryKey, number>>({ taste: 0, punctuality: 0, cleanliness: 0, communication: 0 });
+  const [selectedStars, setSelectedStars] = useState<Record<CategoryKey, number>>({ taste: 0, punctuality: 0, cleanliness: 0, communication: 0 });
   const [note, setNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
   useEffect(() => {
     if (!bookingId) return;
-    const fetch = async () => {
+    const fetchBooking = async () => {
       const { data } = await supabase.rpc("get_booking_for_rating", {
         booking_uuid: bookingId,
       });
@@ -36,17 +45,26 @@ export default function RateSession() {
       }
       setLoading(false);
     };
-    fetch();
+    fetchBooking();
   }, [bookingId]);
 
+  const allRated = CATEGORIES.every(c => selectedStars[c.key] > 0);
+  const overallAvg = allRated
+    ? Math.round(CATEGORIES.reduce((sum, c) => sum + selectedStars[c.key], 0) / CATEGORIES.length)
+    : 0;
+
   const handleSubmit = async () => {
-    if (selectedStar === 0 || !bookingId) return;
+    if (!allRated || !bookingId) return;
     setSubmitting(true);
     await supabase.rpc("submit_booking_rating", {
       booking_uuid: bookingId,
-      p_rating: selectedStar,
+      p_rating: overallAvg,
       p_note: note || null,
-    });
+      p_taste: selectedStars.taste,
+      p_punctuality: selectedStars.punctuality,
+      p_cleanliness: selectedStars.cleanliness,
+      p_communication: selectedStars.communication,
+    } as any);
     setSubmitting(false);
     setSubmitted(true);
   };
@@ -54,7 +72,7 @@ export default function RateSession() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="w-8 h-8 animate-spin" style={{ color: "#86A383" }} />
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
   }
@@ -63,7 +81,7 @@ export default function RateSession() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background px-6">
         <p className="font-body text-muted-foreground">Booking not found.</p>
-        <button onClick={() => navigate("/")} className="mt-4 font-body text-sm underline" style={{ color: "#86A383" }}>
+        <button onClick={() => navigate("/")} className="mt-4 font-body text-sm underline text-primary">
           Go home
         </button>
       </div>
@@ -73,7 +91,7 @@ export default function RateSession() {
   if (submitted || booking.rating) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background px-6">
-        <CheckCircle2 className="w-16 h-16 mb-4" style={{ color: "#86A383" }} />
+        <CheckCircle2 className="w-16 h-16 mb-4 text-primary" />
         <h1 className="font-display italic text-2xl text-foreground mb-2">Thank you!</h1>
         <p className="font-body text-muted-foreground text-center">
           Your feedback helps us improve the Cooq experience.
@@ -98,28 +116,40 @@ export default function RateSession() {
           {booking.booking_date ? ` on ${format(new Date(booking.booking_date), "d MMM")}` : ""}?
         </p>
 
-        {/* Stars */}
-        <div className="flex gap-2 justify-center mb-2">
-          {[1, 2, 3, 4, 5].map((s) => (
-            <button
-              key={s}
-              onMouseEnter={() => setHoveredStar(s)}
-              onMouseLeave={() => setHoveredStar(0)}
-              onClick={() => setSelectedStar(s)}
-              className="transition-transform hover:scale-110"
-            >
-              <Star
-                className="w-10 h-10"
-                fill={s <= (hoveredStar || selectedStar) ? "#F5C542" : "none"}
-                stroke={s <= (hoveredStar || selectedStar) ? "#F5C542" : "#CBD5E1"}
-                strokeWidth={1.5}
-              />
-            </button>
-          ))}
+        {/* Category ratings */}
+        <div className="space-y-6 mb-6">
+          {CATEGORIES.map(cat => {
+            const hovered = hoveredStars[cat.key];
+            const selected = selectedStars[cat.key];
+            const display = hovered || selected;
+            return (
+              <div key={cat.key}>
+                <p className="font-body text-sm font-semibold text-foreground mb-2">{cat.label}</p>
+                <div className="flex gap-2 mb-1">
+                  {[1, 2, 3, 4, 5].map((s) => (
+                    <button
+                      key={s}
+                      onMouseEnter={() => setHoveredStars(prev => ({ ...prev, [cat.key]: s }))}
+                      onMouseLeave={() => setHoveredStars(prev => ({ ...prev, [cat.key]: 0 }))}
+                      onClick={() => setSelectedStars(prev => ({ ...prev, [cat.key]: s }))}
+                      className="transition-transform hover:scale-110"
+                    >
+                      <Star
+                        className="w-8 h-8"
+                        fill={s <= display ? "#F5C542" : "none"}
+                        stroke={s <= display ? "#F5C542" : "hsl(var(--border))"}
+                        strokeWidth={1.5}
+                      />
+                    </button>
+                  ))}
+                </div>
+                <p className="font-body text-xs text-muted-foreground h-4">
+                  {starLabels[display] || ""}
+                </p>
+              </div>
+            );
+          })}
         </div>
-        <p className="font-body text-xs text-center text-muted-foreground mb-6 h-4">
-          {starLabels[hoveredStar || selectedStar] || ""}
-        </p>
 
         {/* Note */}
         <textarea
@@ -132,9 +162,8 @@ export default function RateSession() {
 
         <button
           onClick={handleSubmit}
-          disabled={selectedStar === 0 || submitting}
-          className="w-full py-4 rounded-xl font-body font-semibold text-base text-white disabled:opacity-40 flex items-center justify-center gap-2"
-          style={{ backgroundColor: "#86A383" }}
+          disabled={!allRated || submitting}
+          className="w-full py-4 rounded-xl font-body font-semibold text-base text-accent-foreground bg-copper disabled:opacity-40 flex items-center justify-center gap-2"
         >
           {submitting ? <Loader2 className="w-5 h-5 animate-spin" /> : "Submit Rating"}
         </button>

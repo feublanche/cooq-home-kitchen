@@ -11,19 +11,19 @@ import { format, addDays, getDay } from "date-fns";
 import { cn } from "@/lib/utils";
 
 /* ─── CONSTANTS ─── */
-const TIER_PRICE: Record<string, number> = { duo: 350, family: 420, large: 550 };
-
+const TIER_PRICE: Record<string, number> = { duo: 350, family: 480, large: 550 };
 
 const TIERS = [
-  { key: "duo", label: "Cooq Duo", people: "1–2 people", duration: "~2 hrs", detail: "2 proteins · 2 sides" },
-  { key: "family", label: "Cooq Family", people: "3–4 people", duration: "~3 hrs", detail: "2 proteins · 3 sides" },
-  { key: "large", label: "Cooq Large", people: "5–6 people", duration: "~4 hrs", detail: "3 proteins · 3 sides" },
+  { key: "duo", label: "Cooq Duo", people: "For 1–2 people", duration: "~2 hrs", detail: "1 starter · 1 main · 1 side per person" },
+  { key: "family", label: "Cooq Family", people: "For 3–4 people", duration: "~3 hrs", detail: "1 starter · 1 main · 1 side per person" },
+  { key: "large", label: "Cooq Large", people: "For 5–6 people", duration: "~4 hrs", detail: "1 starter · 1 main · 1 side per person" },
 ] as const;
 
 const FREQUENCIES = [
-  { key: "weekly", label: "Once a week", sessions: 4 },
-  { key: "twice", label: "Twice a week", sessions: 8 },
-  { key: "three", label: "3× a week", sessions: 12 },
+  { key: "once", label: "Try once", sessions: 1, subtitle: "Perfect for a first session", badge: "" },
+  { key: "weekly", label: "Once a week", sessions: 4, subtitle: "", badge: "" },
+  { key: "twice", label: "Twice a week", sessions: 8, subtitle: "", badge: "Save 5%" },
+  { key: "three", label: "3× a week", sessions: 12, subtitle: "", badge: "Save 10%" },
 ] as const;
 
 const TIME_SLOTS = ["8:00 AM", "10:00 AM", "12:00 PM", "2:00 PM", "4:00 PM", "6:00 PM"];
@@ -31,13 +31,21 @@ const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const jsDayToIdx = (jsDay: number) => (jsDay + 6) % 7;
 
 const TIER_LABELS: Record<string, string> = { duo: "Cooq Duo", family: "Cooq Family", large: "Cooq Large" };
-const FREQ_LABELS: Record<string, string> = { weekly: "Once a week", twice: "Twice a week", three: "3× a week" };
+const FREQ_LABELS: Record<string, string> = { once: "Try once", weekly: "Once a week", twice: "Twice a week", three: "3× a week" };
 const TIER_PARTY: Record<string, number> = { duo: 2, family: 4, large: 6 };
 
 const getTotal = (tier: string, freq: string): number => {
   const base = TIER_PRICE[tier] ?? 350;
+  if (freq === "once") return base;
   const sessions = freq === "twice" ? 8 : freq === "three" ? 12 : 4;
   return base * sessions;
+};
+
+const getSessionCount = (freq: string): number => {
+  if (freq === "once") return 1;
+  if (freq === "twice") return 8;
+  if (freq === "three") return 12;
+  return 4;
 };
 
 /* ─── COMPONENT ─── */
@@ -93,6 +101,8 @@ const BookingForm = () => {
 
   const minDate = useMemo(() => addDays(new Date(), 2), []);
   const sessionTotal = tier ? getTotal(tier, frequency || "weekly") : 0;
+  const sessionPrice = tier ? TIER_PRICE[tier] : 0;
+  const sessionCount = getSessionCount(frequency || "weekly");
 
   // Pre-fill area from search session
   const searchNeighborhood = (() => {
@@ -180,6 +190,15 @@ const BookingForm = () => {
     : dayLabels.length === 2
     ? `Every ${dayLabels[0]} + ${dayLabels[1]}`
     : `Every ${dayLabels[0]}, ${dayLabels[1]} + ${dayLabels[2]}`;
+
+  // Frequency line for tier cards
+  const getMonthlyLine = (tierKey: string) => {
+    const price = TIER_PRICE[tierKey];
+    if (!frequency || frequency === "once") return `From AED ${(price * 4).toLocaleString()}/month`;
+    const sessions = getSessionCount(frequency);
+    const freqLabel = FREQ_LABELS[frequency] || "";
+    return `AED ${(price * sessions).toLocaleString()}/month · ${freqLabel.toLowerCase()}`;
+  };
 
   /* ─── SUBMIT ─── */
   const handleSubmit = async () => {
@@ -293,7 +312,11 @@ const BookingForm = () => {
                       <p className="font-body text-sm text-muted-foreground mt-0.5">{t.people} · {t.duration}</p>
                       <p className="font-body text-xs text-muted-foreground mt-0.5">{t.detail}</p>
                     </div>
-                    <p className="font-display text-lg font-bold text-copper">AED {price}</p>
+                    <div className="text-right">
+                      <p className="font-display text-lg font-bold text-copper">AED {price}</p>
+                      <p className="font-body text-[11px] text-muted-foreground">per session</p>
+                      <p className="font-body text-[10px] text-muted-foreground mt-0.5">{getMonthlyLine(t.key)}</p>
+                    </div>
                   </div>
                   {selected && <Check className="w-5 h-5 text-primary mt-2" />}
                 </button>
@@ -308,15 +331,25 @@ const BookingForm = () => {
             <p className="font-body text-xs font-semibold tracking-[0.15em] uppercase text-copper mb-3">How often?</p>
             <div className="flex flex-wrap gap-2">
               {FREQUENCIES.map(f => (
-                <button key={f.key} type="button"
-                  onClick={() => { setFrequency(f.key); setSelectedDays([]); setSelectedTimes([]); setStartDate(undefined); setSecondMenuId(""); }}
-                  className={`px-4 py-2.5 rounded-full text-sm font-medium transition border ${
-                    frequency === f.key ? "border-primary bg-primary/10 text-primary font-semibold" : "border-border bg-card text-foreground"
-                  }`}>
-                  {f.label}
-                </button>
+                <div key={f.key} className="relative">
+                  <button type="button"
+                    onClick={() => { setFrequency(f.key); setSelectedDays([]); setSelectedTimes([]); setStartDate(undefined); setSecondMenuId(""); }}
+                    className={`px-4 py-2.5 rounded-full text-sm font-medium transition border ${
+                      frequency === f.key ? "border-primary bg-primary/10 text-primary font-semibold" : "border-border bg-card text-foreground"
+                    }`}>
+                    {f.key === "once" ? "Try once — no commitment" : f.label}
+                  </button>
+                  {f.badge && (
+                    <span className="absolute -top-2 -right-2 px-1.5 py-0.5 rounded-full bg-green-500 text-white text-[9px] font-bold leading-none">
+                      {f.badge}
+                    </span>
+                  )}
+                </div>
               ))}
             </div>
+            {frequency === "once" && (
+              <p className="font-body text-xs text-muted-foreground mt-2 italic">Perfect for a first session</p>
+            )}
           </div>
         )}
 
@@ -396,7 +429,7 @@ const BookingForm = () => {
                 />
                 {startDate && (
                   <p className="font-body text-sm text-primary font-medium mt-1">
-                    {summaryDaysText}, starting {format(startDate, "d MMM yyyy")}
+                    {frequency === "once" ? `On ${format(startDate, "d MMM yyyy")}` : `${summaryDaysText}, starting ${format(startDate, "d MMM yyyy")}`}
                   </p>
                 )}
               </div>
@@ -484,11 +517,20 @@ const BookingForm = () => {
               {startDate && (<><Divider /><SummaryRow label="Starting" value={format(startDate, "EEE, d MMM yyyy")} /></>)}
               <Divider />
               <div className="flex justify-between items-center py-3">
-                <span className="font-body text-base font-semibold text-muted-foreground">Total</span>
-                <span className="font-display text-xl font-bold text-copper">
-                  AED {sessionTotal.toLocaleString()} /month
-                </span>
+                <span className="font-body text-sm text-muted-foreground">Per session</span>
+                <span className="font-display text-base font-bold text-copper">AED {sessionPrice}</span>
               </div>
+              {frequency !== "once" && (
+                <>
+                  <Divider />
+                  <div className="flex justify-between items-center py-3">
+                    <span className="font-body text-sm text-muted-foreground">Monthly total</span>
+                    <span className="font-display text-xl font-bold text-copper">
+                      AED {sessionTotal.toLocaleString()} ({sessionCount} sessions/month)
+                    </span>
+                  </div>
+                </>
+              )}
             </div>
           )}
 
@@ -528,8 +570,15 @@ const BookingForm = () => {
         <div className="max-w-[430px] mx-auto">
           <button disabled={loading || !canSubmit} onClick={handleSubmit}
             className="w-full py-4 rounded-xl font-body font-semibold text-base disabled:opacity-40 transition-opacity text-accent-foreground bg-copper">
-            {loading ? "Processing..." : `Confirm & Pay · AED ${sessionTotal.toLocaleString()}/month`}
+            {loading ? "Processing..." : frequency === "once"
+              ? `Confirm & Pay · AED ${sessionPrice} · single session`
+              : `Confirm & Pay · AED ${sessionPrice}/session`}
           </button>
+          {frequency && frequency !== "once" && tier && (
+            <p className="font-body text-xs text-muted-foreground text-center mt-2">
+              AED {sessionTotal.toLocaleString()}/month · {sessionCount} sessions
+            </p>
+          )}
         </div>
       </div>
     </div>

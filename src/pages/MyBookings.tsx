@@ -18,6 +18,7 @@ interface Booking {
   grocery_addon: boolean | null;
   rating: number | null;
   rated_at: string | null;
+  session_notes: string | null;
 }
 
 const statusColors: Record<string, string> = {
@@ -74,8 +75,34 @@ const MyBookings = () => {
     const formatted = new Date(b.booking_date).toLocaleDateString("en-GB", {
       weekday: "short", day: "numeric", month: "short", year: "numeric",
     });
-    const time = (b as any).booking_time;
-    return time ? `${formatted} · ${time}` : formatted;
+    return formatted;
+  };
+
+  const getSessionTime = (b: Booking): string | null => {
+    try {
+      if (!b.session_notes) return null;
+      const notes = JSON.parse(b.session_notes);
+      if (notes.time_slots && notes.time_slots.length > 0) return notes.time_slots[0];
+    } catch {}
+    return null;
+  };
+
+  const getSessionPriceDisplay = (b: Booking) => {
+    const total = b.total_aed || 0;
+    const freq = b.frequency;
+    if (freq === "once") {
+      return { price: `AED ${total}`, label: "single session" };
+    }
+    if (freq === "twice") {
+      return { price: `AED ${Math.round(total / 8)}`, label: "per session · twice a week" };
+    }
+    if (freq === "three") {
+      return { price: `AED ${Math.round(total / 12)}`, label: "per session · 3× a week" };
+    }
+    if (freq === "weekly") {
+      return { price: `AED ${Math.round(total / 4)}`, label: "per session · once a week" };
+    }
+    return { price: `AED ${total}`, label: "" };
   };
 
   return (
@@ -122,66 +149,65 @@ const MyBookings = () => {
           </div>
         ) : (
           <div className="space-y-4">
-            {filtered.map((b) => (
-              <div key={b.id} className="bg-card rounded-xl p-5 border border-border" style={{ boxShadow: "var(--shadow-card)" }}>
-                <div className="flex items-start justify-between mb-3">
-                  <div>
-                    <p className="font-display text-base text-foreground">{b.cook_name}</p>
-                    <p className="font-body text-xs text-muted-foreground">{b.menu_selected}</p>
-                  </div>
-                  <span className={`px-2.5 py-1 rounded-full font-body text-xs font-medium capitalize ${statusColors[b.status || "pending"] || statusColors.pending}`}>
-                    {b.status || "pending"}
-                  </span>
-                </div>
-
-                <div className="space-y-1.5">
-                  <div className="flex items-center gap-2 font-body text-sm text-muted-foreground">
-                    <Calendar className="w-3.5 h-3.5" />
-                    <span>{formatSessionDate(b)}</span>
-                  </div>
-                  {b.area && (
-                    <div className="flex items-center gap-2 font-body text-sm text-muted-foreground">
-                      <MapPin className="w-3.5 h-3.5" />
-                      <span>{b.area}</span>
+            {filtered.map((b) => {
+              const priceDisplay = getSessionPriceDisplay(b);
+              const sessionTime = getSessionTime(b);
+              return (
+                <div key={b.id} className="bg-card rounded-xl p-5 border border-border" style={{ boxShadow: "var(--shadow-card)" }}>
+                  <div className="flex items-start justify-between mb-3">
+                    <div>
+                      <p className="font-display text-base text-foreground">{b.cook_name}</p>
+                      <p className="font-body text-xs text-muted-foreground">{b.menu_selected}</p>
                     </div>
-                  )}
-                  <p className="text-xs text-[#86A383]">
-                    {b.cook_name && b.cook_name !== "To be assigned" ? `Cook: ${b.cook_name}` : "Cook: To be assigned"}
-                  </p>
-                </div>
-
-                <div className="flex items-center justify-between mt-3 pt-3 border-t border-border">
-                  <span className="font-body text-xs text-muted-foreground">Booked {new Date(b.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}</span>
-                  <div className="text-right">
-                    <span className="font-display text-base font-bold text-copper">
-                      AED {b.frequency === "weekly" ? Math.round((b.total_aed || 0) / 4)
-                        : b.frequency === "twice" ? Math.round((b.total_aed || 0) / 8)
-                        : b.frequency === "three" ? Math.round((b.total_aed || 0) / 12)
-                        : b.total_aed || 0} per session
+                    <span className={`px-2.5 py-1 rounded-full font-body text-xs font-medium capitalize ${statusColors[b.status || "pending"] || statusColors.pending}`}>
+                      {b.status || "pending"}
                     </span>
-                    {b.frequency && (
-                      <p className="font-body text-[10px] text-muted-foreground mt-0.5">
-                        {b.frequency === "weekly" ? "once a week" : b.frequency === "twice" ? "twice a week" : b.frequency === "three" ? "3× a week" : b.frequency}
-                      </p>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-2 font-body text-sm text-muted-foreground">
+                      <Calendar className="w-3.5 h-3.5" />
+                      <span>{formatSessionDate(b)}</span>
+                    </div>
+                    {sessionTime && (
+                      <div className="flex items-center gap-2 font-body text-sm text-muted-foreground pl-5">
+                        <span>{sessionTime}</span>
+                      </div>
+                    )}
+                    {b.area && (
+                      <div className="flex items-center gap-2 font-body text-sm text-muted-foreground">
+                        <MapPin className="w-3.5 h-3.5" />
+                        <span>{b.area}</span>
+                      </div>
                     )}
                   </div>
+
+                  <div className="flex items-center justify-between mt-3 pt-3 border-t border-border">
+                    <span className="font-body text-xs text-muted-foreground">Booked {new Date(b.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}</span>
+                    <div className="text-right">
+                      <span className="font-display text-base font-bold text-copper">{priceDisplay.price}</span>
+                      {priceDisplay.label && (
+                        <p className="font-body text-[10px] text-muted-foreground mt-0.5">{priceDisplay.label}</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {(b.status === "pending" || b.status === "confirmed") && (
+                    <a href={`mailto:hello@cooq.ae?subject=Reschedule request - ${b.id}`}
+                      className="mt-3 w-full py-2.5 rounded-lg border border-copper text-copper font-body text-sm font-medium flex items-center justify-center gap-1.5 hover:bg-copper/5 transition-colors">
+                      Reschedule →
+                    </a>
+                  )}
+
+                  {b.status === "completed" && !b.rating && (
+                    <button onClick={() => navigate(`/rate/${b.id}`)}
+                      className="w-full mt-3 py-2 rounded-lg border border-copper text-copper font-body text-sm font-medium flex items-center justify-center gap-1.5 hover:bg-copper/5 transition-colors">
+                      <Star className="w-3.5 h-3.5" /> Rate your session →
+                    </button>
+                  )}
                 </div>
-
-                {(b.status === "pending" || b.status === "confirmed") && (
-                  <a href={`mailto:hello@cooq.ae?subject=Reschedule request - ${b.id}`}
-                    className="mt-3 w-full py-2.5 rounded-lg border border-copper text-copper font-body text-sm font-medium flex items-center justify-center gap-1.5 hover:bg-copper/5 transition-colors">
-                    Reschedule →
-                  </a>
-                )}
-
-                {b.status === "completed" && !b.rating && (
-                  <button onClick={() => navigate(`/rate/${b.id}`)}
-                    className="w-full mt-3 py-2 rounded-lg border border-copper text-copper font-body text-sm font-medium flex items-center justify-center gap-1.5 hover:bg-copper/5 transition-colors">
-                    <Star className="w-3.5 h-3.5" /> Rate your session →
-                  </button>
-                )}
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
