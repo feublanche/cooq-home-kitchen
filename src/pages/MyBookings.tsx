@@ -249,6 +249,10 @@ const MyBookings = () => {
                       <Star className="w-3.5 h-3.5" /> Rate your session →
                     </button>
                   )}
+
+                  <p className="font-body text-[10px] text-muted-foreground mt-3 leading-snug">
+                    Free reschedule anytime · Full refund if cancelled 48hrs+ before session
+                  </p>
                 </div>
               );
             })}
