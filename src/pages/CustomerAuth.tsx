@@ -95,9 +95,11 @@ const CustomerAuth = () => {
 
   return (
     <div className="bg-[#F9F7F2] min-h-screen max-w-[430px] mx-auto px-4">
-      <div className="flex justify-center pt-8 mb-8">
+      <div className="flex justify-center pt-8 mb-4">
         <img src={cooqLogo} alt="Cooq" className="h-8" />
       </div>
+      <h2 className="font-display italic text-xl text-center text-foreground mb-1">Save your cook</h2>
+      <p className="font-body text-sm text-center text-muted-foreground mb-6">Sign in to confirm your booking — takes 30 seconds.</p>
 
       {/* Tabs */}
       <div className="flex mb-6 border-b border-gray-200">

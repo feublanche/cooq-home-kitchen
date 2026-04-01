@@ -119,7 +119,7 @@ const MyBookings = () => {
 
       <div className="px-6 pb-6">
         <h1 className="font-display italic text-2xl text-foreground mb-1">My Bookings</h1>
-        <p className="font-body text-sm text-muted-foreground mb-4">{userEmail}</p>
+        <p className="font-body text-sm text-muted-foreground mb-4" style={{ display: "none" }}>{userEmail}</p>
 
         <div className="flex gap-2 mb-6 overflow-x-auto">
           {filterTabs.map((tab) => (
