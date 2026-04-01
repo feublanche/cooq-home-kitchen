@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { ArrowLeft, ChevronDown, MapPin } from "lucide-react";
 import { dubaiNeighborhoods } from "@/data/dubaiNeighborhoods";
 import cooqLogo from "@/assets/cooq-logo.png";
+import StepProgress from "@/components/StepProgress";
 
 const cuisineOptions = [
   "Lebanese", "Indian", "Mediterranean", "Continental", "Emirati", "Keto", "Vegan",
