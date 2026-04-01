@@ -10,6 +10,7 @@ const Confirmation = () => {
   const location = useLocation();
   const state = (location.state as any) || {};
   const { bookingId, cookId, totalPaid, bookingDate, bookingTime, area, selectedMenuName, secondaryBookingDate, secondaryMenuName } = state;
+  const cookInitials = state.cookName || "";
 
   const [cookData, setCookData] = useState<any>(null);
   const [fallbackTotal, setFallbackTotal] = useState<number>(0);
