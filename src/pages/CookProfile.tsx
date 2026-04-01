@@ -127,6 +127,7 @@ const CookProfile = () => {
         <button onClick={() => navigate("/results")} className="text-foreground"><ArrowLeft className="w-5 h-5" /></button>
         <img src={cooqLogo} alt="Cooq" className="h-7" />
       </nav>
+      <StepProgress current={1} />
 
       <div className="px-6 pb-6">
         <div className="flex flex-col items-center text-center mb-8">
