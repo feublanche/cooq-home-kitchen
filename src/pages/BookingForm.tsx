@@ -5,6 +5,8 @@ import { ArrowLeft, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import cooqLogo from "@/assets/cooq-logo.png";
+import StepProgress from "@/components/StepProgress";
+import TrustBadges from "@/components/TrustBadges";
 import type { User } from "@supabase/supabase-js";
 import { Calendar } from "@/components/ui/calendar";
 import { format, addDays, getDay } from "date-fns";
