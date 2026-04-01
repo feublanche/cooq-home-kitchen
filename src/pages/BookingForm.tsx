@@ -5,6 +5,8 @@ import { ArrowLeft, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import cooqLogo from "@/assets/cooq-logo.png";
+import StepProgress from "@/components/StepProgress";
+import TrustBadges from "@/components/TrustBadges";
 import type { User } from "@supabase/supabase-js";
 import { Calendar } from "@/components/ui/calendar";
 import { format, addDays, getDay } from "date-fns";
@@ -288,11 +290,14 @@ const BookingForm = () => {
         <img src={cooqLogo} alt="Cooq" className="h-7" />
       </nav>
 
+      <StepProgress current={2} />
+
       {/* Sticky summary bar */}
       <div className="sticky top-0 z-20 bg-card border-b border-border px-6 py-3">
         <p className="font-body text-sm text-foreground">
           Booking with <span className="font-semibold">{cookInitials}</span> · <span className="text-copper font-medium">{primaryMenuName}</span>
         </p>
+        <TrustBadges />
       </div>
 
       <div className="flex-1 px-6 pb-32 space-y-8 pt-4">
@@ -551,6 +556,28 @@ const BookingForm = () => {
               <a href="/privacy" target="_blank" className="text-primary underline">Privacy Policy</a>
             </span>
           </label>
+
+          {/* Price summary card */}
+          {tier && (
+            <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 space-y-1.5">
+              <p className="font-body text-sm font-semibold text-foreground">
+                {TIER_LABELS[tier]} · AED {sessionPrice}/session
+              </p>
+              {frequency && (
+                <p className="font-body text-xs text-muted-foreground">
+                  {FREQ_LABELS[frequency]} · {frequency === "once" ? "1 session" : `~${sessionCount} sessions/month`}
+                </p>
+              )}
+              {frequency && frequency !== "once" && (
+                <p className="font-body text-xs text-copper font-medium">
+                  Est. monthly: AED {sessionTotal.toLocaleString()}
+                </p>
+              )}
+              <p className="font-body text-xs text-muted-foreground">
+                {cookInitials} · {primaryMenuName}
+              </p>
+            </div>
+          )}
 
           {/* Trust line */}
           <p className="font-body text-xs text-muted-foreground leading-relaxed">

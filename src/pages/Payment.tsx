@@ -5,6 +5,7 @@ import { loadStripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import { Loader2, Lock } from "lucide-react";
 import cooqLogo from "@/assets/cooq-logo.png";
+import StepProgress from "@/components/StepProgress";
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || "");
 
@@ -154,6 +155,7 @@ export default function Payment() {
             <span className="font-body text-[10px] text-slate-400">Secured by Stripe</span>
           </div>
         </div>
+        <StepProgress current={3} />
 
         <div className="bg-white rounded-xl shadow-sm mx-4 mt-4 p-5">
           <h2 className="font-display text-base text-slate-800 mb-3">Your Booking</h2>

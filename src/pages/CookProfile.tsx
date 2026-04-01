@@ -5,6 +5,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { ArrowLeft, ShieldCheck, Check, Star } from "lucide-react";
 import cooqLogo from "@/assets/cooq-logo.png";
 import { Progress } from "@/components/ui/progress";
+import StepProgress from "@/components/StepProgress";
+import TrustBadges from "@/components/TrustBadges";
 
 const RATING_CATEGORIES = [
   { key: "taste_rating", label: "Food taste" },
@@ -125,6 +127,7 @@ const CookProfile = () => {
         <button onClick={() => navigate("/results")} className="text-foreground"><ArrowLeft className="w-5 h-5" /></button>
         <img src={cooqLogo} alt="Cooq" className="h-7" />
       </nav>
+      <StepProgress current={1} />
 
       <div className="px-6 pb-6">
         <div className="flex flex-col items-center text-center mb-8">
@@ -149,6 +152,7 @@ const CookProfile = () => {
             {cook.health_card && (
               <span className="font-body text-[10px] text-muted-foreground">Health Card ✓</span>
             )}
+            <TrustBadges />
           </div>
           {cook.bio && (
             <p className="font-body text-sm text-muted-foreground mt-4 leading-relaxed max-w-sm">{cook.bio}</p>

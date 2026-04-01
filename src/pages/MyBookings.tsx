@@ -2,8 +2,19 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, LogOut, Calendar, ChefHat, MapPin, Star } from "lucide-react";
+import { ArrowLeft, LogOut, Calendar, ChefHat, MapPin, Star, X } from "lucide-react";
 import cooqLogo from "@/assets/cooq-logo.png";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface Booking {
   id: string;
@@ -19,7 +30,10 @@ interface Booking {
   rating: number | null;
   rated_at: string | null;
   session_notes: string | null;
+  tier: string | null;
 }
+
+const TIER_LABELS: Record<string, string> = { duo: "Cooq Duo", family: "Cooq Family", large: "Cooq Large" };
 
 const statusColors: Record<string, string> = {
   pending: "bg-amber-100 text-amber-800",
@@ -119,7 +133,7 @@ const MyBookings = () => {
 
       <div className="px-6 pb-6">
         <h1 className="font-display italic text-2xl text-foreground mb-1">My Bookings</h1>
-        <p className="font-body text-sm text-muted-foreground mb-4">{userEmail}</p>
+        <p className="font-body text-sm text-muted-foreground mb-4" style={{ display: "none" }}>{userEmail}</p>
 
         <div className="flex gap-2 mb-6 overflow-x-auto">
           {filterTabs.map((tab) => (
@@ -157,7 +171,10 @@ const MyBookings = () => {
                   <div className="flex items-start justify-between mb-3">
                     <div>
                       <p className="font-display text-base text-foreground">{b.cook_name}</p>
-                      <p className="font-body text-xs text-muted-foreground">{b.menu_selected}</p>
+                      <p className="font-body text-xs text-muted-foreground">
+                        {b.menu_selected}
+                        {b.tier && <span className="text-muted-foreground"> · {TIER_LABELS[b.tier] || b.tier}</span>}
+                      </p>
                     </div>
                     <span className={`px-2.5 py-1 rounded-full font-body text-xs font-medium capitalize ${statusColors[b.status || "pending"] || statusColors.pending}`}>
                       {b.status || "pending"}
@@ -193,10 +210,37 @@ const MyBookings = () => {
                   </div>
 
                   {(b.status === "pending" || b.status === "confirmed") && (
-                    <a href={`mailto:hello@cooq.ae?subject=Reschedule request - ${b.id}`}
-                      className="mt-3 w-full py-2.5 rounded-lg border border-copper text-copper font-body text-sm font-medium flex items-center justify-center gap-1.5 hover:bg-copper/5 transition-colors">
-                      Reschedule →
-                    </a>
+                    <div className="flex gap-2 mt-3">
+                      <a href={`mailto:hello@cooq.ae?subject=Reschedule request - ${b.id}`}
+                        className="flex-1 py-2.5 rounded-lg border border-copper text-copper font-body text-sm font-medium flex items-center justify-center gap-1.5 hover:bg-copper/5 transition-colors">
+                        Reschedule →
+                      </a>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <button className="flex-1 py-2.5 rounded-lg border border-border text-muted-foreground font-body text-sm font-medium flex items-center justify-center gap-1.5 hover:bg-muted/50 transition-colors">
+                            Cancel
+                          </button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Full refund available if cancelled 48hrs+ before your session.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Keep Booking</AlertDialogCancel>
+                            <AlertDialogAction asChild>
+                              <a href={`https://wa.me/971585938877?text=I'd like to cancel booking ${b.id}`}
+                                target="_blank" rel="noopener noreferrer"
+                                className="inline-flex items-center justify-center rounded-md text-sm font-medium px-4 py-2 bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                                Confirm Cancel — Contact WhatsApp
+                              </a>
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
                   )}
 
                   {b.status === "completed" && !b.rating && (
@@ -205,6 +249,10 @@ const MyBookings = () => {
                       <Star className="w-3.5 h-3.5" /> Rate your session →
                     </button>
                   )}
+
+                  <p className="font-body text-[10px] text-muted-foreground mt-3 leading-snug">
+                    Free reschedule anytime · Full refund if cancelled 48hrs+ before session
+                  </p>
                 </div>
               );
             })}

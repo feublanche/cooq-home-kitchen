@@ -3,12 +3,14 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { CheckCircle2 } from "lucide-react";
 import cooqLogo from "@/assets/cooq-logo.png";
+import StepProgress from "@/components/StepProgress";
 
 const Confirmation = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const state = (location.state as any) || {};
   const { bookingId, cookId, totalPaid, bookingDate, bookingTime, area, selectedMenuName, secondaryBookingDate, secondaryMenuName } = state;
+  const cookInitials = state.cookName || "";
 
   const [cookData, setCookData] = useState<any>(null);
   const [fallbackTotal, setFallbackTotal] = useState<number>(0);
@@ -43,6 +45,7 @@ const Confirmation = () => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
+      <StepProgress current={4} />
       <div className="bg-foreground rounded-b-3xl pb-8 px-4 pt-8 flex flex-col items-center">
         <CheckCircle2 className="w-10 h-10 text-primary mx-auto" />
         <h1 className="font-display italic text-[28px] text-primary-foreground text-center mt-3">You're all set.</h1>
@@ -113,6 +116,18 @@ const Confirmation = () => {
             <span className="font-bold text-accent">AED {displayTotal.toLocaleString()}</span>
           </div>
         </div>
+      </div>
+
+      {/* Session summary card */}
+      <div className="bg-card rounded-xl mx-4 mt-4 p-5 shadow-sm border border-border">
+        <p className="font-body text-xs font-semibold tracking-[0.15em] uppercase text-copper mb-3">Session Summary</p>
+        <div className="space-y-1.5 text-sm">
+          <p className="font-body text-foreground font-medium">{cookData ? displayName : cookInitials || "Your Cook"}</p>
+          {selectedMenuName && <p className="font-body text-muted-foreground">{selectedMenuName}</p>}
+          {state.tier && <p className="font-body text-muted-foreground">{state.tier === "duo" ? "Cooq Duo" : state.tier === "family" ? "Cooq Family" : state.tier === "large" ? "Cooq Large" : state.tier}</p>}
+          {state.frequency && <p className="font-body text-muted-foreground">{state.frequency === "once" ? "Try once" : state.frequency === "weekly" ? "Once a week" : state.frequency === "twice" ? "Twice a week" : state.frequency === "three" ? "3× a week" : state.frequency}</p>}
+        </div>
+        <p className="font-body text-[11px] text-primary mt-3">Full refund if cancelled 48hrs+ before your session.</p>
       </div>
 
       {/* Info box */}

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { ArrowLeft, ChevronDown, MapPin } from "lucide-react";
 import { dubaiNeighborhoods } from "@/data/dubaiNeighborhoods";
 import cooqLogo from "@/assets/cooq-logo.png";
+import StepProgress from "@/components/StepProgress";
 
 const cuisineOptions = [
   "Lebanese", "Indian", "Mediterranean", "Continental", "Emirati", "Keto", "Vegan",
@@ -86,6 +87,7 @@ const Search = () => {
         </button>
         <img src={cooqLogo} alt="Cooq" className="h-7" />
       </nav>
+      <StepProgress current={0} />
 
       <div className="flex-1 px-6 pb-6 space-y-8 overflow-y-auto">
         {/* SECTION 1: Neighbourhood dropdown */}
