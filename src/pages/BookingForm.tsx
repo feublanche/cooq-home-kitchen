@@ -290,11 +290,14 @@ const BookingForm = () => {
         <img src={cooqLogo} alt="Cooq" className="h-7" />
       </nav>
 
+      <StepProgress current={2} />
+
       {/* Sticky summary bar */}
       <div className="sticky top-0 z-20 bg-card border-b border-border px-6 py-3">
         <p className="font-body text-sm text-foreground">
           Booking with <span className="font-semibold">{cookInitials}</span> · <span className="text-copper font-medium">{primaryMenuName}</span>
         </p>
+        <TrustBadges />
       </div>
 
       <div className="flex-1 px-6 pb-32 space-y-8 pt-4">
