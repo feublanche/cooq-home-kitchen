@@ -117,6 +117,18 @@ const Confirmation = () => {
         </div>
       </div>
 
+      {/* Session summary card */}
+      <div className="bg-card rounded-xl mx-4 mt-4 p-5 shadow-sm border border-border">
+        <p className="font-body text-xs font-semibold tracking-[0.15em] uppercase text-copper mb-3">Session Summary</p>
+        <div className="space-y-1.5 text-sm">
+          <p className="font-body text-foreground font-medium">{cookData ? displayName : cookInitials || "Your Cook"}</p>
+          {selectedMenuName && <p className="font-body text-muted-foreground">{selectedMenuName}</p>}
+          {state.tier && <p className="font-body text-muted-foreground">{state.tier === "duo" ? "Cooq Duo" : state.tier === "family" ? "Cooq Family" : state.tier === "large" ? "Cooq Large" : state.tier}</p>}
+          {state.frequency && <p className="font-body text-muted-foreground">{state.frequency === "once" ? "Try once" : state.frequency === "weekly" ? "Once a week" : state.frequency === "twice" ? "Twice a week" : state.frequency === "three" ? "3× a week" : state.frequency}</p>}
+        </div>
+        <p className="font-body text-[11px] text-primary mt-3">Full refund if cancelled 48hrs+ before your session.</p>
+      </div>
+
       {/* Info box */}
       <div className="bg-primary/10 border border-primary/20 rounded-xl mx-4 mt-4 p-4">
         <p className="text-primary text-sm leading-relaxed">
