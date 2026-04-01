@@ -5,6 +5,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { ArrowLeft, ShieldCheck, Check, Star } from "lucide-react";
 import cooqLogo from "@/assets/cooq-logo.png";
 import { Progress } from "@/components/ui/progress";
+import StepProgress from "@/components/StepProgress";
+import TrustBadges from "@/components/TrustBadges";
 
 const RATING_CATEGORIES = [
   { key: "taste_rating", label: "Food taste" },
