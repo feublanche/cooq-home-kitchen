@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { CheckCircle2 } from "lucide-react";
 import cooqLogo from "@/assets/cooq-logo.png";
+import StepProgress from "@/components/StepProgress";
 
 const Confirmation = () => {
   const navigate = useNavigate();

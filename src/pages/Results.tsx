@@ -68,6 +68,7 @@ const Results = () => {
         </button>
         <img src={cooqLogo} alt="Cooq" className="h-7" />
       </nav>
+      <StepProgress current={1} />
 
       <div className="px-6 pb-4">
         <p className="font-body text-xs font-semibold tracking-[0.15em] uppercase text-copper mb-1">Your Matches</p>

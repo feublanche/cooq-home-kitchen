@@ -557,6 +557,28 @@ const BookingForm = () => {
             </span>
           </label>
 
+          {/* Price summary card */}
+          {tier && (
+            <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 space-y-1.5">
+              <p className="font-body text-sm font-semibold text-foreground">
+                {TIER_LABELS[tier]} · AED {sessionPrice}/session
+              </p>
+              {frequency && (
+                <p className="font-body text-xs text-muted-foreground">
+                  {FREQ_LABELS[frequency]} · {frequency === "once" ? "1 session" : `~${sessionCount} sessions/month`}
+                </p>
+              )}
+              {frequency && frequency !== "once" && (
+                <p className="font-body text-xs text-copper font-medium">
+                  Est. monthly: AED {sessionTotal.toLocaleString()}
+                </p>
+              )}
+              <p className="font-body text-xs text-muted-foreground">
+                {cookInitials} · {primaryMenuName}
+              </p>
+            </div>
+          )}
+
           {/* Trust line */}
           <p className="font-body text-xs text-muted-foreground leading-relaxed">
             🔒 Secure payment · Cooq Certified cook · Free reschedule anytime · Cancellation with full refund if requested 48hrs+ before session

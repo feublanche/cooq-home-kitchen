@@ -152,6 +152,7 @@ const CookProfile = () => {
             {cook.health_card && (
               <span className="font-body text-[10px] text-muted-foreground">Health Card ✓</span>
             )}
+            <TrustBadges />
           </div>
           {cook.bio && (
             <p className="font-body text-sm text-muted-foreground mt-4 leading-relaxed max-w-sm">{cook.bio}</p>

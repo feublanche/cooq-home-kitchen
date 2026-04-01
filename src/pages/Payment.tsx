@@ -155,6 +155,7 @@ export default function Payment() {
             <span className="font-body text-[10px] text-slate-400">Secured by Stripe</span>
           </div>
         </div>
+        <StepProgress current={3} />
 
         <div className="bg-white rounded-xl shadow-sm mx-4 mt-4 p-5">
           <h2 className="font-display text-base text-slate-800 mb-3">Your Booking</h2>
