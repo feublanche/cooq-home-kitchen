@@ -44,6 +44,7 @@ const Confirmation = () => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
+      <StepProgress current={4} />
       <div className="bg-foreground rounded-b-3xl pb-8 px-4 pt-8 flex flex-col items-center">
         <CheckCircle2 className="w-10 h-10 text-primary mx-auto" />
         <h1 className="font-display italic text-[28px] text-primary-foreground text-center mt-3">You're all set.</h1>
