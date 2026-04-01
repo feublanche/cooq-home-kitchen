@@ -30,7 +30,10 @@ interface Booking {
   rating: number | null;
   rated_at: string | null;
   session_notes: string | null;
+  tier: string | null;
 }
+
+const TIER_LABELS: Record<string, string> = { duo: "Cooq Duo", family: "Cooq Family", large: "Cooq Large" };
 
 const statusColors: Record<string, string> = {
   pending: "bg-amber-100 text-amber-800",
