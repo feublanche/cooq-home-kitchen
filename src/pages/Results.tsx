@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { ArrowLeft, ShieldCheck, ChefHat, Clock, Star } from "lucide-react";
 import cooqLogo from "@/assets/cooq-logo.png";
+import StepProgress from "@/components/StepProgress";
 
 const Results = () => {
   const navigate = useNavigate();
