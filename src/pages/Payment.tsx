@@ -40,7 +40,7 @@ const CheckoutForm = ({ totalAed, bookingId, paymentState, paymentIntentId }: { 
 
     const { error: stripeError } = await stripe.confirmPayment({
       elements,
-      confirmParams: { return_url: window.location.origin + "/confirmation" },
+      confirmParams: { return_url: `${window.location.origin}/confirmation?booking_id=${paymentState.bookingId}` },
       redirect: "if_required",
     });
 
