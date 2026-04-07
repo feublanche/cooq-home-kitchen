@@ -117,7 +117,7 @@ const BookingForm = () => {
   const sessionTotal = tier ? getTotal(tier, frequency || "weekly") : 0;
   const baseSessionPrice = tier ? TIER_PRICE[tier] : 0;
   const discountedPrice = tier && frequency ? getDiscountedSessionPrice(tier, frequency) : baseSessionPrice;
-  const discountRate = frequency ? getDiscountRate(frequency) : 0;
+  
   const sessionPrice = discountedPrice || baseSessionPrice;
   const sessionCount = getSessionCount(frequency || "weekly");
 
