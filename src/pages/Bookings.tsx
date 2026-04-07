@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { ChefHat, Calendar, Star } from "lucide-react";
+import { ChefHat, Calendar, Star, X } from "lucide-react";
 import cooqLogo from "@/assets/cooq-logo.png";
 import BottomNav from "@/components/BottomNav";
 
@@ -34,6 +34,7 @@ const TIER_LABELS: Record<string, string> = { duo: "Duo", family: "Family", larg
 const Bookings = () => {
   const navigate = useNavigate();
   const [userId, setUserId] = useState<string | null>(null);
+  const [cancelModalBooking, setCancelModalBooking] = useState<Booking | null>(null);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -120,17 +121,23 @@ const Bookings = () => {
                   <div className="flex items-center justify-between mt-3 pt-3 border-t border-border">
                     <span className="font-display text-base font-bold text-accent">AED {b.tier === "large" ? 550 : b.tier === "family" ? 420 : 350}/session</span>
                     {isUpcoming(b.status) && (
-                      <button onClick={() => navigate("/book", {
-                        state: {
-                          cookId: b.cook_id,
-                          cookInitials: getInitials(b.cook_name),
-                          selectedMenuId: b.selected_menu_id,
-                          selectedMenuName: b.menu_selected,
-                        }
-                      })}
-                        className="px-4 py-1.5 rounded-full border border-copper text-copper font-body text-xs font-medium hover:bg-copper/5 transition-colors">
-                        Reschedule
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button onClick={() => setCancelModalBooking(b)}
+                          className="px-4 py-1.5 rounded-full border border-destructive text-destructive font-body text-xs font-medium hover:bg-destructive/5 transition-colors">
+                          Cancel
+                        </button>
+                        <button onClick={() => navigate("/book", {
+                          state: {
+                            cookId: b.cook_id,
+                            cookInitials: getInitials(b.cook_name),
+                            selectedMenuId: b.selected_menu_id,
+                            selectedMenuName: b.menu_selected,
+                          }
+                        })}
+                          className="px-4 py-1.5 rounded-full border border-copper text-copper font-body text-xs font-medium hover:bg-copper/5 transition-colors">
+                          Reschedule
+                        </button>
+                      </div>
                     )}
                   </div>
 
@@ -140,12 +147,51 @@ const Bookings = () => {
                       <Star className="w-3.5 h-3.5" /> Rate your session →
                     </button>
                   )}
+
+                  {/* Policy reminder */}
+                  <p className="font-body text-[10px] text-muted-foreground mt-3">
+                    Free reschedule anytime · Full refund if cancelled 48hrs+ before session
+                  </p>
                 </div>
               );
             })}
           </div>
         )}
       </div>
+
+      {/* Cancel confirmation modal */}
+      {cancelModalBooking && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-6">
+          <div className="bg-card rounded-2xl p-6 w-full max-w-sm shadow-xl relative">
+            <button onClick={() => setCancelModalBooking(null)} className="absolute top-4 right-4 text-muted-foreground hover:text-foreground">
+              <X className="w-5 h-5" />
+            </button>
+            <h3 className="font-display text-lg text-foreground mb-2">Cancel this session?</h3>
+            <div className="space-y-2 mb-5">
+              <p className="font-body text-sm text-muted-foreground">
+                <span className="font-medium text-foreground">Free reschedule</span> — anytime, no charge.
+              </p>
+              <p className="font-body text-sm text-muted-foreground">
+                <span className="font-medium text-foreground">Full refund</span> — if cancelled 48+ hours before your session.
+              </p>
+              <p className="font-body text-sm text-muted-foreground">
+                <span className="font-medium text-foreground">No refund</span> — if cancelled under 48 hours before your session.
+              </p>
+            </div>
+            <a
+              href="https://wa.me/971585931737"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block w-full text-center py-3 rounded-xl bg-destructive text-destructive-foreground font-body font-semibold text-sm"
+            >
+              To cancel, contact us on WhatsApp
+            </a>
+            <button onClick={() => setCancelModalBooking(null)} className="w-full text-center py-2 mt-2 font-body text-sm text-muted-foreground">
+              Keep my booking
+            </button>
+          </div>
+        </div>
+      )}
 
       <BottomNav />
     </div>
