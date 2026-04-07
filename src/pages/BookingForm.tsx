@@ -538,16 +538,38 @@ const BookingForm = () => {
               <Divider />
               <div className="flex justify-between items-center py-3">
                 <span className="font-body text-sm text-muted-foreground">Per session</span>
-                <span className="font-display text-base font-bold text-copper">AED {sessionPrice}</span>
+                <div className="text-right">
+                  {getDiscountRate(frequency) > 0 ? (
+                    <>
+                      <span className="font-body text-sm text-muted-foreground line-through mr-2">AED {baseSessionPrice}</span>
+                      <span className="font-display text-base font-bold text-primary">AED {sessionPrice}</span>
+                    </>
+                  ) : (
+                    <span className="font-display text-base font-bold text-copper">AED {sessionPrice}</span>
+                  )}
+                </div>
               </div>
+              {getDiscountRate(frequency) > 0 && (
+                <p className="font-body text-xs text-primary font-semibold pb-1">
+                  {Math.round(getDiscountRate(frequency) * 100)}% recurring discount applied
+                </p>
+              )}
               {frequency !== "once" && (
                 <>
                   <Divider />
                   <div className="flex justify-between items-center py-3">
                     <span className="font-body text-sm text-muted-foreground">Monthly total</span>
-                    <span className="font-display text-xl font-bold text-copper">
-                      AED {sessionTotal.toLocaleString()} ({sessionCount} sessions/month)
-                    </span>
+                    <div className="text-right">
+                      {getDiscountRate(frequency) > 0 && (
+                        <span className="font-body text-sm text-muted-foreground line-through mr-2">
+                          AED {(baseSessionPrice * sessionCount).toLocaleString()}
+                        </span>
+                      )}
+                      <span className="font-display text-xl font-bold text-copper">
+                        AED {sessionTotal.toLocaleString()}
+                      </span>
+                      <span className="font-body text-xs text-muted-foreground ml-1">({sessionCount} sessions)</span>
+                    </div>
                   </div>
                 </>
               )}
