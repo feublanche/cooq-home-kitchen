@@ -598,8 +598,22 @@ const BookingForm = () => {
           {tier && (
             <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 space-y-1.5">
               <p className="font-body text-sm font-semibold text-foreground">
-                {TIER_LABELS[tier]} · AED {sessionPrice}/session
+                {TIER_LABELS[tier]} ·{" "}
+                {getDiscountRate(frequency) > 0 ? (
+                  <>
+                    <span className="line-through text-muted-foreground">AED {baseSessionPrice}</span>{" "}
+                    <span className="text-primary">AED {sessionPrice}</span>
+                  </>
+                ) : (
+                  <>AED {sessionPrice}</>
+                )}
+                /session
               </p>
+              {getDiscountRate(frequency) > 0 && (
+                <p className="font-body text-xs text-primary font-semibold">
+                  {Math.round(getDiscountRate(frequency) * 100)}% recurring discount
+                </p>
+              )}
               {frequency && (
                 <p className="font-body text-xs text-muted-foreground">
                   {FREQ_LABELS[frequency]} · {frequency === "once" ? "1 session" : `~${sessionCount} sessions/month`}
