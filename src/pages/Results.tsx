@@ -73,7 +73,7 @@ const Results = () => {
       <div className="px-6 pb-4">
         <p className="font-body text-xs font-semibold tracking-[0.15em] uppercase text-copper mb-1">Your Matches</p>
         <h1 className="font-display italic text-2xl text-foreground mb-2">
-          {isLoading ? "Finding cooks..." : noFilterMatch ? "No cooks available with this cuisine yet — check back soon." : `${displayCooks.length} cook${displayCooks.length !== 1 ? "s" : ""} match your preferences`}
+          {isLoading ? "Finding cooks..." : noFilterMatch || displayCooks.length === 0 ? "No cooks available in this area yet — check back soon." : `${displayCooks.length} cook${displayCooks.length !== 1 ? "s" : ""} match your preferences`}
         </h1>
       </div>
 

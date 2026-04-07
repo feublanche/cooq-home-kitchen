@@ -36,11 +36,23 @@ const TIER_LABELS: Record<string, string> = { duo: "Cooq Duo", family: "Cooq Fam
 const FREQ_LABELS: Record<string, string> = { once: "Try once", weekly: "Once a week", twice: "Twice a week", three: "3× a week" };
 const TIER_PARTY: Record<string, number> = { duo: 2, family: 4, large: 6 };
 
-const getTotal = (tier: string, freq: string): number => {
+const getDiscountRate = (freq: string): number => {
+  if (freq === "twice") return 0.05;
+  if (freq === "three") return 0.10;
+  return 0;
+};
+
+const getDiscountedSessionPrice = (tier: string, freq: string): number => {
   const base = TIER_PRICE[tier] ?? 350;
-  if (freq === "once") return base;
+  const discount = getDiscountRate(freq);
+  return Math.round(base * (1 - discount));
+};
+
+const getTotal = (tier: string, freq: string): number => {
+  const discountedPrice = getDiscountedSessionPrice(tier, freq);
+  if (freq === "once") return discountedPrice;
   const sessions = freq === "twice" ? 8 : freq === "three" ? 12 : 4;
-  return base * sessions;
+  return discountedPrice * sessions;
 };
 
 const getSessionCount = (freq: string): number => {
@@ -103,7 +115,10 @@ const BookingForm = () => {
 
   const minDate = useMemo(() => addDays(new Date(), 2), []);
   const sessionTotal = tier ? getTotal(tier, frequency || "weekly") : 0;
-  const sessionPrice = tier ? TIER_PRICE[tier] : 0;
+  const baseSessionPrice = tier ? TIER_PRICE[tier] : 0;
+  const discountedPrice = tier && frequency ? getDiscountedSessionPrice(tier, frequency) : baseSessionPrice;
+  
+  const sessionPrice = discountedPrice || baseSessionPrice;
   const sessionCount = getSessionCount(frequency || "weekly");
 
   // Pre-fill area from search session
@@ -523,16 +538,38 @@ const BookingForm = () => {
               <Divider />
               <div className="flex justify-between items-center py-3">
                 <span className="font-body text-sm text-muted-foreground">Per session</span>
-                <span className="font-display text-base font-bold text-copper">AED {sessionPrice}</span>
+                <div className="text-right">
+                  {getDiscountRate(frequency) > 0 ? (
+                    <>
+                      <span className="font-body text-sm text-muted-foreground line-through mr-2">AED {baseSessionPrice}</span>
+                      <span className="font-display text-base font-bold text-primary">AED {sessionPrice}</span>
+                    </>
+                  ) : (
+                    <span className="font-display text-base font-bold text-copper">AED {sessionPrice}</span>
+                  )}
+                </div>
               </div>
+              {getDiscountRate(frequency) > 0 && (
+                <p className="font-body text-xs text-primary font-semibold pb-1">
+                  {Math.round(getDiscountRate(frequency) * 100)}% recurring discount applied
+                </p>
+              )}
               {frequency !== "once" && (
                 <>
                   <Divider />
                   <div className="flex justify-between items-center py-3">
                     <span className="font-body text-sm text-muted-foreground">Monthly total</span>
-                    <span className="font-display text-xl font-bold text-copper">
-                      AED {sessionTotal.toLocaleString()} ({sessionCount} sessions/month)
-                    </span>
+                    <div className="text-right">
+                      {getDiscountRate(frequency) > 0 && (
+                        <span className="font-body text-sm text-muted-foreground line-through mr-2">
+                          AED {(baseSessionPrice * sessionCount).toLocaleString()}
+                        </span>
+                      )}
+                      <span className="font-display text-xl font-bold text-copper">
+                        AED {sessionTotal.toLocaleString()}
+                      </span>
+                      <span className="font-body text-xs text-muted-foreground ml-1">({sessionCount} sessions)</span>
+                    </div>
                   </div>
                 </>
               )}
@@ -561,8 +598,22 @@ const BookingForm = () => {
           {tier && (
             <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 space-y-1.5">
               <p className="font-body text-sm font-semibold text-foreground">
-                {TIER_LABELS[tier]} · AED {sessionPrice}/session
+                {TIER_LABELS[tier]} ·{" "}
+                {getDiscountRate(frequency) > 0 ? (
+                  <>
+                    <span className="line-through text-muted-foreground">AED {baseSessionPrice}</span>{" "}
+                    <span className="text-primary">AED {sessionPrice}</span>
+                  </>
+                ) : (
+                  <>AED {sessionPrice}</>
+                )}
+                /session
               </p>
+              {getDiscountRate(frequency) > 0 && (
+                <p className="font-body text-xs text-primary font-semibold">
+                  {Math.round(getDiscountRate(frequency) * 100)}% recurring discount
+                </p>
+              )}
               {frequency && (
                 <p className="font-body text-xs text-muted-foreground">
                   {FREQ_LABELS[frequency]} · {frequency === "once" ? "1 session" : `~${sessionCount} sessions/month`}
