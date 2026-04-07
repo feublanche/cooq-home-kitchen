@@ -1,7 +1,15 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import cooqLogo from "@/assets/cooq-logo.png";
+import { Check, X } from "lucide-react";
+
+const PASSWORD_RULES = [
+  { key: "length", label: "At least 8 characters", test: (p: string) => p.length >= 8 },
+  { key: "upper", label: "1 uppercase letter", test: (p: string) => /[A-Z]/.test(p) },
+  { key: "number", label: "1 number", test: (p: string) => /[0-9]/.test(p) },
+  { key: "special", label: "1 special character (!@#$%^&*)", test: (p: string) => /[!@#$%^&*]/.test(p) },
+];
 
 const CustomerAuth = () => {
   const navigate = useNavigate();
@@ -18,14 +26,21 @@ const CustomerAuth = () => {
   const [info, setInfo] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const passwordChecks = useMemo(() => PASSWORD_RULES.map(r => ({ ...r, passed: r.test(password) })), [password]);
+  const allPasswordValid = passwordChecks.every(c => c.passed);
+
   const handleSignIn = async () => {
     setError("");
     setInfo("");
     setLoading(true);
-    const { error: err } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error: err } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
     if (err) {
-      setError(err.message);
+      if (err.message?.includes("Email not confirmed")) {
+        setError("Please confirm your email before signing in. Check your inbox.");
+      } else {
+        setError(err.message);
+      }
       return;
     }
     const savedBookingState = sessionStorage.getItem("cooq_pending_booking");
@@ -35,19 +50,6 @@ const CustomerAuth = () => {
     } else {
       navigate(returnTo, { replace: true });
     }
-  };
-
-  const handleMagicLink = async () => {
-    setError("");
-    setInfo("");
-    setLoading(true);
-    const { error: err } = await supabase.auth.signInWithOtp({ email });
-    setLoading(false);
-    if (err) {
-      setError(err.message);
-      return;
-    }
-    setInfo("Check your email for a sign-in link");
   };
 
   const handleForgotPassword = async () => {
@@ -70,8 +72,8 @@ const CustomerAuth = () => {
   const handleSignUp = async () => {
     setError("");
     setInfo("");
-    if (password.length < 8) {
-      setError("Password must be at least 8 characters");
+    if (!allPasswordValid) {
+      setError("Password does not meet all requirements");
       return;
     }
     if (password !== confirmPassword) {
@@ -89,7 +91,7 @@ const CustomerAuth = () => {
       setError(err.message);
       return;
     }
-    setInfo("Check your email to verify your account, then sign in above.");
+    setInfo("Check your inbox to confirm your email before booking.");
     setTab("signin");
   };
 
@@ -104,11 +106,7 @@ const CustomerAuth = () => {
       {/* Tabs */}
       <div className="flex mb-6 border-b border-gray-200">
         <button
-          onClick={() => {
-            setTab("signin");
-            setError("");
-            setInfo("");
-          }}
+          onClick={() => { setTab("signin"); setError(""); setInfo(""); }}
           className={`flex-1 pb-3 text-sm font-semibold transition-colors ${
             tab === "signin" ? "border-b-2 border-[#B57E5D] text-[#2D312E]" : "text-gray-400"
           }`}
@@ -116,11 +114,7 @@ const CustomerAuth = () => {
           Sign In
         </button>
         <button
-          onClick={() => {
-            setTab("signup");
-            setError("");
-            setInfo("");
-          }}
+          onClick={() => { setTab("signup"); setError(""); setInfo(""); }}
           className={`flex-1 pb-3 text-sm font-semibold transition-colors ${
             tab === "signup" ? "border-b-2 border-[#B57E5D] text-[#2D312E]" : "text-gray-400"
           }`}
@@ -158,20 +152,6 @@ const CustomerAuth = () => {
           <button onClick={handleForgotPassword} className="text-[12px] text-gray-400 w-full text-center">
             Forgot password?
           </button>
-
-          <div className="flex items-center gap-3 my-2">
-            <div className="flex-1 h-px bg-gray-200" />
-            <span className="text-xs text-gray-400">or</span>
-            <div className="flex-1 h-px bg-gray-200" />
-          </div>
-
-          <button
-            onClick={handleMagicLink}
-            disabled={loading || !email}
-            className="border border-gray-200 rounded-xl py-3 w-full text-sm text-gray-600 disabled:opacity-40"
-          >
-            Send me a sign-in link
-          </button>
         </div>
       ) : (
         <div className="space-y-4">
@@ -191,11 +171,26 @@ const CustomerAuth = () => {
           />
           <input
             type="password"
-            placeholder="Password (min 8 characters)"
+            placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className="border border-gray-200 rounded-xl px-4 py-3 w-full text-sm focus:outline-none focus:ring-2 focus:ring-[#B57E5D]"
           />
+          {/* Password strength checklist */}
+          {password.length > 0 && (
+            <div className="space-y-1 pl-1">
+              {passwordChecks.map(c => (
+                <div key={c.key} className="flex items-center gap-2">
+                  {c.passed ? (
+                    <Check className="w-3.5 h-3.5 text-[#86A383]" />
+                  ) : (
+                    <X className="w-3.5 h-3.5 text-red-400" />
+                  )}
+                  <span className={`text-xs ${c.passed ? "text-[#86A383]" : "text-gray-400"}`}>{c.label}</span>
+                </div>
+              ))}
+            </div>
+          )}
           <input
             type="password"
             placeholder="Confirm password"
@@ -224,7 +219,7 @@ const CustomerAuth = () => {
           <button
             onClick={handleSignUp}
             disabled={
-              loading || !agreedToTerms || !email || !name || password.length < 8 || password !== confirmPassword
+              loading || !agreedToTerms || !email || !name || !allPasswordValid || password !== confirmPassword
             }
             className="bg-[#B57E5D] text-white rounded-xl py-4 w-full font-semibold text-sm disabled:opacity-40 transition-opacity"
           >
