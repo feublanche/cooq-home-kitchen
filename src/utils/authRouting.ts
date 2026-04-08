@@ -1,13 +1,12 @@
 import { NavigateFunction } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 
-const OPERATOR_EMAIL = "cooqdubai@gmail.com";
-
 export async function routeAfterAuth(navigate: NavigateFunction) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return;
 
-  if (user.email === OPERATOR_EMAIL) {
+  const role = user.app_metadata?.role;
+  if (role === "operator") {
     navigate("/admin", { replace: true });
     return;
   }

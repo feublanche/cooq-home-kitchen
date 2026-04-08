@@ -2,8 +2,6 @@ import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 
-const OPERATOR_EMAIL = "cooqdubai@gmail.com";
-
 const CustomerProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -16,7 +14,7 @@ const CustomerProtectedRoute = ({ children }: { children: React.ReactNode }) => 
         navigate("/account", { state: { returnTo: location.pathname }, replace: true });
         return;
       }
-      if (session.user.email === OPERATOR_EMAIL) {
+      if (session.user.app_metadata?.role === "operator") {
         navigate("/admin", { replace: true });
         return;
       }

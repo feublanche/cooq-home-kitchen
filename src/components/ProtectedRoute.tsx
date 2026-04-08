@@ -3,8 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
 
-const OPERATOR_EMAIL = "cooqdubai@gmail.com";
-
 const ProtectedRoute = ({ children }: { children: ReactNode }) => {
   const navigate = useNavigate();
   const [checking, setChecking] = useState(true);
@@ -19,8 +17,8 @@ const ProtectedRoute = ({ children }: { children: ReactNode }) => {
         return;
       }
 
-      // Only the operator email can access /admin
-      if (session.user.email !== OPERATOR_EMAIL) {
+      // Only the operator role can access /admin
+      if (session.user.app_metadata?.role !== "operator") {
         // Check if they're a cook — redirect accordingly
         const { data: cook } = await supabase
           .from("cooks")

@@ -6,7 +6,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
-const OPERATOR_EMAIL = 'cooqdubai@gmail.com';
+
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -36,8 +36,8 @@ serve(async (req) => {
     }
 
     // Only operator can send notifications
-    const callerEmail = claimsData.claims.email as string;
-    if (callerEmail !== OPERATOR_EMAIL) {
+    const appMetadata = claimsData.claims.app_metadata as Record<string, unknown> | undefined;
+    if (appMetadata?.role !== 'operator') {
       return new Response(JSON.stringify({ error: 'Forbidden' }), {
         status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
