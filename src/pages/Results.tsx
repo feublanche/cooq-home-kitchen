@@ -42,6 +42,8 @@ const Results = () => {
   };
 
   const filtered = cooks.filter((cook: any) => {
+    // Only show approved cooks
+    if (cook.status !== "approved") return false;
     if (cuisines && cuisines.length > 0) {
       const cookCuisines = (cook.cuisine || []).map((c: string) => c.toLowerCase());
       const match = cuisines.some((c: string) =>
