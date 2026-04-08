@@ -107,7 +107,7 @@ const CookProfile = () => {
       navigate("/account", { state: { returnTo: "/cook/" + id } });
       return;
     }
-    if (session.user.email === "cooqdubai@gmail.com") {
+    if (session.user.app_metadata?.role === "operator") {
       sessionStorage.setItem("cooq_pending_booking", JSON.stringify(bookingState));
       navigate("/account", { state: { returnTo: "/cook/" + id } });
       return;

@@ -62,7 +62,7 @@ const CookLogin: React.FC = () => {
         setLoading(false);
         return;
       }
-      if (emailVal === "cooqdubai@gmail.com") {
+      if (data.user.app_metadata?.role === "operator") {
         navigate("/admin", { replace: true });
         return;
       }
