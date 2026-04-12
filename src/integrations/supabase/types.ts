@@ -207,16 +207,56 @@ export type Database = {
           },
         ]
       }
+      cook_documents: {
+        Row: {
+          cook_id: string
+          document_type: string
+          file_url: string
+          id: string
+          reviewed_at: string | null
+          status: string
+          uploaded_at: string
+        }
+        Insert: {
+          cook_id: string
+          document_type: string
+          file_url: string
+          id?: string
+          reviewed_at?: string | null
+          status?: string
+          uploaded_at?: string
+        }
+        Update: {
+          cook_id?: string
+          document_type?: string
+          file_url?: string
+          id?: string
+          reviewed_at?: string | null
+          status?: string
+          uploaded_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cook_documents_cook_id_fkey"
+            columns: ["cook_id"]
+            isOneToOne: false
+            referencedRelation: "cooks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cook_menus: {
         Row: {
           cook_id: string | null
           cook_name: string
           created_at: string | null
           cuisine: string | null
+          description: string | null
           dietary: string[] | null
           id: string
           meals: string[] | null
           menu_name: string
+          photo_urls: string[] | null
           price_aed: number
           rejection_reason: string | null
           serves: number | null
@@ -227,10 +267,12 @@ export type Database = {
           cook_name: string
           created_at?: string | null
           cuisine?: string | null
+          description?: string | null
           dietary?: string[] | null
           id?: string
           meals?: string[] | null
           menu_name: string
+          photo_urls?: string[] | null
           price_aed?: number
           rejection_reason?: string | null
           serves?: number | null
@@ -241,10 +283,12 @@ export type Database = {
           cook_name?: string
           created_at?: string | null
           cuisine?: string | null
+          description?: string | null
           dietary?: string[] | null
           id?: string
           meals?: string[] | null
           menu_name?: string
+          photo_urls?: string[] | null
           price_aed?: number
           rejection_reason?: string | null
           serves?: number | null

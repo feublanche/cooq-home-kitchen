@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useCook } from "@/context/CookContext";
 import { toast } from "@/hooks/use-toast";
-import { Bell, ChevronRight, MapPin, Calendar, Clock, UtensilsCrossed, Camera } from "lucide-react";
+import { Bell, ChevronRight, MapPin, Calendar, Clock, UtensilsCrossed, FileText, User, ClipboardList } from "lucide-react";
 import cooqLogo from "@/assets/cooq-logo.png";
 import CookBottomNav from "@/components/cook/CookBottomNav";
 import { format, parseISO } from "date-fns";
@@ -72,7 +72,6 @@ const CookDashboard = () => {
     fetchData();
   }, [fetchData]);
 
-  // Real-time listener
   useEffect(() => {
     if (!cook) return;
     const ch = supabase
@@ -97,6 +96,7 @@ const CookDashboard = () => {
   }, [cook, fetchData]);
 
   const firstName = cook?.name?.split(" ")[0] || "Cooq";
+  const initials = cook?.name?.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase() || "?";
 
   const formatDate = (d: string | null) => {
     if (!d) return "—";
@@ -105,6 +105,41 @@ const CookDashboard = () => {
     } catch {
       return d;
     }
+  };
+
+  // Status banner
+  const statusBanner = () => {
+    if (!cook) return null;
+    const s = cook.status;
+    if (s === "applied" || s === "pending" || s === "reviewed") {
+      return (
+        <div className="mx-4 mt-3 rounded-xl p-3" style={{ backgroundColor: "rgba(181,126,93,0.15)", border: "1px solid rgba(181,126,93,0.3)" }}>
+          <p className="font-body text-sm" style={{ color: "#B57E5D" }}>
+            ⏳ Your profile is under review. We'll be in touch within 48 hours.
+          </p>
+        </div>
+      );
+    }
+    if (s === "approved" || s === "active") {
+      return (
+        <div className="mx-4 mt-3 rounded-xl p-3" style={{ backgroundColor: "rgba(134,163,131,0.15)", border: "1px solid rgba(134,163,131,0.3)" }}>
+          <p className="font-body text-sm" style={{ color: "#86A383" }}>
+            ✓ You're live on Cooq!
+          </p>
+        </div>
+      );
+    }
+    if (s === "suspended" || s === "rejected") {
+      return (
+        <div className="mx-4 mt-3 rounded-xl p-3" style={{ backgroundColor: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)" }}>
+          <p className="font-body text-sm" style={{ color: "#ef4444" }}>
+            Your account is paused. Contact{" "}
+            <a href="mailto:hello@cooq.ae" className="underline">support</a>.
+          </p>
+        </div>
+      );
+    }
+    return null;
   };
 
   return (
@@ -116,6 +151,13 @@ const CookDashboard = () => {
       >
         <img src={cooqLogo} alt="Cooq" className="h-7 brightness-0 invert" />
         <div className="flex items-center gap-3">
+          {cook?.photo_url ? (
+            <img src={cook.photo_url} alt="" className="w-8 h-8 rounded-full object-cover" />
+          ) : (
+            <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: "rgba(134,163,131,0.2)" }}>
+              <span className="font-body text-xs font-bold" style={{ color: "#86A383" }}>{initials}</span>
+            </div>
+          )}
           <span className="font-body" style={{ fontSize: "12px", color: "rgba(249,247,242,0.5)" }}>
             Hi, {firstName}
           </span>
@@ -127,6 +169,9 @@ const CookDashboard = () => {
           </button>
         </div>
       </div>
+
+      {/* Status banner */}
+      {statusBanner()}
 
       {/* Stats */}
       <div className="mt-4 px-4 flex gap-3 overflow-x-auto pb-2">
@@ -169,6 +214,34 @@ const CookDashboard = () => {
           <ChevronRight className="w-5 h-5" style={{ color: "#F9F7F2" }} />
         </div>
       )}
+
+      {/* Quick links */}
+      <div className="px-4 mt-6 grid grid-cols-2 gap-3">
+        {[
+          { icon: ClipboardList, label: "My Orders", path: "/cook/orders" },
+          { icon: UtensilsCrossed, label: "My Menus", path: "/cook/menus" },
+          { icon: User, label: "My Profile", path: "/cook/profile" },
+          { icon: FileText, label: "Documents", path: "/cook/documents" },
+        ].map((link) => {
+          const Icon = link.icon;
+          return (
+            <button
+              key={link.path}
+              className="flex items-center gap-2 rounded-xl py-3 px-4 font-body font-semibold"
+              style={{
+                fontSize: "13px",
+                backgroundColor: "rgba(249,247,242,0.05)",
+                border: "1px solid rgba(134,163,131,0.18)",
+                color: "#F9F7F2",
+              }}
+              onClick={() => navigate(link.path)}
+            >
+              <Icon className="w-4 h-4" style={{ color: "#86A383" }} />
+              {link.label}
+            </button>
+          );
+        })}
+      </div>
 
       {/* Upcoming sessions */}
       <div className="mt-6 px-4">
@@ -254,31 +327,6 @@ const CookDashboard = () => {
             </div>
           ))
         )}
-      </div>
-
-      {/* Quick actions */}
-      <div className="px-4 mt-6 grid grid-cols-2 gap-3">
-        <button
-          className="flex items-center justify-center gap-2 rounded-xl py-3 font-body font-semibold"
-          style={{ fontSize: "14px", backgroundColor: "#B57E5D", color: "#fff" }}
-          onClick={() => navigate("/cook/menu-submit")}
-        >
-          <UtensilsCrossed className="w-4 h-4" />
-          Submit a Menu
-        </button>
-        <button
-          className="flex items-center justify-center gap-2 rounded-xl py-3 font-body font-semibold"
-          style={{
-            fontSize: "14px",
-            backgroundColor: "transparent",
-            color: "#86A383",
-            border: "1px solid rgba(134,163,131,0.4)",
-          }}
-          onClick={() => navigate("/cook/photo-upload")}
-        >
-          <Camera className="w-4 h-4" />
-          Upload Photos
-        </button>
       </div>
 
       <CookBottomNav pendingCount={pendingCount} />

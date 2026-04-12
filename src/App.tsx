@@ -21,12 +21,16 @@ import Bookings from "./pages/Bookings";
 import AccountPage from "./pages/Account";
 import NotFound from "./pages/NotFound";
 import CookLogin from "./pages/cook/CookLogin";
+import CookSignup from "./pages/cook/CookSignup";
 import CookDashboard from "./pages/cook/CookDashboard";
 import CookOrders from "./pages/cook/CookOrders";
 import CookMenuSubmit from "./pages/cook/CookMenuSubmit";
+import CookMenus from "./pages/cook/CookMenus";
 import CookPhotoUpload from "./pages/cook/CookPhotoUpload";
 import CookEarnings from "./pages/cook/CookEarnings";
 import CookAvailability from "./pages/cook/CookAvailability";
+import CookProfilePage from "./pages/cook/CookProfile";
+import CookDocuments from "./pages/cook/CookDocuments";
 import Payment from "./pages/Payment";
 import RateSession from "./pages/RateSession";
 import CustomerAuth from "./pages/CustomerAuth";
@@ -65,13 +69,18 @@ const App = () => (
               <Route path="/privacy" element={<Privacy />} />
               <Route path="/cook-agreement" element={<CookAgreement />} />
               <Route path="/reset-password" element={<ResetPassword />} />
+              {/* Cook portal */}
               <Route path="/cook/login" element={<CookLogin />} />
+              <Route path="/cook/signup" element={<CookSignup />} />
               <Route path="/cook/dashboard" element={<CookProtectedRoute><CookDashboard /></CookProtectedRoute>} />
               <Route path="/cook/orders" element={<CookProtectedRoute><CookOrders /></CookProtectedRoute>} />
               <Route path="/cook/menu-submit" element={<CookProtectedRoute><CookMenuSubmit /></CookProtectedRoute>} />
+              <Route path="/cook/menus" element={<CookProtectedRoute><CookMenus /></CookProtectedRoute>} />
               <Route path="/cook/photo-upload" element={<CookProtectedRoute><CookPhotoUpload /></CookProtectedRoute>} />
               <Route path="/cook/earnings" element={<CookProtectedRoute><CookEarnings /></CookProtectedRoute>} />
               <Route path="/cook/availability" element={<CookProtectedRoute><CookAvailability /></CookProtectedRoute>} />
+              <Route path="/cook/profile" element={<CookProtectedRoute><CookProfilePage /></CookProtectedRoute>} />
+              <Route path="/cook/documents" element={<CookProtectedRoute><CookDocuments /></CookProtectedRoute>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </div>
