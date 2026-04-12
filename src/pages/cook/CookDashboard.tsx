@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useCook } from "@/context/CookContext";
 import { toast } from "@/hooks/use-toast";
-import { Bell, ChevronRight, MapPin, Calendar, Clock, UtensilsCrossed, FileText, User } from "lucide-react";
+import { Bell, ChevronRight, MapPin, Calendar, Clock, UtensilsCrossed, FileText, User, ClipboardList } from "lucide-react";
 import cooqLogo from "@/assets/cooq-logo.png";
 import CookBottomNav from "@/components/cook/CookBottomNav";
 import { format, parseISO } from "date-fns";
