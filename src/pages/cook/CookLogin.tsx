@@ -238,16 +238,18 @@ const CookLogin: React.FC = () => {
           )}
         </div>
 
-        {/* New cook info */}
+        {/* Apply to cook */}
         <div className="mt-5 pt-5" style={{ borderTop: "1px solid rgba(249,247,242,0.1)" }}>
           <p className="font-body text-[13px] font-semibold mb-1" style={{ color: "#F9F7F2" }}>
-            New cook?
+            Don't have an account?
           </p>
-          <p className="font-body text-xs leading-relaxed mb-2" style={{ color: "rgba(249,247,242,0.5)" }}>
-            Accounts are set up after your vetting is complete. Email{" "}
-            <a href="mailto:hello@cooq.ae" className="underline" style={{ color: "#86A383" }}>hello@cooq.ae</a>{" "}
-            to apply.
-          </p>
+          <button
+            onClick={() => navigate("/cook/signup")}
+            className="font-body text-sm underline"
+            style={{ color: "#86A383" }}
+          >
+            Apply to cook →
+          </button>
         </div>
       </div>
 
