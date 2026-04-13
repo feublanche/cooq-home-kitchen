@@ -81,18 +81,22 @@ const CustomerAuth = () => {
       return;
     }
     setLoading(true);
-    const { error: err } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { data: { full_name: name } },
-    });
-    setLoading(false);
-    if (err) {
-      setError(err.message);
-      return;
+    try {
+      const { data, error: err } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { data: { full_name: name } },
+      });
+      setLoading(false);
+      if (err) {
+        setError(err.message);
+        return;
+      }
+      navigate("/", { replace: true });
+    } catch (e: any) {
+      setLoading(false);
+      setError(e?.message || "An unexpected error occurred");
     }
-    setInfo("Check your inbox to confirm your email before booking.");
-    setTab("signin");
   };
 
   return (

@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import cooqLogo from "@/assets/cooq-logo.png";
 import { Loader2, Camera, Check } from "lucide-react";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 const cuisineOptions = [
   "Lebanese", "Indian", "Mediterranean", "Continental", "Emirati", "Filipino",
