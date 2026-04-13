@@ -9,13 +9,12 @@ import CookBottomNav from "@/components/cook/CookBottomNav";
 interface DocSlot {
   type: string;
   label: string;
-  required: boolean;
+  description: string;
 }
 
 const DOC_SLOTS: DocSlot[] = [
-  { type: "emirates_id", label: "Emirates ID (front)", required: true },
-  { type: "health_card", label: "Health Card / Food Handler Certificate", required: true },
-  { type: "certification", label: "Additional Certification", required: false },
+  { type: "emirates_id", label: "Emirates ID (front)", description: "Upload a photo of your Emirates ID (front side)" },
+  { type: "health_card", label: "Health Card / Food Safety Certificate", description: "Upload your DHA health card or food handler certificate" },
 ];
 
 interface DocRecord {
@@ -33,6 +32,8 @@ const CookDocuments = () => {
   const [loading, setLoading] = useState(true);
   const [uploadingType, setUploadingType] = useState<string | null>(null);
   const fileRefs = useRef<Record<string, HTMLInputElement | null>>({});
+
+  const isPending = cook?.status === "pending" || cook?.status === "applied";
 
   const fetchDocs = async () => {
     if (!cook) return;
@@ -65,7 +66,7 @@ const CookDocuments = () => {
     setUploadingType(type);
 
     const ext = file.name.split(".").pop() || "jpg";
-    const path = `${cook.user_id}/${type}.${ext}`;
+    const path = `${cook.id}/${type}.${ext}`;
 
     const { error: uploadErr } = await supabase.storage
       .from("cook-documents")
@@ -93,6 +94,19 @@ const CookDocuments = () => {
       toast({ title: "Failed to save document", variant: "destructive" });
     } else {
       toast({ title: "Uploaded — under review ✓" });
+
+      // Notify operator
+      try {
+        await supabase.functions.invoke("notify-cook", {
+          body: {
+            cook_name: cook.name,
+            cook_email: cook.email,
+            event_type: "document_uploaded",
+            booking_details: { document_type: type },
+          },
+        });
+      } catch (e) { console.log("Notification skipped:", e); }
+
       fetchDocs();
     }
     setUploadingType(null);
@@ -105,26 +119,36 @@ const CookDocuments = () => {
 
   const statusLabel = (status: string) => {
     if (status === "verified") return "Verified ✓";
-    return "Uploaded — under review ✓";
+    return "Uploaded — under review";
   };
 
+  const statusColor = (status: string) => status === "verified" ? "#86A383" : "#B57E5D";
+
   return (
-    <div className="min-h-screen pb-24 px-4 pt-4 bg-background">
+    <div className="min-h-screen pb-24 px-4 pt-4" style={{ backgroundColor: "#FAF9F6" }}>
       <div className="flex items-center gap-3 mb-6">
-        <button onClick={() => navigate(-1)}>
-          <ArrowLeft className="w-5 h-5 text-foreground" />
+        <button onClick={() => navigate("/cook/dashboard")}>
+          <ArrowLeft className="w-5 h-5" style={{ color: "#2C3B3A" }} />
         </button>
-        <h1 className="font-display text-foreground" style={{ fontSize: "20px" }}>Documents</h1>
+        <h1 className="font-display" style={{ fontSize: "20px", color: "#2C3B3A" }}>Documents</h1>
       </div>
 
-      <p className="font-body mb-6 text-muted-foreground" style={{ fontSize: "12px" }}>
+      {isPending && (
+        <div className="rounded-xl p-3 mb-4" style={{ backgroundColor: "rgba(134,163,131,0.08)", border: "1px solid rgba(134,163,131,0.15)" }}>
+          <p className="font-body text-xs" style={{ color: "#86A383" }}>
+            Upload your documents now to speed up your approval.
+          </p>
+        </div>
+      )}
+
+      <p className="font-body mb-6" style={{ fontSize: "12px", color: "#999" }}>
         Upload your verification documents. Our team reviews them within 48 hours.
       </p>
 
       {loading ? (
         <div className="space-y-3">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="rounded-xl animate-pulse bg-card border border-gray-100" style={{ height: "80px" }} />
+          {[1, 2].map((i) => (
+            <div key={i} className="rounded-xl animate-pulse bg-white border border-gray-100" style={{ height: "100px" }} />
           ))}
         </div>
       ) : (
@@ -134,18 +158,16 @@ const CookDocuments = () => {
             const isUploading = uploadingType === slot.type;
 
             return (
-              <div key={slot.type} className="rounded-xl p-4 bg-card border border-gray-100">
+              <div key={slot.type} className="rounded-xl p-4 bg-white border border-gray-100">
                 <div className="flex justify-between items-start">
-                  <div>
-                    <p className="font-body font-semibold text-foreground" style={{ fontSize: "14px" }}>{slot.label}</p>
-                    <p className="font-body mt-0.5 text-muted-foreground" style={{ fontSize: "11px" }}>
-                      {slot.required ? "Required" : "Optional"}
-                    </p>
+                  <div className="flex-1">
+                    <p className="font-body font-semibold" style={{ fontSize: "14px", color: "#2C3B3A" }}>{slot.label}</p>
+                    <p className="font-body mt-1" style={{ fontSize: "11px", color: "#999" }}>{slot.description}</p>
                   </div>
                   {doc && (
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1 shrink-0 ml-2">
                       {statusIcon(doc.status)}
-                      <span className="font-body" style={{ fontSize: "11px", color: doc.status === "verified" ? "#86A383" : "#B57E5D" }}>
+                      <span className="font-body" style={{ fontSize: "11px", color: statusColor(doc.status) }}>
                         {statusLabel(doc.status)}
                       </span>
                     </div>
@@ -153,7 +175,7 @@ const CookDocuments = () => {
                 </div>
 
                 {!doc && (
-                  <p className="font-body mt-1 text-gray-400" style={{ fontSize: "11px" }}>Not uploaded</p>
+                  <p className="font-body mt-1" style={{ fontSize: "11px", color: "#ccc" }}>Not uploaded</p>
                 )}
 
                 <input
@@ -184,7 +206,7 @@ const CookDocuments = () => {
       )}
 
       <div className="mt-6 rounded-xl p-4" style={{ backgroundColor: "rgba(134,163,131,0.06)", border: "1px solid rgba(134,163,131,0.15)" }}>
-        <p className="font-body text-muted-foreground" style={{ fontSize: "12px" }}>
+        <p className="font-body" style={{ fontSize: "12px", color: "#999" }}>
           Documents are securely stored and only visible to the Cooq team. We verify them as part of your onboarding.
         </p>
       </div>

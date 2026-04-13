@@ -1,5 +1,5 @@
 import { useLocation, useNavigate } from "react-router-dom";
-import { LayoutDashboard, ClipboardList, UtensilsCrossed, User } from "lucide-react";
+import { LayoutDashboard, ClipboardList, UtensilsCrossed, FileText } from "lucide-react";
 import { useCook } from "@/context/CookContext";
 
 interface CookBottomNavProps {
@@ -8,9 +8,9 @@ interface CookBottomNavProps {
 
 const tabs = [
   { icon: LayoutDashboard, label: "Home", path: "/cook/dashboard" },
-  { icon: ClipboardList, label: "Orders", path: "/cook/orders" },
   { icon: UtensilsCrossed, label: "Menus", path: "/cook/menus" },
-  { icon: User, label: "Profile", path: "/cook/profile" },
+  { icon: ClipboardList, label: "Orders", path: "/cook/orders" },
+  { icon: FileText, label: "Documents", path: "/cook/documents" },
 ];
 
 const CookBottomNav = ({ pendingCount = 0 }: CookBottomNavProps) => {
@@ -18,15 +18,14 @@ const CookBottomNav = ({ pendingCount = 0 }: CookBottomNavProps) => {
   const navigate = useNavigate();
   const { cook } = useCook();
 
-  // Only show for approved/active cooks
   if (!cook || (cook.status !== "approved" && cook.status !== "active")) {
     return null;
   }
 
   return (
     <div
-      className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around h-16 bg-white border-t border-gray-200"
-      style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+      className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around h-16 border-t"
+      style={{ backgroundColor: "#FAF9F6", borderColor: "rgba(0,0,0,0.08)", paddingBottom: "env(safe-area-inset-bottom)" }}
     >
       {tabs.map((tab) => {
         const Icon = tab.icon;

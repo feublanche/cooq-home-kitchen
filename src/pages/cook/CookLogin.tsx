@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import cooqLogo from "@/assets/cooq-logo.png";
-import { Loader2 } from "lucide-react";
+import { Loader2, ArrowLeft } from "lucide-react";
 import OtpInput from "@/components/OtpInput";
 
 const CookLogin = () => {
@@ -84,7 +84,7 @@ const CookLogin = () => {
 
   if (checkingSession) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: "#FAF9F6" }}>
         <Loader2 className="w-8 h-8 animate-spin" style={{ color: "#86A383" }} />
       </div>
     );
@@ -92,14 +92,17 @@ const CookLogin = () => {
 
   if (screen === "otp") {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center px-6 bg-background">
+      <div className="min-h-screen flex flex-col items-center justify-center px-6" style={{ backgroundColor: "#FAF9F6" }}>
         <img src={cooqLogo} alt="Cooq" className="h-8 mb-8" />
-        <div className="w-full max-w-sm rounded-2xl p-6 bg-card border border-gray-100">
-          <h1 className="font-display italic text-2xl text-center mb-1 text-foreground">
-            Enter your code
+        <div className="w-full max-w-sm rounded-2xl p-6 bg-white border border-gray-100">
+          <button onClick={() => setScreen("email")} className="flex items-center gap-1 font-body text-xs mb-4" style={{ color: "#86A383" }}>
+            <ArrowLeft className="w-4 h-4" /> Change email
+          </button>
+          <h1 className="font-display italic text-2xl text-center mb-1" style={{ color: "#2C3B3A" }}>
+            Check your email
           </h1>
-          <p className="font-body text-xs text-center mb-6 text-muted-foreground">
-            We sent a 6-digit code to <span style={{ color: "#86A383" }}>{email}</span>. Check your inbox.
+          <p className="font-body text-xs text-center mb-6" style={{ color: "#999" }}>
+            We sent a sign-in link to <span style={{ color: "#86A383" }}>{email}</span>. Click the link or enter the code below.
           </p>
 
           <OtpInput value={code} onChange={setCode} onComplete={handleVerify} error={!!otpError} />
@@ -115,13 +118,13 @@ const CookLogin = () => {
             onClick={() => handleVerify(code)}
             disabled={verifying || code.length < 6}
             className="w-full py-3 rounded-xl font-body font-semibold text-sm mt-6 disabled:opacity-50"
-            style={{ backgroundColor: "#B57E5D", color: "#F9F7F2" }}
+            style={{ backgroundColor: "#B87355", color: "#FAF9F6" }}
           >
             {verifying ? "Verifying..." : "Verify"}
           </button>
 
-          <button onClick={handleResend} className="font-body text-xs mt-4 block mx-auto hover:underline text-muted-foreground">
-            Didn't get it? Resend code
+          <button onClick={handleResend} className="font-body text-xs mt-4 block mx-auto hover:underline" style={{ color: "#999" }}>
+            Didn't get it? Resend
           </button>
         </div>
       </div>
@@ -129,14 +132,14 @@ const CookLogin = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-6 bg-background">
+    <div className="min-h-screen flex flex-col items-center justify-center px-6" style={{ backgroundColor: "#FAF9F6" }}>
       <img src={cooqLogo} alt="Cooq" className="h-8 mb-8" />
-      <div className="w-full max-w-sm rounded-2xl p-6 bg-card border border-gray-100">
-        <h1 className="font-display italic text-2xl text-center mb-1 text-foreground">
+      <div className="w-full max-w-sm rounded-2xl p-6 bg-white border border-gray-100">
+        <h1 className="font-display italic text-2xl text-center mb-1" style={{ color: "#2C3B3A" }}>
           Welcome back
         </h1>
-        <p className="font-body text-xs text-center mb-6 text-muted-foreground">
-          Enter your email — we'll send you a 6-digit code
+        <p className="font-body text-xs text-center mb-6" style={{ color: "#999" }}>
+          Enter your email — we'll send you a sign-in link
         </p>
 
         {error && (
@@ -146,20 +149,21 @@ const CookLogin = () => {
         <input
           type="email" placeholder="Email" value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="w-full py-3 px-4 rounded-xl font-body text-sm border border-gray-200 bg-white text-foreground outline-none focus:ring-1 focus:ring-primary"
+          className="w-full py-3 px-4 rounded-xl font-body text-sm border border-gray-200 bg-white outline-none focus:ring-1 focus:ring-[#86A383]"
+          style={{ color: "#2C3B3A" }}
         />
 
         <button
           onClick={handleSendCode} disabled={loading}
           className="w-full py-3 rounded-xl font-body font-semibold text-sm mt-6 flex items-center justify-center gap-2 disabled:opacity-50"
-          style={{ backgroundColor: "#B57E5D", color: "#F9F7F2" }}
+          style={{ backgroundColor: "#B87355", color: "#FAF9F6" }}
         >
           {loading && <Loader2 className="w-4 h-4 animate-spin" />}
           Send my code →
         </button>
 
         <div className="mt-5 pt-5 border-t border-gray-100">
-          <p className="font-body text-[13px] font-semibold mb-1 text-foreground">
+          <p className="font-body text-[13px] font-semibold mb-1" style={{ color: "#2C3B3A" }}>
             New cook?
           </p>
           <button onClick={() => navigate("/cook/signup")} className="font-body text-sm underline" style={{ color: "#86A383" }}>
@@ -168,9 +172,9 @@ const CookLogin = () => {
         </div>
       </div>
 
-      <p className="font-body text-xs mt-6 text-muted-foreground">
+      <p className="font-body text-xs mt-6" style={{ color: "#999" }}>
         Need help? Email{" "}
-        <a href="mailto:hello@cooq.ae" className="underline">hello@cooq.ae</a>
+        <a href="mailto:cooqdubai@gmail.com" className="underline">cooqdubai@gmail.com</a>
       </p>
     </div>
   );
