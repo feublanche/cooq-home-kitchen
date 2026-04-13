@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useCook } from "@/context/CookContext";
-import { ArrowLeft, ClipboardList } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import CookBottomNav from "@/components/cook/CookBottomNav";
 import { format, parseISO } from "date-fns";
 
