@@ -3,23 +3,18 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import cooqLogo from "@/assets/cooq-logo.png";
 import { Loader2, ArrowLeft } from "lucide-react";
-import OtpInput from "@/components/OtpInput";
 
 const CookLogin = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const stateError = (location.state as any)?.error || "";
 
-  const [screen, setScreen] = useState<"email" | "otp">("email");
+  const [screen, setScreen] = useState<"email" | "waiting">("email");
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(stateError);
   const [checkingSession, setCheckingSession] = useState(true);
   const hasRedirected = useRef(false);
-
-  const [code, setCode] = useState("");
-  const [otpError, setOtpError] = useState("");
-  const [verifying, setVerifying] = useState(false);
 
   useEffect(() => {
     const checkExisting = async () => {
@@ -38,7 +33,21 @@ const CookLogin = () => {
     checkExisting();
   }, [navigate]);
 
-  const handleSendCode = async () => {
+  // Listen for magic link sign-in
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === "SIGNED_IN" && session && screen === "waiting") {
+        if (session.user?.app_metadata?.role === "operator") {
+          navigate("/admin", { replace: true });
+          return;
+        }
+        navigate("/cook/dashboard", { replace: true });
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [navigate, screen]);
+
+  const handleSendLink = async () => {
     if (!email.trim() || !email.includes("@")) { setError("Enter a valid email"); return; }
     setError("");
     setLoading(true);
@@ -48,38 +57,7 @@ const CookLogin = () => {
     });
     setLoading(false);
     if (otpErr) { setError(otpErr.message); return; }
-    setScreen("otp");
-  };
-
-  const handleVerify = async (token: string) => {
-    setOtpError("");
-    setVerifying(true);
-    const { data, error: verErr } = await supabase.auth.verifyOtp({
-      email: email.trim(),
-      token,
-      type: "email",
-    });
-    setVerifying(false);
-    if (verErr) {
-      setOtpError("That code is incorrect. Try again or resend.");
-      setCode("");
-      return;
-    }
-    if (data.user?.app_metadata?.role === "operator") {
-      navigate("/admin", { replace: true });
-      return;
-    }
-    navigate("/cook/dashboard", { replace: true });
-  };
-
-  const handleResend = async () => {
-    setOtpError("");
-    setCode("");
-    const { error: err } = await supabase.auth.signInWithOtp({
-      email: email.trim(),
-      options: { shouldCreateUser: false },
-    });
-    if (err) setOtpError(err.message);
+    setScreen("waiting");
   };
 
   if (checkingSession) {
@@ -90,7 +68,7 @@ const CookLogin = () => {
     );
   }
 
-  if (screen === "otp") {
+  if (screen === "waiting") {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center px-6" style={{ backgroundColor: "#FAF9F6" }}>
         <img src={cooqLogo} alt="Cooq" className="h-8 mb-8" />
@@ -102,28 +80,13 @@ const CookLogin = () => {
             Check your email
           </h1>
           <p className="font-body text-xs text-center mb-6" style={{ color: "#999" }}>
-            We sent a sign-in link to <span style={{ color: "#86A383" }}>{email}</span>. Click the link or enter the code below.
+            We sent a sign-in link to <span style={{ color: "#86A383" }}>{email}</span>. Click the link in your email to continue.
           </p>
-
-          <OtpInput value={code} onChange={setCode} onComplete={handleVerify} error={!!otpError} />
-
-          {otpError && <p className="font-body text-sm text-red-500 text-center mt-3">{otpError}</p>}
-          {verifying && (
-            <div className="flex justify-center mt-4">
-              <Loader2 className="w-5 h-5 animate-spin" style={{ color: "#86A383" }} />
-            </div>
-          )}
-
-          <button
-            onClick={() => handleVerify(code)}
-            disabled={verifying || code.length < 6}
-            className="w-full py-3 rounded-xl font-body font-semibold text-sm mt-6 disabled:opacity-50"
-            style={{ backgroundColor: "#B87355", color: "#FAF9F6" }}
-          >
-            {verifying ? "Verifying..." : "Verify"}
-          </button>
-
-          <button onClick={handleResend} className="font-body text-xs mt-4 block mx-auto hover:underline" style={{ color: "#999" }}>
+          <div className="flex justify-center">
+            <Loader2 className="w-5 h-5 animate-spin" style={{ color: "#86A383" }} />
+          </div>
+          <p className="font-body text-xs text-center mt-4" style={{ color: "#999" }}>Waiting for you to click the link...</p>
+          <button onClick={handleSendLink} className="font-body text-xs mt-4 block mx-auto hover:underline" style={{ color: "#999" }}>
             Didn't get it? Resend
           </button>
         </div>
@@ -154,12 +117,12 @@ const CookLogin = () => {
         />
 
         <button
-          onClick={handleSendCode} disabled={loading}
+          onClick={handleSendLink} disabled={loading}
           className="w-full py-3 rounded-xl font-body font-semibold text-sm mt-6 flex items-center justify-center gap-2 disabled:opacity-50"
           style={{ backgroundColor: "#B87355", color: "#FAF9F6" }}
         >
           {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-          Send my code →
+          Send sign-in link →
         </button>
 
         <div className="mt-5 pt-5 border-t border-gray-100">

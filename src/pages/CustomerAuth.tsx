@@ -1,28 +1,38 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import cooqLogo from "@/assets/cooq-logo.png";
-import { Loader2 } from "lucide-react";
-import OtpInput from "@/components/OtpInput";
+import { Loader2, ArrowLeft } from "lucide-react";
 
 const CustomerAuth = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const returnTo = (location.state as any)?.returnTo || "/";
 
-  const [screen, setScreen] = useState<"collect" | "otp">("collect");
+  const [screen, setScreen] = useState<"collect" | "waiting">("collect");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // OTP screen
-  const [code, setCode] = useState("");
-  const [otpError, setOtpError] = useState("");
-  const [verifying, setVerifying] = useState(false);
+  // Listen for magic link sign-in
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "SIGNED_IN" && screen === "waiting") {
+        const savedBookingState = sessionStorage.getItem("cooq_pending_booking");
+        if (savedBookingState) {
+          sessionStorage.removeItem("cooq_pending_booking");
+          navigate("/book", { replace: true, state: JSON.parse(savedBookingState) });
+        } else {
+          navigate(returnTo, { replace: true });
+        }
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [navigate, returnTo, screen]);
 
-  const handleSendCode = async () => {
+  const handleSendLink = async () => {
     if (!name.trim()) { setError("Please enter your name"); return; }
     if (!email.trim() || !email.includes("@")) { setError("Please enter a valid email"); return; }
     setError("");
@@ -36,74 +46,30 @@ const CustomerAuth = () => {
     });
     setLoading(false);
     if (otpErr) { setError(otpErr.message); return; }
-    setScreen("otp");
-  };
-
-  const handleVerify = async (token: string) => {
-    setOtpError("");
-    setVerifying(true);
-    const { error: verErr } = await supabase.auth.verifyOtp({
-      email: email.trim(),
-      token,
-      type: "email",
-    });
-    setVerifying(false);
-    if (verErr) {
-      setOtpError("That code is incorrect. Try again or resend.");
-      setCode("");
-      return;
-    }
-    const savedBookingState = sessionStorage.getItem("cooq_pending_booking");
-    if (savedBookingState) {
-      sessionStorage.removeItem("cooq_pending_booking");
-      navigate("/book", { replace: true, state: JSON.parse(savedBookingState) });
-    } else {
-      navigate(returnTo, { replace: true });
-    }
-  };
-
-  const handleResend = async () => {
-    setOtpError("");
-    setCode("");
-    const { error: err } = await supabase.auth.signInWithOtp({
-      email: email.trim(),
-      options: { shouldCreateUser: true, data: { full_name: name.trim(), phone: phone.trim() || undefined } },
-    });
-    if (err) setOtpError(err.message);
+    setScreen("waiting");
   };
 
   const inputClass = "border border-gray-200 rounded-xl px-4 py-3 w-full text-sm font-body focus:outline-none focus:ring-2 focus:ring-primary bg-white text-foreground";
 
-  if (screen === "otp") {
+  if (screen === "waiting") {
     return (
       <div className="bg-[hsl(var(--background))] min-h-screen max-w-[430px] mx-auto px-4">
         <div className="flex justify-center pt-8 mb-4">
           <img src={cooqLogo} alt="Cooq" className="h-8" />
         </div>
-        <h2 className="font-display italic text-xl text-center text-foreground mb-1">Enter your code</h2>
-        <p className="font-body text-sm text-center text-muted-foreground mb-8">
-          We sent a 6-digit code to <span className="font-semibold text-foreground">{email}</span>. Check your inbox.
-        </p>
-
-        <OtpInput value={code} onChange={setCode} onComplete={handleVerify} error={!!otpError} />
-
-        {otpError && <p className="text-sm text-red-600 text-center mt-3">{otpError}</p>}
-        {verifying && (
-          <div className="flex justify-center mt-4">
-            <Loader2 className="w-5 h-5 animate-spin text-primary" />
-          </div>
-        )}
-
-        <button
-          onClick={() => handleVerify(code)}
-          disabled={verifying || code.length < 6}
-          className="bg-accent text-accent-foreground rounded-xl py-4 w-full font-semibold text-sm mt-6 disabled:opacity-40 transition-opacity"
-        >
-          {verifying ? "Verifying..." : "Verify"}
+        <button onClick={() => setScreen("collect")} className="flex items-center gap-1 font-body text-xs mb-4 text-primary">
+          <ArrowLeft className="w-4 h-4" /> Change email
         </button>
-
-        <button onClick={handleResend} className="text-xs text-muted-foreground w-full text-center mt-4 hover:underline">
-          Didn't get it? Resend code
+        <h2 className="font-display italic text-xl text-center text-foreground mb-1">Check your email</h2>
+        <p className="font-body text-sm text-center text-muted-foreground mb-8">
+          We sent a sign-in link to <span className="font-semibold text-foreground">{email}</span>. Click the link in your email to continue.
+        </p>
+        <div className="flex justify-center">
+          <Loader2 className="w-5 h-5 animate-spin text-primary" />
+        </div>
+        <p className="font-body text-xs text-center text-muted-foreground mt-4">Waiting for you to click the link...</p>
+        <button onClick={handleSendLink} className="text-xs text-muted-foreground w-full text-center mt-4 hover:underline">
+          Didn't get it? Resend link
         </button>
       </div>
     );
@@ -116,7 +82,7 @@ const CustomerAuth = () => {
       </div>
       <h2 className="font-display italic text-2xl text-center text-foreground mb-1">Welcome to Cooq</h2>
       <p className="font-body text-sm text-center text-muted-foreground mb-6">
-        Enter your email — we'll send you a 6-digit code
+        Enter your details — we'll send you a sign-in link by email
       </p>
 
       {error && <p className="text-sm text-red-600 mb-4">{error}</p>}
@@ -142,11 +108,11 @@ const CustomerAuth = () => {
       </div>
 
       <button
-        onClick={handleSendCode} disabled={loading}
+        onClick={handleSendLink} disabled={loading}
         className="bg-accent text-accent-foreground rounded-xl py-4 w-full font-semibold text-sm mt-6 disabled:opacity-40 transition-opacity flex items-center justify-center gap-2"
       >
         {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-        Send my code →
+        Continue →
       </button>
 
       <p className="text-xs text-muted-foreground text-center mt-4">

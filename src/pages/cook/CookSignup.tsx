@@ -1,10 +1,9 @@
-import { useState, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useRef, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import cooqLogo from "@/assets/cooq-logo.png";
 import { Loader2, Camera, Check, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
-import OtpInput from "@/components/OtpInput";
 
 const cuisineOptions = [
   "Lebanese", "Indian", "Mediterranean", "Continental", "Emirati", "Filipino",
@@ -24,10 +23,13 @@ const experienceOptions = [
 
 const dayOptions = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
+const PUBLISHED_URL = "https://cooq-home-kitchen.lovable.app";
+
 const CookSignup = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [step, setStep] = useState(1);
-  const [otpScreen, setOtpScreen] = useState(false);
+  const [waitingForLink, setWaitingForLink] = useState(false);
 
   // Step 1
   const [name, setName] = useState("");
@@ -37,11 +39,6 @@ const CookSignup = () => {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [userId, setUserId] = useState("");
-
-  // OTP
-  const [code, setCode] = useState("");
-  const [otpError, setOtpError] = useState("");
-  const [verifying, setVerifying] = useState(false);
 
   // Step 2
   const [bio, setBio] = useState("");
@@ -55,9 +52,54 @@ const CookSignup = () => {
   const [done, setDone] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
+  // On mount: detect ?step=2 with authenticated session
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get("step") === "2") {
+      const checkAuth = async () => {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          setUserId(session.user.id);
+          setName(session.user.user_metadata?.full_name || "");
+          setEmail(session.user.email || "");
+          setPhone(session.user.user_metadata?.phone || "");
+          setStep(2);
+        }
+      };
+      checkAuth();
+    }
+  }, [location.search]);
+
+  // Listen for auth state change (magic link callback)
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === "SIGNED_IN" && session && waitingForLink) {
+        setWaitingForLink(false);
+
+        // Upsert cook row
+        const { data: existing } = await supabase
+          .from("cooks").select("id").eq("user_id", session.user.id).maybeSingle();
+
+        if (!existing) {
+          await supabase.from("cooks").insert({
+            user_id: session.user.id,
+            name: name.trim(),
+            email: email.trim(),
+            phone: phone.trim(),
+            status: "pending",
+          } as any);
+        }
+
+        setUserId(session.user.id);
+        setStep(2);
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [waitingForLink, name, email, phone]);
+
   const inputCls = "w-full py-3 px-4 rounded-xl font-body text-sm border border-gray-200 bg-white outline-none focus:ring-1 focus:ring-[#86A383]";
 
-  const handleSendCode = async () => {
+  const handleSendLink = async () => {
     const newErrors: Record<string, string> = {};
     if (!name.trim()) newErrors.name = "Full name is required";
     if (!email.trim() || !email.includes("@")) newErrors.email = "Valid email is required";
@@ -72,60 +114,12 @@ const CookSignup = () => {
       options: {
         shouldCreateUser: true,
         data: { full_name: name.trim(), phone: phone.trim() },
+        emailRedirectTo: `${PUBLISHED_URL}/cook/signup?step=2`,
       },
     });
     setLoading(false);
     if (otpErr) { setErrors({ general: otpErr.message }); return; }
-    setOtpScreen(true);
-  };
-
-  const handleVerify = async (token: string) => {
-    setOtpError("");
-    setVerifying(true);
-    const { data, error: verErr } = await supabase.auth.verifyOtp({
-      email: email.trim(),
-      token,
-      type: "email",
-    });
-    setVerifying(false);
-    if (verErr) {
-      setOtpError("That code is incorrect. Try again or resend.");
-      setCode("");
-      return;
-    }
-
-    if (!data.user) {
-      setOtpError("Verification failed. Try again.");
-      return;
-    }
-
-    // Upsert cook row
-    const { data: existing } = await supabase
-      .from("cooks").select("id").eq("user_id", data.user.id).maybeSingle();
-
-    if (!existing) {
-      await supabase.from("cooks").insert({
-        user_id: data.user.id,
-        name: name.trim(),
-        email: email.trim(),
-        phone: phone.trim(),
-        status: "pending",
-      } as any);
-    }
-
-    setUserId(data.user.id);
-    setOtpScreen(false);
-    setStep(2);
-  };
-
-  const handleResend = async () => {
-    setOtpError("");
-    setCode("");
-    const { error: err } = await supabase.auth.signInWithOtp({
-      email: email.trim(),
-      options: { shouldCreateUser: true, data: { full_name: name.trim(), phone: phone.trim() } },
-    });
-    if (err) setOtpError(err.message);
+    setWaitingForLink(true);
   };
 
   const handlePhotoSelect = (file: File | null) => {
@@ -185,7 +179,6 @@ const CookSignup = () => {
 
     if (updateError) { toast.error("Profile update failed: " + updateError.message); setSubmitting(false); return; }
 
-    // Trigger notification to operator
     try {
       await supabase.functions.invoke("notify-cook", {
         body: {
@@ -229,8 +222,8 @@ const CookSignup = () => {
     );
   }
 
-  // OTP screen
-  if (otpScreen) {
+  // Waiting for magic link screen
+  if (waitingForLink) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center px-6" style={{ backgroundColor: "#FAF9F6" }}>
         <img src={cooqLogo} alt="Cooq" className="h-8 mb-6" />
@@ -245,32 +238,18 @@ const CookSignup = () => {
           </div>
         </div>
         <div className="w-full max-w-sm rounded-2xl p-6 bg-white border border-gray-100">
-          <button onClick={() => setOtpScreen(false)} className="flex items-center gap-1 font-body text-xs mb-4" style={{ color: "#86A383" }}>
+          <button onClick={() => setWaitingForLink(false)} className="flex items-center gap-1 font-body text-xs mb-4" style={{ color: "#86A383" }}>
             <ArrowLeft className="w-4 h-4" /> Change email
           </button>
           <h1 className="font-display italic text-2xl text-center mb-1" style={{ color: "#2C3B3A" }}>Check your email</h1>
           <p className="font-body text-xs text-center mb-6" style={{ color: "#999" }}>
-            We sent a sign-in link to <span style={{ color: "#86A383" }}>{email}</span>. Click the link or enter the code below.
+            We sent a sign-in link to <span style={{ color: "#86A383" }}>{email}</span>. Click the link in your email to continue.
           </p>
-
-          <OtpInput value={code} onChange={setCode} onComplete={handleVerify} error={!!otpError} />
-
-          {otpError && <p className="font-body text-sm text-red-500 text-center mt-3">{otpError}</p>}
-          {verifying && (
-            <div className="flex justify-center mt-4">
-              <Loader2 className="w-5 h-5 animate-spin" style={{ color: "#86A383" }} />
-            </div>
-          )}
-
-          <button
-            onClick={() => handleVerify(code)} disabled={verifying || code.length < 6}
-            className="w-full py-3 rounded-xl font-body font-semibold text-sm mt-6 disabled:opacity-50"
-            style={{ backgroundColor: "#B87355", color: "#FAF9F6" }}
-          >
-            {verifying ? "Verifying..." : "Verify"}
-          </button>
-
-          <button onClick={handleResend} className="font-body text-xs mt-4 block mx-auto hover:underline" style={{ color: "#999" }}>
+          <div className="flex justify-center">
+            <Loader2 className="w-5 h-5 animate-spin" style={{ color: "#86A383" }} />
+          </div>
+          <p className="font-body text-xs text-center mt-4" style={{ color: "#999" }}>Waiting for you to click the link...</p>
+          <button onClick={handleSendLink} className="font-body text-xs mt-4 block mx-auto hover:underline" style={{ color: "#999" }}>
             Didn't get it? Resend
           </button>
         </div>
@@ -345,12 +324,12 @@ const CookSignup = () => {
             </div>
 
             <button
-              onClick={handleSendCode} disabled={loading}
+              onClick={handleSendLink} disabled={loading}
               className="w-full py-3 rounded-xl font-body font-semibold text-sm mt-6 flex items-center justify-center gap-2 disabled:opacity-50"
               style={{ backgroundColor: "#B87355", color: "#FAF9F6" }}
             >
               {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-              Send my code →
+              Continue →
             </button>
 
             <p className="font-body text-xs text-center mt-4" style={{ color: "#999" }}>
@@ -369,7 +348,7 @@ const CookSignup = () => {
               Tell us about yourself so families can find you
             </p>
 
-            {/* Photo upload — optional */}
+            {/* Photo upload */}
             <div className="flex flex-col items-center mb-6">
               <div
                 className="w-24 h-24 rounded-full overflow-hidden cursor-pointer relative"
@@ -389,13 +368,11 @@ const CookSignup = () => {
             </div>
 
             <div className="space-y-4">
-              {/* Bio */}
               <div>
                 <label className="font-body text-xs block mb-1" style={{ color: "#666" }}>Short bio * ({bio.length}/200)</label>
                 <textarea value={bio} onChange={(e) => setBio(e.target.value.slice(0, 200))} placeholder="Tell families a little about yourself and your cooking style." rows={3} className={inputCls} style={{ resize: "none", color: "#2C3B3A" }} />
               </div>
 
-              {/* Cuisines */}
               <div>
                 <label className="font-body text-xs block mb-2" style={{ color: "#666" }}>Cuisines you cook *</label>
                 <div className="flex flex-wrap gap-2">
@@ -410,7 +387,6 @@ const CookSignup = () => {
                 </div>
               </div>
 
-              {/* Areas */}
               <div>
                 <label className="font-body text-xs block mb-2" style={{ color: "#666" }}>Areas you serve *</label>
                 <div className="flex flex-wrap gap-2">
@@ -425,7 +401,6 @@ const CookSignup = () => {
                 </div>
               </div>
 
-              {/* Experience dropdown */}
               <div>
                 <label className="font-body text-xs block mb-1" style={{ color: "#666" }}>Years of experience *</label>
                 <select value={experience} onChange={(e) => setExperience(e.target.value)} className={inputCls} style={{ color: "#2C3B3A" }}>
@@ -434,7 +409,6 @@ const CookSignup = () => {
                 </select>
               </div>
 
-              {/* Days available */}
               <div>
                 <label className="font-body text-xs block mb-2" style={{ color: "#666" }}>Days available</label>
                 <div className="flex flex-wrap gap-2">
