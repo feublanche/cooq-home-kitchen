@@ -135,7 +135,7 @@ const CookSignup = () => {
       .upload(path, photoFile, { upsert: true });
 
     if (uploadError) {
-      toast({ title: "Photo upload failed: " + uploadError.message, variant: "destructive" });
+      toast.error("Photo upload failed: " + uploadError.message);
       setSubmitting(false);
       return;
     }
@@ -156,7 +156,7 @@ const CookSignup = () => {
       .eq("user_id", userId);
 
     if (updateError) {
-      toast({ title: "Profile update failed: " + updateError.message, variant: "destructive" });
+      toast.error("Profile update failed: " + updateError.message);
       setSubmitting(false);
       return;
     }
