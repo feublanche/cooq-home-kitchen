@@ -386,20 +386,19 @@ const BookingForm = () => {
         )}
 
         {/* SECTION 3: Day + Time pickers */}
-        {tier && frequency && (
-          {noAvailabilitySet ? (
-            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-              <p className="font-body text-sm text-amber-800">
-                This cook hasn't set their schedule yet — contact cooqdubai@gmail.com
-              </p>
-            </div>
-          ) : (
+        {tier && frequency && noAvailabilitySet && (
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+            <p className="font-body text-sm text-amber-800">
+              This cook hasn't set their schedule yet — contact cooqdubai@gmail.com
+            </p>
+          </div>
+        )}
+        {tier && frequency && !noAvailabilitySet && (
           <div ref={dateRef} className="animate-in fade-in slide-in-from-bottom-2 duration-300 space-y-6">
             <p className="font-body text-xs font-semibold tracking-[0.15em] uppercase text-copper mb-1">
               Choose your day{numDayPicks > 1 ? "s" : ""} & time{numDayPicks > 1 ? "s" : ""}
             </p>
 
-            {/* Day-of-week selectors */}
             {Array.from({ length: numDayPicks }).map((_, idx) => {
               const selectedDayIdx = selectedDays[idx];
               const slotsForDay = selectedDayIdx !== undefined ? (cookAvailability[selectedDayIdx] || []) : [];
@@ -421,7 +420,6 @@ const BookingForm = () => {
                             next[idx] = dayIdx;
                             return next.slice(0, numDayPicks);
                           });
-                          // Reset time for this slot when day changes
                           setSelectedTimes(prev => {
                             const next = [...prev];
                             next[idx] = "";
@@ -463,7 +461,6 @@ const BookingForm = () => {
               );
             })}
 
-            {/* Start date picker */}
             {daysComplete && timesComplete && (
               <div className="space-y-2">
                 <p className="font-body text-sm font-semibold text-foreground">Starting from</p>
@@ -486,7 +483,6 @@ const BookingForm = () => {
               </div>
             )}
 
-            {/* Second menu for 2x or 3x */}
             {numDayPicks >= 2 && (
               <div className="rounded-xl border border-border bg-card p-4 space-y-2">
                 <p className="font-body text-sm font-semibold text-foreground">Second menu (for alternate sessions)</p>
