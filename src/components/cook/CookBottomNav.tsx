@@ -1,5 +1,5 @@
 import { useLocation, useNavigate } from "react-router-dom";
-import { LayoutDashboard, ClipboardList, UtensilsCrossed, FileText } from "lucide-react";
+import { LayoutDashboard, ClipboardList, UtensilsCrossed, FileText, CalendarDays } from "lucide-react";
 import { useCook } from "@/context/CookContext";
 
 interface CookBottomNavProps {
@@ -10,7 +10,8 @@ const tabs = [
   { icon: LayoutDashboard, label: "Home", path: "/cook/dashboard" },
   { icon: UtensilsCrossed, label: "Menus", path: "/cook/menus" },
   { icon: ClipboardList, label: "Orders", path: "/cook/orders" },
-  { icon: FileText, label: "Documents", path: "/cook/documents" },
+  { icon: CalendarDays, label: "Schedule", path: "/cook/availability" },
+  { icon: FileText, label: "Docs", path: "/cook/documents" },
 ];
 
 const CookBottomNav = ({ pendingCount = 0 }: CookBottomNavProps) => {

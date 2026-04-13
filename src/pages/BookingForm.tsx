@@ -28,7 +28,10 @@ const FREQUENCIES = [
   { key: "three", label: "3× a week", sessions: 12, subtitle: "", badge: "Save 10%" },
 ] as const;
 
-const TIME_SLOTS = ["8:00 AM", "10:00 AM", "12:00 PM", "2:00 PM", "4:00 PM", "6:00 PM"];
+const SLOT_OPTIONS = [
+  { key: "morning", label: "Morning (8am–12pm)" },
+  { key: "afternoon", label: "Afternoon (2pm–6pm)" },
+];
 const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const jsDayToIdx = (jsDay: number) => (jsDay + 6) % 7;
 
@@ -105,8 +108,10 @@ const BookingForm = () => {
   const [availableMenus, setAvailableMenus] = useState<Array<{ id: string; menu_name: string }>>([]);
 
   // Cook availability
+  const [cookAvailability, setCookAvailability] = useState<Record<number, string[]>>({});
   const [cookAvailableDays, setCookAvailableDays] = useState<number[]>([]);
   const [cookAvailableLoaded, setCookAvailableLoaded] = useState(false);
+  const [noAvailabilitySet, setNoAvailabilitySet] = useState(false);
 
   // Refs for scroll
   const freqRef = useRef<HTMLDivElement>(null);
@@ -151,13 +156,20 @@ const BookingForm = () => {
   useEffect(() => {
     if (!cookId) return;
     let active = true;
-    supabase.from("cook_availability").select("day_of_week, available").eq("cook_id", cookId)
+    supabase.from("cook_availability").select("day_of_week, available, time_slots").eq("cook_id", cookId)
       .then(({ data }) => {
         if (!active) return;
         if (data && data.length > 0) {
-          setCookAvailableDays(data.filter(d => d.available !== false).map(d => d.day_of_week));
+          const activeDays = data.filter(d => d.available !== false);
+          setCookAvailableDays(activeDays.map(d => d.day_of_week));
+          const slotMap: Record<number, string[]> = {};
+          activeDays.forEach(d => { slotMap[d.day_of_week] = (d.time_slots || []) as string[]; });
+          setCookAvailability(slotMap);
+          setNoAvailabilitySet(false);
         } else {
-          setCookAvailableDays([0, 1, 2, 3, 4, 5, 6]);
+          setCookAvailableDays([]);
+          setCookAvailability({});
+          setNoAvailabilitySet(true);
         }
         setCookAvailableLoaded(true);
       });
@@ -177,14 +189,7 @@ const BookingForm = () => {
     if (frequency && dateRef.current) dateRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
   }, [frequency]);
 
-  // Toggle day selection
-  const toggleDay = (dayIdx: number) => {
-    setSelectedDays(prev => {
-      if (prev.includes(dayIdx)) return prev.filter(d => d !== dayIdx);
-      if (prev.length >= numDayPicks) return [...prev.slice(1), dayIdx];
-      return [...prev, dayIdx];
-    });
-  };
+
 
   // Address complete check
   const addressComplete = streetNumber.trim() && streetName.trim() && building.trim() && phone.replace(/[^0-9]/g, "").length >= 7;
@@ -374,14 +379,23 @@ const BookingForm = () => {
         )}
 
         {/* SECTION 3: Day + Time pickers */}
-        {tier && frequency && (
+        {tier && frequency && noAvailabilitySet && (
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+            <p className="font-body text-sm text-amber-800">
+              This cook hasn't set their schedule yet — contact cooqdubai@gmail.com
+            </p>
+          </div>
+        )}
+        {tier && frequency && !noAvailabilitySet && (
           <div ref={dateRef} className="animate-in fade-in slide-in-from-bottom-2 duration-300 space-y-6">
             <p className="font-body text-xs font-semibold tracking-[0.15em] uppercase text-copper mb-1">
               Choose your day{numDayPicks > 1 ? "s" : ""} & time{numDayPicks > 1 ? "s" : ""}
             </p>
 
-            {/* Day-of-week selectors */}
-            {Array.from({ length: numDayPicks }).map((_, idx) => (
+            {Array.from({ length: numDayPicks }).map((_, idx) => {
+              const selectedDayIdx = selectedDays[idx];
+              const slotsForDay = selectedDayIdx !== undefined ? (cookAvailability[selectedDayIdx] || []) : [];
+              return (
               <div key={idx} className="space-y-3">
                 {numDayPicks > 1 && (
                   <p className="font-body text-sm font-semibold text-foreground">Session {idx + 1}</p>
@@ -399,6 +413,11 @@ const BookingForm = () => {
                             next[idx] = dayIdx;
                             return next.slice(0, numDayPicks);
                           });
+                          setSelectedTimes(prev => {
+                            const next = [...prev];
+                            next[idx] = "";
+                            return next.slice(0, numDayPicks);
+                          });
                         }}
                         className={`px-4 py-2.5 rounded-full text-sm transition border ${
                           isSelected ? "border-primary bg-primary/10 text-primary font-semibold"
@@ -410,29 +429,31 @@ const BookingForm = () => {
                     );
                   })}
                 </div>
+                {selectedDayIdx !== undefined && (
                 <div>
                   <p className="font-body text-xs text-muted-foreground mb-2">Time slot</p>
                   <div className="flex flex-wrap gap-2">
-                    {TIME_SLOTS.map(slot => (
-                      <button key={slot} type="button" onClick={() => {
+                    {(slotsForDay.length > 0 ? SLOT_OPTIONS.filter(s => slotsForDay.includes(s.key)) : SLOT_OPTIONS).map(slot => (
+                      <button key={slot.key} type="button" onClick={() => {
                         setSelectedTimes(prev => {
                           const next = [...prev];
-                          next[idx] = slot;
+                          next[idx] = slot.key;
                           return next.slice(0, numDayPicks);
                         });
                       }}
                         className={`px-4 py-2 rounded-full text-sm transition border ${
-                          selectedTimes[idx] === slot ? "border-primary bg-primary/10 text-primary font-semibold" : "border-border bg-card text-foreground"
+                          selectedTimes[idx] === slot.key ? "border-primary bg-primary/10 text-primary font-semibold" : "border-border bg-card text-foreground"
                         }`}>
-                        {slot}
+                        {slot.label}
                       </button>
                     ))}
                   </div>
                 </div>
+                )}
               </div>
-            ))}
+              );
+            })}
 
-            {/* Start date picker */}
             {daysComplete && timesComplete && (
               <div className="space-y-2">
                 <p className="font-body text-sm font-semibold text-foreground">Starting from</p>
@@ -455,7 +476,6 @@ const BookingForm = () => {
               </div>
             )}
 
-            {/* Second menu for 2x or 3x */}
             {numDayPicks >= 2 && (
               <div className="rounded-xl border border-border bg-card p-4 space-y-2">
                 <p className="font-body text-sm font-semibold text-foreground">Second menu (for alternate sessions)</p>
