@@ -1,46 +1,56 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import cooqLogo from "@/assets/cooq-logo.png";
-import { Check, X } from "lucide-react";
-
-const PASSWORD_RULES = [
-  { key: "length", label: "At least 8 characters", test: (p: string) => p.length >= 8 },
-  { key: "upper", label: "1 uppercase letter", test: (p: string) => /[A-Z]/.test(p) },
-  { key: "number", label: "1 number", test: (p: string) => /[0-9]/.test(p) },
-  { key: "special", label: "1 special character (!@#$%^&*)", test: (p: string) => /[!@#$%^&*]/.test(p) },
-];
+import { Loader2 } from "lucide-react";
+import OtpInput from "@/components/OtpInput";
 
 const CustomerAuth = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const returnTo = (location.state as any)?.returnTo || "/my-bookings";
+  const returnTo = (location.state as any)?.returnTo || "/";
 
-  const [tab, setTab] = useState<"signin" | "signup">("signin");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [screen, setScreen] = useState<"collect" | "otp">("collect");
   const [name, setName] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [agreedToTerms, setAgreedToTerms] = useState(false);
-  const [error, setError] = useState("");
-  const [info, setInfo] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  const passwordChecks = useMemo(() => PASSWORD_RULES.map(r => ({ ...r, passed: r.test(password) })), [password]);
-  const allPasswordValid = passwordChecks.every(c => c.passed);
+  // OTP screen
+  const [code, setCode] = useState("");
+  const [otpError, setOtpError] = useState("");
+  const [verifying, setVerifying] = useState(false);
 
-  const handleSignIn = async () => {
+  const handleSendCode = async () => {
+    if (!name.trim()) { setError("Please enter your name"); return; }
+    if (!email.trim() || !email.includes("@")) { setError("Please enter a valid email"); return; }
     setError("");
-    setInfo("");
     setLoading(true);
-    const { data, error: err } = await supabase.auth.signInWithPassword({ email, password });
+    const { error: otpErr } = await supabase.auth.signInWithOtp({
+      email: email.trim(),
+      options: {
+        shouldCreateUser: true,
+        data: { full_name: name.trim(), phone: phone.trim() || undefined },
+      },
+    });
     setLoading(false);
-    if (err) {
-      if (err.message?.includes("Email not confirmed")) {
-        setError("Please confirm your email before signing in. Check your inbox.");
-      } else {
-        setError(err.message);
-      }
+    if (otpErr) { setError(otpErr.message); return; }
+    setScreen("otp");
+  };
+
+  const handleVerify = async (token: string) => {
+    setOtpError("");
+    setVerifying(true);
+    const { error: verErr } = await supabase.auth.verifyOtp({
+      email: email.trim(),
+      token,
+      type: "email",
+    });
+    setVerifying(false);
+    if (verErr) {
+      setOtpError("That code is incorrect. Try again or resend.");
+      setCode("");
       return;
     }
     const savedBookingState = sessionStorage.getItem("cooq_pending_booking");
@@ -52,185 +62,99 @@ const CustomerAuth = () => {
     }
   };
 
-  const handleForgotPassword = async () => {
-    if (!email) {
-      setError("Enter your email first");
-      return;
-    }
-    setError("");
-    setInfo("");
-    setLoading(true);
-    const { error: err } = await supabase.auth.resetPasswordForEmail(email);
-    setLoading(false);
-    if (err) {
-      setError(err.message);
-      return;
-    }
-    setInfo("Reset link sent to your email");
+  const handleResend = async () => {
+    setOtpError("");
+    setCode("");
+    const { error: err } = await supabase.auth.signInWithOtp({
+      email: email.trim(),
+      options: { shouldCreateUser: true, data: { full_name: name.trim(), phone: phone.trim() || undefined } },
+    });
+    if (err) setOtpError(err.message);
   };
 
-  const handleSignUp = async () => {
-    setError("");
-    setInfo("");
-    if (!allPasswordValid) {
-      setError("Password does not meet all requirements");
-      return;
-    }
-    if (password !== confirmPassword) {
-      setError("Passwords do not match");
-      return;
-    }
-    setLoading(true);
-    try {
-      const { data, error: err } = await supabase.auth.signUp({
-        email,
-        password,
-        options: { data: { full_name: name } },
-      });
-      setLoading(false);
-      if (err) {
-        setError(err.message);
-        return;
-      }
-      navigate("/", { replace: true });
-    } catch (e: any) {
-      setLoading(false);
-      setError(e?.message || "An unexpected error occurred");
-    }
-  };
+  const inputClass = "border border-gray-200 rounded-xl px-4 py-3 w-full text-sm font-body focus:outline-none focus:ring-2 focus:ring-primary bg-white text-foreground";
+
+  if (screen === "otp") {
+    return (
+      <div className="bg-[hsl(var(--background))] min-h-screen max-w-[430px] mx-auto px-4">
+        <div className="flex justify-center pt-8 mb-4">
+          <img src={cooqLogo} alt="Cooq" className="h-8" />
+        </div>
+        <h2 className="font-display italic text-xl text-center text-foreground mb-1">Enter your code</h2>
+        <p className="font-body text-sm text-center text-muted-foreground mb-8">
+          We sent a 6-digit code to <span className="font-semibold text-foreground">{email}</span>. Check your inbox.
+        </p>
+
+        <OtpInput value={code} onChange={setCode} onComplete={handleVerify} error={!!otpError} />
+
+        {otpError && <p className="text-sm text-red-600 text-center mt-3">{otpError}</p>}
+        {verifying && (
+          <div className="flex justify-center mt-4">
+            <Loader2 className="w-5 h-5 animate-spin text-primary" />
+          </div>
+        )}
+
+        <button
+          onClick={() => handleVerify(code)}
+          disabled={verifying || code.length < 6}
+          className="bg-accent text-accent-foreground rounded-xl py-4 w-full font-semibold text-sm mt-6 disabled:opacity-40 transition-opacity"
+        >
+          {verifying ? "Verifying..." : "Verify"}
+        </button>
+
+        <button onClick={handleResend} className="text-xs text-muted-foreground w-full text-center mt-4 hover:underline">
+          Didn't get it? Resend code
+        </button>
+      </div>
+    );
+  }
 
   return (
-    <div className="bg-[#F9F7F2] min-h-screen max-w-[430px] mx-auto px-4">
+    <div className="bg-[hsl(var(--background))] min-h-screen max-w-[430px] mx-auto px-4">
       <div className="flex justify-center pt-8 mb-4">
         <img src={cooqLogo} alt="Cooq" className="h-8" />
       </div>
-      <h2 className="font-display italic text-xl text-center text-foreground mb-1">Save your cook</h2>
-      <p className="font-body text-sm text-center text-muted-foreground mb-6">Sign in to confirm your booking — takes 30 seconds.</p>
-
-      {/* Tabs */}
-      <div className="flex mb-6 border-b border-gray-200">
-        <button
-          onClick={() => { setTab("signin"); setError(""); setInfo(""); }}
-          className={`flex-1 pb-3 text-sm font-semibold transition-colors ${
-            tab === "signin" ? "border-b-2 border-[#B57E5D] text-[#2D312E]" : "text-gray-400"
-          }`}
-        >
-          Sign In
-        </button>
-        <button
-          onClick={() => { setTab("signup"); setError(""); setInfo(""); }}
-          className={`flex-1 pb-3 text-sm font-semibold transition-colors ${
-            tab === "signup" ? "border-b-2 border-[#B57E5D] text-[#2D312E]" : "text-gray-400"
-          }`}
-        >
-          Create Account
-        </button>
-      </div>
+      <h2 className="font-display italic text-2xl text-center text-foreground mb-1">Welcome to Cooq</h2>
+      <p className="font-body text-sm text-center text-muted-foreground mb-6">
+        Enter your email — we'll send you a 6-digit code
+      </p>
 
       {error && <p className="text-sm text-red-600 mb-4">{error}</p>}
-      {info && <p className="text-sm text-[#86A383] mb-4">{info}</p>}
 
-      {tab === "signin" ? (
-        <div className="space-y-4">
+      <div className="space-y-3">
+        <input
+          type="text" placeholder="Full name" value={name}
+          onChange={(e) => setName(e.target.value)} className={inputClass}
+        />
+        <input
+          type="email" placeholder="Email" value={email}
+          onChange={(e) => setEmail(e.target.value)} className={inputClass}
+        />
+        <div className="flex gap-2">
+          <div className="flex items-center gap-1.5 rounded-xl border border-gray-200 px-3 py-3 bg-white text-sm font-body text-foreground shrink-0">
+            <span>🇦🇪</span><span>+971</span>
+          </div>
           <input
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="border border-gray-200 rounded-xl px-4 py-3 w-full text-sm focus:outline-none focus:ring-2 focus:ring-[#B57E5D]"
+            type="tel" placeholder="Phone number" value={phone}
+            onChange={(e) => setPhone(e.target.value)} className={inputClass}
           />
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="border border-gray-200 rounded-xl px-4 py-3 w-full text-sm focus:outline-none focus:ring-2 focus:ring-[#B57E5D]"
-          />
-          <button
-            onClick={handleSignIn}
-            disabled={loading || !email || !password}
-            className="bg-[#B57E5D] text-white rounded-xl py-4 w-full font-semibold text-sm disabled:opacity-40 transition-opacity"
-          >
-            {loading ? "Signing in..." : "Sign In"}
-          </button>
-          <button onClick={handleForgotPassword} className="text-[12px] text-gray-400 w-full text-center">
-            Forgot password?
-          </button>
         </div>
-      ) : (
-        <div className="space-y-4">
-          <input
-            type="text"
-            placeholder="Full name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="border border-gray-200 rounded-xl px-4 py-3 w-full text-sm focus:outline-none focus:ring-2 focus:ring-[#B57E5D]"
-          />
-          <input
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="border border-gray-200 rounded-xl px-4 py-3 w-full text-sm focus:outline-none focus:ring-2 focus:ring-[#B57E5D]"
-          />
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="border border-gray-200 rounded-xl px-4 py-3 w-full text-sm focus:outline-none focus:ring-2 focus:ring-[#B57E5D]"
-          />
-          {/* Password strength checklist */}
-          {password.length > 0 && (
-            <div className="space-y-1 pl-1">
-              {passwordChecks.map(c => (
-                <div key={c.key} className="flex items-center gap-2">
-                  {c.passed ? (
-                    <Check className="w-3.5 h-3.5 text-[#86A383]" />
-                  ) : (
-                    <X className="w-3.5 h-3.5 text-red-400" />
-                  )}
-                  <span className={`text-xs ${c.passed ? "text-[#86A383]" : "text-gray-400"}`}>{c.label}</span>
-                </div>
-              ))}
-            </div>
-          )}
-          <input
-            type="password"
-            placeholder="Confirm password"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            className="border border-gray-200 rounded-xl px-4 py-3 w-full text-sm focus:outline-none focus:ring-2 focus:ring-[#B57E5D]"
-          />
-          <label className="flex items-start gap-2 text-sm text-gray-600">
-            <input
-              type="checkbox"
-              checked={agreedToTerms}
-              onChange={(e) => setAgreedToTerms(e.target.checked)}
-              className="mt-0.5"
-            />
-            <span>
-              I agree to the{" "}
-              <a href="/terms" target="_blank" className="text-[#86A383] underline">
-                Terms &amp; Conditions
-              </a>{" "}
-              and{" "}
-              <a href="/privacy" target="_blank" className="text-[#86A383] underline">
-                Privacy Policy
-              </a>
-            </span>
-          </label>
-          <button
-            onClick={handleSignUp}
-            disabled={
-              loading || !agreedToTerms || !email || !name || !allPasswordValid || password !== confirmPassword
-            }
-            className="bg-[#B57E5D] text-white rounded-xl py-4 w-full font-semibold text-sm disabled:opacity-40 transition-opacity"
-          >
-            {loading ? "Creating..." : "Create Account"}
-          </button>
-        </div>
-      )}
+      </div>
+
+      <button
+        onClick={handleSendCode} disabled={loading}
+        className="bg-accent text-accent-foreground rounded-xl py-4 w-full font-semibold text-sm mt-6 disabled:opacity-40 transition-opacity flex items-center justify-center gap-2"
+      >
+        {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+        Send my code →
+      </button>
+
+      <p className="text-xs text-muted-foreground text-center mt-4">
+        By continuing you agree to our{" "}
+        <a href="/terms" className="underline text-primary">Terms</a>{" "}
+        &amp;{" "}
+        <a href="/privacy" className="underline text-primary">Privacy Policy</a>
+      </p>
     </div>
   );
 };
