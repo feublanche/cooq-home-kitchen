@@ -36,20 +36,27 @@ export const CookProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let cancelled = false;
+
     const fetchCook = async (userId: string) => {
-      setLoading(true);
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("cooks")
         .select("*")
         .eq("user_id", userId)
         .limit(1)
-        .single();
-      setCook(data ? (data as unknown as CookRow) : null);
+        .maybeSingle();
+      if (cancelled) return;
+      if (!error && data) {
+        setCook(data as unknown as CookRow);
+      } else {
+        setCook(null);
+      }
       setLoading(false);
     };
 
     // Check existing session on mount
     supabase.auth.getSession().then(({ data: { session } }) => {
+      if (cancelled) return;
       if (session?.user) {
         fetchCook(session.user.id);
       } else {
@@ -57,16 +64,20 @@ export const CookProvider = ({ children }: { children: ReactNode }) => {
       }
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (cancelled) return;
+      if (event === "SIGNED_IN" && session?.user) {
         fetchCook(session.user.id);
-      } else {
+      } else if (event === "SIGNED_OUT") {
         setCook(null);
         setLoading(false);
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+    };
   }, []);
 
   return (

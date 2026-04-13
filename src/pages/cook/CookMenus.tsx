@@ -31,7 +31,6 @@ const CookMenus = () => {
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
 
-  // Form state
   const [menuName, setMenuName] = useState("");
   const [description, setDescription] = useState("");
   const [starter, setStarter] = useState("");
@@ -63,7 +62,8 @@ const CookMenus = () => {
   };
 
   const openEdit = (m: CookMenu) => {
-    if (m.status === "approved") return;
+    // Can only edit rejected menus
+    if (m.status !== "rejected") return;
     setEditId(m.id);
     setMenuName(m.menu_name);
     setDescription(m.description || "");
@@ -105,7 +105,6 @@ const CookMenus = () => {
 
     setSubmitting(true);
 
-    // Upload new photos
     const uploadedUrls: string[] = [];
     for (const file of photos) {
       const ext = file.name.split(".").pop() || "jpg";
@@ -117,7 +116,6 @@ const CookMenus = () => {
       }
     }
 
-    // Keep existing URLs that weren't from new files
     const existingUrls = photoPreviews.filter((p) => p.startsWith("http") && !p.startsWith("blob:"));
     const allUrls = [...existingUrls, ...uploadedUrls].slice(0, 3);
 
@@ -134,7 +132,7 @@ const CookMenus = () => {
     if (editId) {
       const { error } = await supabase.from("cook_menus").update(payload as any).eq("id", editId);
       if (error) toast({ title: "Update failed", variant: "destructive" });
-      else toast({ title: "Menu updated ✓" });
+      else toast({ title: "Menu resubmitted for review ✓" });
     } else {
       const { error } = await supabase.from("cook_menus").insert({
         ...payload,
@@ -153,37 +151,23 @@ const CookMenus = () => {
 
   const statusBadge = (s: string | null) => {
     if (s === "approved") return { bg: "rgba(134,163,131,0.15)", text: "#86A383", label: "Live ✓" };
-    if (s === "rejected") return { bg: "rgba(239,68,68,0.1)", text: "#ef4444", label: "Not approved" };
-    return { bg: "rgba(181,126,93,0.15)", text: "#B57E5D", label: "Awaiting approval" };
+    if (s === "rejected") return { bg: "rgba(239,68,68,0.08)", text: "#ef4444", label: "Not approved" };
+    return { bg: "rgba(181,126,93,0.1)", text: "#B57E5D", label: "Awaiting approval" };
   };
 
-  const inputStyle: React.CSSProperties = {
-    backgroundColor: "rgba(249,247,242,0.06)",
-    border: "1px solid rgba(134,163,131,0.25)",
-    borderRadius: "12px",
-    padding: "12px 16px",
-    color: "#F9F7F2",
-    fontSize: "14px",
-    width: "100%",
-    outline: "none",
-    fontFamily: "'DM Sans', sans-serif",
-  };
+  const inputCls = "w-full py-3 px-4 rounded-xl font-body text-sm border border-gray-200 bg-white text-foreground outline-none focus:ring-1 focus:ring-primary";
 
   return (
-    <div className="min-h-screen pb-24 px-4 pt-4" style={{ backgroundColor: "#2D312E" }}>
+    <div className="min-h-screen pb-24 px-4 pt-4 bg-background">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <button onClick={() => navigate(-1)}>
-            <ArrowLeft className="w-5 h-5" style={{ color: "#F9F7F2" }} />
+            <ArrowLeft className="w-5 h-5 text-foreground" />
           </button>
-          <h1 className="font-display" style={{ fontSize: "20px", color: "#F9F7F2" }}>My Menus</h1>
+          <h1 className="font-display text-foreground" style={{ fontSize: "20px" }}>My Menus</h1>
         </div>
         {!showForm && (
-          <button
-            onClick={() => { resetForm(); setShowForm(true); }}
-            className="flex items-center gap-1 rounded-full px-3 py-1.5 font-body font-semibold"
-            style={{ fontSize: "12px", backgroundColor: "#B57E5D", color: "#F9F7F2" }}
-          >
+          <button onClick={() => { resetForm(); setShowForm(true); }} className="flex items-center gap-1 rounded-full px-3 py-1.5 font-body font-semibold" style={{ fontSize: "12px", backgroundColor: "#B57E5D", color: "#F9F7F2" }}>
             <Plus className="w-4 h-4" /> Add menu
           </button>
         )}
@@ -194,61 +178,42 @@ const CookMenus = () => {
           {loading ? (
             <div className="space-y-2">
               {[1, 2].map((i) => (
-                <div key={i} className="rounded-xl animate-pulse" style={{ backgroundColor: "rgba(249,247,242,0.05)", height: "80px" }} />
+                <div key={i} className="rounded-xl animate-pulse bg-card border border-gray-100" style={{ height: "80px" }} />
               ))}
             </div>
           ) : menus.length === 0 ? (
             <div className="flex flex-col items-center py-12">
-              <p className="font-body" style={{ fontSize: "13px", color: "rgba(249,247,242,0.5)" }}>
+              <p className="font-body text-muted-foreground" style={{ fontSize: "13px" }}>
                 No menus yet. Tap "Add menu" to get started.
               </p>
             </div>
           ) : (
             menus.map((m) => {
               const badge = statusBadge(m.status);
-              const isApproved = m.status === "approved";
+              const isLocked = m.status === "approved" || m.status === "pending_review";
               return (
-                <div
-                  key={m.id}
-                  className="rounded-xl p-4 mb-3 cursor-pointer"
-                  style={{ backgroundColor: "rgba(249,247,242,0.05)", border: "1px solid rgba(134,163,131,0.18)" }}
-                  onClick={() => openEdit(m)}
-                >
+                <div key={m.id} className={`rounded-xl p-4 mb-3 bg-card border border-gray-100 ${m.status === "rejected" ? "cursor-pointer" : ""}`} onClick={() => openEdit(m)}>
                   <div className="flex justify-between items-start">
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
-                        <span className="font-body font-bold" style={{ fontSize: "14px", color: "#F9F7F2" }}>
-                          {m.menu_name}
-                        </span>
-                        {isApproved && <Lock className="w-3.5 h-3.5" style={{ color: "rgba(249,247,242,0.3)" }} />}
+                        <span className="font-body font-bold text-foreground" style={{ fontSize: "14px" }}>{m.menu_name}</span>
+                        {isLocked && <Lock className="w-3.5 h-3.5 text-gray-300" />}
                       </div>
-                      {m.description && (
-                        <p className="font-body mt-1" style={{ fontSize: "12px", color: "rgba(249,247,242,0.5)" }}>
-                          {m.description}
-                        </p>
-                      )}
-                      <p className="font-body mt-1" style={{ fontSize: "12px", color: "#86A383" }}>
-                        AED {m.price_aed} · {m.cuisine}
-                      </p>
+                      {m.description && <p className="font-body mt-1 text-muted-foreground" style={{ fontSize: "12px" }}>{m.description}</p>}
+                      <p className="font-body mt-1" style={{ fontSize: "12px", color: "#86A383" }}>AED {m.price_aed} · {m.cuisine}</p>
                     </div>
-                    <span className="font-body rounded-full px-2.5 py-0.5 shrink-0" style={{ fontSize: "10px", backgroundColor: badge.bg, color: badge.text }}>
-                      {badge.label}
-                    </span>
+                    <span className="font-body rounded-full px-2.5 py-0.5 shrink-0" style={{ fontSize: "10px", backgroundColor: badge.bg, color: badge.text }}>{badge.label}</span>
                   </div>
                   {m.meals && m.meals.length > 0 && (
-                    <p className="font-body italic mt-2" style={{ fontSize: "11px", color: "rgba(249,247,242,0.4)" }}>
-                      {m.meals.join(" · ")}
-                    </p>
+                    <p className="font-body italic mt-2 text-muted-foreground" style={{ fontSize: "11px" }}>{m.meals.join(" · ")}</p>
                   )}
-                  {isApproved && (
-                    <p className="font-body mt-2" style={{ fontSize: "10px", color: "rgba(249,247,242,0.3)" }}>
-                      Contact support to change an approved menu
+                  {isLocked && (
+                    <p className="font-body mt-2 text-gray-400" style={{ fontSize: "10px" }}>
+                      {m.status === "approved" ? "Contact support to change an approved menu" : "This menu is awaiting review"}
                     </p>
                   )}
                   {m.status === "rejected" && m.rejection_reason && (
-                    <p className="font-body italic mt-2" style={{ fontSize: "11px", color: "rgba(239,68,68,0.7)" }}>
-                      {m.rejection_reason}
-                    </p>
+                    <p className="font-body italic mt-2 text-red-400" style={{ fontSize: "11px" }}>{m.rejection_reason}</p>
                   )}
                   {m.photo_urls && m.photo_urls.length > 0 && (
                     <div className="flex gap-2 mt-2">
@@ -266,87 +231,62 @@ const CookMenus = () => {
 
       {showForm && (
         <div className="space-y-4">
-          <input value={menuName} onChange={(e) => setMenuName(e.target.value)}
-            placeholder='e.g. "Lebanese Family Feast"' style={inputStyle} />
+          <input value={menuName} onChange={(e) => setMenuName(e.target.value)} placeholder='e.g. "Lebanese Family Feast"' className={inputCls} />
 
           <div>
-            <label className="font-body text-xs block mb-1" style={{ color: "rgba(249,247,242,0.5)" }}>
-              Description ({description.length}/300)
-            </label>
-            <textarea value={description} onChange={(e) => setDescription(e.target.value.slice(0, 300))}
-              placeholder="A hearty home-cooked spread perfect for families..."
-              rows={2} style={{ ...inputStyle, resize: "none" }} />
+            <label className="font-body text-xs block mb-1 text-muted-foreground">Description ({description.length}/300)</label>
+            <textarea value={description} onChange={(e) => setDescription(e.target.value.slice(0, 300))} placeholder="A hearty home-cooked spread perfect for families..." rows={2} className={inputCls} style={{ resize: "none" }} />
           </div>
 
-          <select value={cuisine} onChange={(e) => setCuisine(e.target.value)}
-            style={{ ...inputStyle, appearance: "none" }}>
-            <option value="" style={{ backgroundColor: "#2D312E" }}>Select cuisine</option>
-            {cuisineOptions.map((c) => (
-              <option key={c} value={c} style={{ backgroundColor: "#2D312E" }}>{c}</option>
-            ))}
+          <select value={cuisine} onChange={(e) => setCuisine(e.target.value)} className={inputCls}>
+            <option value="">Select cuisine</option>
+            {cuisineOptions.map((c) => (<option key={c} value={c}>{c}</option>))}
           </select>
 
           <div>
-            <label className="font-body text-xs block mb-1" style={{ color: "rgba(249,247,242,0.5)" }}>Starter</label>
-            <input value={starter} onChange={(e) => setStarter(e.target.value)}
-              placeholder="e.g. Hummus with warm pita" style={inputStyle} />
+            <label className="font-body text-xs block mb-1 text-muted-foreground">Starter</label>
+            <input value={starter} onChange={(e) => setStarter(e.target.value)} placeholder="e.g. Hummus with warm pita" className={inputCls} />
           </div>
           <div>
-            <label className="font-body text-xs block mb-1" style={{ color: "rgba(249,247,242,0.5)" }}>Main</label>
-            <input value={main} onChange={(e) => setMain(e.target.value)}
-              placeholder="e.g. Grilled chicken shawarma platter" style={inputStyle} />
+            <label className="font-body text-xs block mb-1 text-muted-foreground">Main</label>
+            <input value={main} onChange={(e) => setMain(e.target.value)} placeholder="e.g. Grilled chicken shawarma platter" className={inputCls} />
           </div>
           <div>
-            <label className="font-body text-xs block mb-1" style={{ color: "rgba(249,247,242,0.5)" }}>Side</label>
-            <input value={side} onChange={(e) => setSide(e.target.value)}
-              placeholder="e.g. Fattoush salad with pomegranate" style={inputStyle} />
+            <label className="font-body text-xs block mb-1 text-muted-foreground">Side</label>
+            <input value={side} onChange={(e) => setSide(e.target.value)} placeholder="e.g. Fattoush salad with pomegranate" className={inputCls} />
           </div>
 
           <div>
-            <label className="font-body text-xs block mb-1" style={{ color: "rgba(249,247,242,0.5)" }}>Price per session (AED)</label>
-            <input type="number" min="100" value={price} onChange={(e) => setPrice(e.target.value)}
-              placeholder="350" style={inputStyle} />
+            <label className="font-body text-xs block mb-1 text-muted-foreground">Price per session (AED)</label>
+            <input type="number" min="100" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="350" className={inputCls} />
           </div>
 
           <div>
-            <label className="font-body text-xs block mb-2" style={{ color: "rgba(249,247,242,0.5)" }}>
-              Food photos (up to 3)
-            </label>
+            <label className="font-body text-xs block mb-2 text-muted-foreground">Food photos (up to 3)</label>
             <div className="flex gap-2">
               {photoPreviews.map((p, i) => (
                 <div key={i} className="w-20 h-20 rounded-xl overflow-hidden relative">
                   <img src={p} alt="" className="w-full h-full object-cover" />
-                  <button onClick={() => removePhoto(i)} className="absolute top-1 right-1 rounded-full p-0.5" style={{ backgroundColor: "rgba(0,0,0,0.6)" }}>
-                    <X className="w-3 h-3" style={{ color: "#F9F7F2" }} />
+                  <button onClick={() => removePhoto(i)} className="absolute top-1 right-1 rounded-full p-0.5 bg-black/50">
+                    <X className="w-3 h-3 text-white" />
                   </button>
                 </div>
               ))}
               {photoPreviews.length < 3 && (
-                <div
-                  className="w-20 h-20 rounded-xl flex flex-col items-center justify-center cursor-pointer"
-                  style={{ backgroundColor: "rgba(249,247,242,0.04)", border: "2px dashed rgba(134,163,131,0.3)" }}
-                  onClick={() => photoRef.current?.click()}
-                >
+                <div className="w-20 h-20 rounded-xl flex flex-col items-center justify-center cursor-pointer bg-gray-50 border-2 border-dashed border-gray-200" onClick={() => photoRef.current?.click()}>
                   <Camera className="w-5 h-5" style={{ color: "#86A383" }} />
-                  <span className="font-body" style={{ fontSize: "9px", color: "rgba(249,247,242,0.4)" }}>Add</span>
+                  <span className="font-body text-muted-foreground" style={{ fontSize: "9px" }}>Add</span>
                 </div>
               )}
             </div>
-            <input ref={photoRef} type="file" accept="image/jpeg,image/png,image/webp" multiple
-              className="hidden" onChange={(e) => handlePhotoAdd(e.target.files)} />
+            <input ref={photoRef} type="file" accept="image/jpeg,image/png,image/webp" multiple className="hidden" onChange={(e) => handlePhotoAdd(e.target.files)} />
           </div>
 
           <div className="flex gap-3 mt-4">
-            <button onClick={() => { resetForm(); setShowForm(false); }}
-              className="flex-1 py-3 rounded-xl font-body text-sm"
-              style={{ border: "1px solid rgba(134,163,131,0.3)", color: "rgba(249,247,242,0.5)" }}>
-              Cancel
-            </button>
-            <button onClick={handleSubmit} disabled={submitting}
-              className="flex-1 py-3 rounded-xl font-body font-semibold text-sm flex items-center justify-center gap-2 disabled:opacity-50"
-              style={{ backgroundColor: "#B57E5D", color: "#F9F7F2" }}>
+            <button onClick={() => { resetForm(); setShowForm(false); }} className="flex-1 py-3 rounded-xl font-body text-sm border border-gray-200 text-muted-foreground">Cancel</button>
+            <button onClick={handleSubmit} disabled={submitting} className="flex-1 py-3 rounded-xl font-body font-semibold text-sm flex items-center justify-center gap-2 disabled:opacity-50" style={{ backgroundColor: "#B57E5D", color: "#F9F7F2" }}>
               {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
-              {editId ? "Update" : "Submit for Review"}
+              {editId ? "Resubmit" : "Submit for Review"}
             </button>
           </div>
         </div>

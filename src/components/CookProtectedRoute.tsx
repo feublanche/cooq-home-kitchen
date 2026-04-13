@@ -2,17 +2,13 @@ import { useEffect, useState, useRef, ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { CookRow, CookContext } from "@/context/CookContext";
-import { Loader2, LogOut } from "lucide-react";
-import cooqLogo from "@/assets/cooq-logo.png";
+import { Loader2 } from "lucide-react";
 
 const CookProtectedRoute = ({ children }: { children: ReactNode }) => {
   const navigate = useNavigate();
   const [checking, setChecking] = useState(true);
   const [cook, setCook] = useState<CookRow | null>(null);
   const [loading, setLoading] = useState(true);
-  const [pendingApproval, setPendingApproval] = useState(false);
-  const [rejected, setRejected] = useState(false);
-  const [pendingEmail, setPendingEmail] = useState("");
   const hasRedirected = useRef(false);
 
   useEffect(() => {
@@ -52,19 +48,7 @@ const CookProtectedRoute = ({ children }: { children: ReactNode }) => {
 
       const cookData = data as unknown as CookRow;
 
-      if (cookData.status === "applied" || cookData.status === "reviewed") {
-        setPendingApproval(true);
-        setPendingEmail(cookData.email);
-        setChecking(false);
-        return;
-      }
-
-      if (cookData.status === "rejected") {
-        setRejected(true);
-        setChecking(false);
-        return;
-      }
-
+      // Allow pending cooks to see the dashboard with status banner
       setCook(cookData);
       setLoading(false);
       setChecking(false);
@@ -88,57 +72,8 @@ const CookProtectedRoute = ({ children }: { children: ReactNode }) => {
 
   if (checking) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: "#2D312E" }}>
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="w-8 h-8 animate-spin" style={{ color: "#86A383" }} />
-      </div>
-    );
-  }
-
-  if (pendingApproval) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center px-6" style={{ backgroundColor: "#2D312E" }}>
-        <img src={cooqLogo} alt="Cooq" className="h-8 mb-8 brightness-0 invert" />
-        <div className="w-full max-w-sm rounded-2xl p-6 text-center" style={{ backgroundColor: "rgba(249,247,242,0.05)" }}>
-          <h2 className="font-display italic text-xl mb-3" style={{ color: "#F9F7F2" }}>
-            Account Pending Approval
-          </h2>
-          <p className="font-body text-sm mb-6" style={{ color: "rgba(249,247,242,0.6)" }}>
-            Your account is pending approval. We'll notify you at{" "}
-            <span style={{ color: "#86A383" }}>{pendingEmail}</span>{" "}
-            when you're approved.
-          </p>
-          <button
-            onClick={async () => {
-              await supabase.auth.signOut();
-              hasRedirected.current = false;
-              navigate("/cook/login", { replace: true });
-            }}
-            className="flex items-center gap-2 mx-auto font-body text-sm"
-            style={{ color: "rgba(249,247,242,0.4)" }}
-          >
-            <LogOut className="w-4 h-4" />
-            Sign out
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  if (rejected) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center px-6" style={{ backgroundColor: "#2D312E" }}>
-        <img src={cooqLogo} alt="Cooq" className="h-8 mb-8 brightness-0 invert" />
-        <div className="w-full max-w-sm rounded-2xl p-6 text-center" style={{ backgroundColor: "rgba(249,247,242,0.05)" }}>
-          <h2 className="font-display italic text-xl mb-3" style={{ color: "#F9F7F2" }}>
-            Account Suspended
-          </h2>
-          <p className="font-body text-sm mb-6" style={{ color: "rgba(249,247,242,0.6)" }}>
-            Your cook account has been suspended. Please contact us for more information.
-          </p>
-          <a href="mailto:hello@cooq.ae" className="font-body text-sm mt-5 underline" style={{ color: "#B57E5D" }}>
-            Contact hello@cooq.ae
-          </a>
-        </div>
       </div>
     );
   }

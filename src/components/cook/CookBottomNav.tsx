@@ -1,5 +1,6 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import { LayoutDashboard, ClipboardList, UtensilsCrossed, User } from "lucide-react";
+import { useCook } from "@/context/CookContext";
 
 interface CookBottomNavProps {
   pendingCount?: number;
@@ -15,15 +16,17 @@ const tabs = [
 const CookBottomNav = ({ pendingCount = 0 }: CookBottomNavProps) => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { cook } = useCook();
+
+  // Only show for approved/active cooks
+  if (!cook || (cook.status !== "approved" && cook.status !== "active")) {
+    return null;
+  }
 
   return (
     <div
-      className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around h-16"
-      style={{
-        backgroundColor: "#1a1f1b",
-        borderTop: "1px solid rgba(134,163,131,0.2)",
-        paddingBottom: "env(safe-area-inset-bottom)",
-      }}
+      className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around h-16 bg-white border-t border-gray-200"
+      style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
       {tabs.map((tab) => {
         const Icon = tab.icon;
@@ -42,7 +45,7 @@ const CookBottomNav = ({ pendingCount = 0 }: CookBottomNavProps) => {
             <div className="relative">
               <Icon
                 className="w-5 h-5"
-                style={{ color: isActive ? "#86A383" : "rgba(249,247,242,0.4)" }}
+                style={{ color: isActive ? "#86A383" : "rgba(45,49,46,0.4)" }}
               />
               {tab.label === "Orders" && pendingCount > 0 && (
                 <span className="absolute -top-1 -right-1.5 w-2 h-2 rounded-full bg-red-500" />
@@ -52,7 +55,7 @@ const CookBottomNav = ({ pendingCount = 0 }: CookBottomNavProps) => {
               className="font-body"
               style={{
                 fontSize: "10px",
-                color: isActive ? "#86A383" : "rgba(249,247,242,0.4)",
+                color: isActive ? "#86A383" : "rgba(45,49,46,0.4)",
               }}
             >
               {tab.label}
