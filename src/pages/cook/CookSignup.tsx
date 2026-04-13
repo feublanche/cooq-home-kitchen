@@ -105,11 +105,11 @@ const CookSignup = () => {
     if (!file) return;
     const allowed = ["image/jpeg", "image/png", "image/webp"];
     if (!allowed.includes(file.type)) {
-      toast({ title: "Only JPG, PNG or WebP allowed", variant: "destructive" });
+      toast.error("Only JPG, PNG or WebP allowed");
       return;
     }
     if (file.size > 10 * 1024 * 1024) {
-      toast({ title: "Image must be under 10MB", variant: "destructive" });
+      toast.error("Image must be under 10MB");
       return;
     }
     setPhotoFile(file);
@@ -121,9 +121,9 @@ const CookSignup = () => {
   };
 
   const handleSubmitProfile = async () => {
-    if (!photoFile) { toast({ title: "Profile photo is required", variant: "destructive" }); return; }
-    if (cuisines.length === 0) { toast({ title: "Select at least one cuisine", variant: "destructive" }); return; }
-    if (areas.length === 0) { toast({ title: "Select at least one area", variant: "destructive" }); return; }
+    if (!photoFile) { toast.error("Profile photo is required"); return; }
+    if (cuisines.length === 0) { toast.error("Select at least one cuisine"); return; }
+    if (areas.length === 0) { toast.error("Select at least one area"); return; }
 
     setSubmitting(true);
 
