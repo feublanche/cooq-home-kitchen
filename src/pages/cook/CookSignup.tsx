@@ -230,8 +230,8 @@ const CookSignup = () => {
 
       {/* Progress */}
       <div className="flex items-center gap-2 mb-6">
-        <div className="w-8 h-1 rounded-full" style={{ backgroundColor: step >= 1 ? "#86A383" : undefined }} className={step >= 1 ? "" : "bg-gray-200"} />
-        <div className="w-8 h-1 rounded-full" style={{ backgroundColor: step >= 2 ? "#86A383" : undefined }} className={step >= 2 ? "" : "bg-gray-200"} />
+        <div className={`w-8 h-1 rounded-full ${step >= 1 ? "" : "bg-gray-200"}`} style={step >= 1 ? { backgroundColor: "#86A383" } : {}} />
+        <div className={`w-8 h-1 rounded-full ${step >= 2 ? "" : "bg-gray-200"}`} style={step >= 2 ? { backgroundColor: "#86A383" } : {}} />
       </div>
 
       <div className="w-full max-w-sm">

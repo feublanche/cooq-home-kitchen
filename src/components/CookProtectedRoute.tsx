@@ -2,17 +2,13 @@ import { useEffect, useState, useRef, ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { CookRow, CookContext } from "@/context/CookContext";
-import { Loader2, LogOut } from "lucide-react";
-import cooqLogo from "@/assets/cooq-logo.png";
+import { Loader2 } from "lucide-react";
 
 const CookProtectedRoute = ({ children }: { children: ReactNode }) => {
   const navigate = useNavigate();
   const [checking, setChecking] = useState(true);
   const [cook, setCook] = useState<CookRow | null>(null);
   const [loading, setLoading] = useState(true);
-  const [pendingApproval, setPendingApproval] = useState(false);
-  const [rejected, setRejected] = useState(false);
-  const [pendingEmail, setPendingEmail] = useState("");
   const hasRedirected = useRef(false);
 
   useEffect(() => {
