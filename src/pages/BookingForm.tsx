@@ -28,7 +28,10 @@ const FREQUENCIES = [
   { key: "three", label: "3× a week", sessions: 12, subtitle: "", badge: "Save 10%" },
 ] as const;
 
-const TIME_SLOTS = ["8:00 AM", "10:00 AM", "12:00 PM", "2:00 PM", "4:00 PM", "6:00 PM"];
+const SLOT_OPTIONS = [
+  { key: "morning", label: "Morning (8am–12pm)" },
+  { key: "afternoon", label: "Afternoon (2pm–6pm)" },
+];
 const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const jsDayToIdx = (jsDay: number) => (jsDay + 6) % 7;
 
@@ -105,8 +108,10 @@ const BookingForm = () => {
   const [availableMenus, setAvailableMenus] = useState<Array<{ id: string; menu_name: string }>>([]);
 
   // Cook availability
+  const [cookAvailability, setCookAvailability] = useState<Record<number, string[]>>({});
   const [cookAvailableDays, setCookAvailableDays] = useState<number[]>([]);
   const [cookAvailableLoaded, setCookAvailableLoaded] = useState(false);
+  const [noAvailabilitySet, setNoAvailabilitySet] = useState(false);
 
   // Refs for scroll
   const freqRef = useRef<HTMLDivElement>(null);
@@ -151,13 +156,20 @@ const BookingForm = () => {
   useEffect(() => {
     if (!cookId) return;
     let active = true;
-    supabase.from("cook_availability").select("day_of_week, available").eq("cook_id", cookId)
+    supabase.from("cook_availability").select("day_of_week, available, time_slots").eq("cook_id", cookId)
       .then(({ data }) => {
         if (!active) return;
         if (data && data.length > 0) {
-          setCookAvailableDays(data.filter(d => d.available !== false).map(d => d.day_of_week));
+          const activeDays = data.filter(d => d.available !== false);
+          setCookAvailableDays(activeDays.map(d => d.day_of_week));
+          const slotMap: Record<number, string[]> = {};
+          activeDays.forEach(d => { slotMap[d.day_of_week] = (d.time_slots || []) as string[]; });
+          setCookAvailability(slotMap);
+          setNoAvailabilitySet(false);
         } else {
-          setCookAvailableDays([0, 1, 2, 3, 4, 5, 6]);
+          setCookAvailableDays([]);
+          setCookAvailability({});
+          setNoAvailabilitySet(true);
         }
         setCookAvailableLoaded(true);
       });
