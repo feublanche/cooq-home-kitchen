@@ -189,14 +189,7 @@ const BookingForm = () => {
     if (frequency && dateRef.current) dateRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
   }, [frequency]);
 
-  // Toggle day selection
-  const toggleDay = (dayIdx: number) => {
-    setSelectedDays(prev => {
-      if (prev.includes(dayIdx)) return prev.filter(d => d !== dayIdx);
-      if (prev.length >= numDayPicks) return [...prev.slice(1), dayIdx];
-      return [...prev, dayIdx];
-    });
-  };
+
 
   // Address complete check
   const addressComplete = streetNumber.trim() && streetName.trim() && building.trim() && phone.replace(/[^0-9]/g, "").length >= 7;
