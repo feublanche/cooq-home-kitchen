@@ -6,7 +6,8 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
-
+// Events that cooks can trigger themselves (no operator auth required)
+const COOK_EVENTS = ['cook_signup', 'menu_submitted', 'document_uploaded'];
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -14,7 +15,6 @@ serve(async (req) => {
   }
 
   try {
-    // Validate JWT
     const authHeader = req.headers.get('Authorization');
     if (!authHeader?.startsWith('Bearer ')) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
@@ -22,68 +22,62 @@ serve(async (req) => {
       });
     }
 
-    const anonClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      { global: { headers: { Authorization: authHeader } } }
-    );
-
-    const { data: claimsData, error: claimsError } = await anonClient.auth.getClaims(authHeader.replace('Bearer ', ''));
-    if (claimsError || !claimsData?.claims) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    // Only operator can send notifications
-    const appMetadata = claimsData.claims.app_metadata as Record<string, unknown> | undefined;
-    if (appMetadata?.role !== 'operator') {
-      return new Response(JSON.stringify({ error: 'Forbidden' }), {
-        status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
     const { cook_name, cook_email, cook_phone, event_type, booking_details } = await req.json();
+
+    // For cook-originated events, just verify they're authenticated
+    if (!COOK_EVENTS.includes(event_type)) {
+      const anonClient = createClient(
+        Deno.env.get('SUPABASE_URL') ?? '',
+        Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+        { global: { headers: { Authorization: authHeader } } }
+      );
+
+      const { data: claimsData, error: claimsError } = await anonClient.auth.getClaims(authHeader.replace('Bearer ', ''));
+      if (claimsError || !claimsData?.claims) {
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+          status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      const appMetadata = claimsData.claims.app_metadata as Record<string, unknown> | undefined;
+      if (appMetadata?.role !== 'operator') {
+        return new Response(JSON.stringify({ error: 'Forbidden' }), {
+          status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    }
 
     const results: Record<string, string> = {};
 
-    // Email notification via Lovable AI
-    if (cook_email) {
-      const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-      if (!LOVABLE_API_KEY) {
-        results.email = 'skipped - no API key';
-      } else {
-        console.log(`[EMAIL] To: ${cook_email}, Event: ${event_type}, Cook: ${cook_name}`);
-        console.log(`[EMAIL] Details:`, JSON.stringify(booking_details));
-        results.email = 'logged';
-      }
-    }
+    // Log notification for operator
+    const operatorEmail = 'cooqdubai@gmail.com';
+    console.log(`[NOTIFY] To: ${operatorEmail}, Event: ${event_type}, Cook: ${cook_name} (${cook_email})`);
+    console.log(`[NOTIFY] Details:`, JSON.stringify(booking_details));
 
     // WhatsApp notification placeholder
     if (cook_phone) {
-      console.log(`[WHATSAPP] To: ${cook_phone}, Event: ${event_type}, Cook: ${cook_name}`);
-      
       let message = '';
       switch (event_type) {
+        case 'cook_signup':
+          message = `New cook application: ${cook_name} (${cook_email}, ${cook_phone}). Cuisines: ${booking_details?.cuisines}. Areas: ${booking_details?.areas}. Review in admin panel.`;
+          break;
+        case 'menu_submitted':
+          message = `Cook ${cook_name} submitted a new ${booking_details?.cuisine} menu called "${booking_details?.menu}". Review in admin panel.`;
+          break;
+        case 'document_uploaded':
+          message = `Cook ${cook_name} uploaded ${booking_details?.document_type}. Review in admin panel.`;
+          break;
         case 'booking_confirmed':
-          message = `Hi ${cook_name}! Your booking for ${booking_details?.menu} on ${booking_details?.date} has been confirmed. Client: ${booking_details?.customer_name}, Area: ${booking_details?.area}.`;
-          break;
-        case 'menu_approved':
-          message = `Hi ${cook_name}! Your menu "${booking_details?.menu}" has been approved by the Cooq team. You're all set!`;
-          break;
-        case 'menu_rejected':
-          message = `Hi ${cook_name}, your menu "${booking_details?.menu}" needs revision. Please update and resubmit. Reason: ${booking_details?.reason || 'See dashboard for details'}.`;
-          break;
-        case 'photo_reminder':
-          message = `Hi ${cook_name}! Don't forget to upload your Proof of Quality photos (containers + kitchen) after your session today.`;
+          message = `Hi ${cook_name}! Your booking for ${booking_details?.menu} on ${booking_details?.date} has been confirmed.`;
           break;
         default:
-          message = `Hi ${cook_name}, you have a new notification from Cooq. Please check your dashboard.`;
+          message = `Notification for ${cook_name}: ${event_type}`;
       }
-
       console.log(`[WHATSAPP] Message: ${message}`);
       results.whatsapp = 'logged_pending_setup';
     }
+
+    results.email = 'logged';
 
     return new Response(JSON.stringify({ success: true, results }), {
       status: 200,

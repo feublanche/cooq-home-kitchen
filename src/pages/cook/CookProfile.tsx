@@ -3,18 +3,18 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useCook } from "@/context/CookContext";
 import { toast } from "@/hooks/use-toast";
-import { ArrowLeft, Camera, Loader2 } from "lucide-react";
-import CookBottomNav from "@/components/cook/CookBottomNav";
+import { ArrowLeft, Camera, Loader2, LogOut } from "lucide-react";
 
 const cuisineOptions = [
   "Lebanese", "Indian", "Mediterranean", "Continental", "Emirati", "Filipino",
   "Pakistani", "Sri Lankan", "Thai", "Chinese", "Japanese", "Mexican",
-  "American", "Italian", "Keto", "Vegan",
+  "American", "Italian", "Keto/Healthy", "Vegan", "Other",
 ];
 
 const areaOptions = [
-  "Downtown Dubai", "JBR", "Marina", "Jumeirah", "Mirdif", "Arabian Ranches",
-  "Business Bay", "DIFC", "Al Barsha", "Palm Jumeirah", "Deira", "Bur Dubai",
+  "Dubai Marina", "JBR", "JLT", "Downtown Dubai", "Business Bay", "DIFC",
+  "Jumeirah", "Umm Suqeim", "Al Barsha", "Arabian Ranches", "Mirdif",
+  "Palm Jumeirah", "Deira/Bur Dubai", "All Dubai",
 ];
 
 const CookProfilePage = () => {
@@ -40,7 +40,7 @@ const CookProfilePage = () => {
     }
   }, [cook]);
 
-  const inputCls = "w-full py-3 px-4 rounded-xl font-body text-sm border border-gray-200 bg-white text-foreground outline-none focus:ring-1 focus:ring-primary";
+  const inputCls = "w-full py-3 px-4 rounded-xl font-body text-sm border border-gray-200 bg-white outline-none focus:ring-1 focus:ring-[#86A383]";
 
   const toggleChip = (value: string, list: string[], setter: (v: string[]) => void) => {
     setter(list.includes(value) ? list.filter((x) => x !== value) : [...list, value]);
@@ -93,12 +93,21 @@ const CookProfilePage = () => {
   const initials = cook?.name?.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase() || "?";
 
   return (
-    <div className="min-h-screen pb-24 px-4 pt-4 bg-background">
-      <div className="flex items-center gap-3 mb-6">
-        <button onClick={() => navigate(-1)}>
-          <ArrowLeft className="w-5 h-5 text-foreground" />
+    <div className="min-h-screen pb-24 px-4 pt-4" style={{ backgroundColor: "#FAF9F6" }}>
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <button onClick={() => navigate("/cook/dashboard")}>
+            <ArrowLeft className="w-5 h-5" style={{ color: "#2C3B3A" }} />
+          </button>
+          <h1 className="font-display" style={{ fontSize: "20px", color: "#2C3B3A" }}>My Profile</h1>
+        </div>
+        <button
+          onClick={async () => { await supabase.auth.signOut(); navigate("/cook/login", { replace: true }); }}
+          className="flex items-center gap-1 font-body text-xs"
+          style={{ color: "#999" }}
+        >
+          <LogOut className="w-4 h-4" /> Sign out
         </button>
-        <h1 className="font-display text-foreground" style={{ fontSize: "20px" }}>My Profile</h1>
       </div>
 
       {/* Photo */}
@@ -116,13 +125,13 @@ const CookProfilePage = () => {
               <span className="font-display text-2xl" style={{ color: "#86A383" }}>{initials}</span>
             </div>
           )}
-          <div className="absolute bottom-0 right-0 w-7 h-7 rounded-full flex items-center justify-center" style={{ backgroundColor: "#B57E5D" }}>
-            <Camera className="w-3.5 h-3.5" style={{ color: "#F9F7F2" }} />
+          <div className="absolute bottom-0 right-0 w-7 h-7 rounded-full flex items-center justify-center" style={{ backgroundColor: "#B87355" }}>
+            <Camera className="w-3.5 h-3.5" style={{ color: "#FAF9F6" }} />
           </div>
         </div>
       </div>
 
-      <p className="font-body text-center mb-6 text-foreground" style={{ fontSize: "16px", fontWeight: 600 }}>{cook?.name}</p>
+      <p className="font-body text-center mb-6 font-semibold" style={{ fontSize: "16px", color: "#2C3B3A" }}>{cook?.name}</p>
 
       {/* Status badge */}
       <div className="flex justify-center mb-6">
@@ -137,12 +146,12 @@ const CookProfilePage = () => {
 
       <div className="space-y-4">
         <div>
-          <label className="font-body text-xs block mb-1 text-muted-foreground">Bio ({bio.length}/200)</label>
-          <textarea value={bio} onChange={(e) => setBio(e.target.value.slice(0, 200))} placeholder="Tell families about your cooking..." rows={3} className={inputCls} style={{ resize: "none" }} />
+          <label className="font-body text-xs block mb-1" style={{ color: "#666" }}>Bio ({bio.length}/200)</label>
+          <textarea value={bio} onChange={(e) => setBio(e.target.value.slice(0, 200))} placeholder="Tell families about your cooking..." rows={3} className={inputCls} style={{ resize: "none", color: "#2C3B3A" }} />
         </div>
 
         <div>
-          <label className="font-body text-xs block mb-2 text-muted-foreground">Cuisines</label>
+          <label className="font-body text-xs block mb-2" style={{ color: "#666" }}>Cuisines</label>
           <div className="flex flex-wrap gap-2">
             {cuisineOptions.map((c) => {
               const selected = cuisines.includes(c);
@@ -156,7 +165,7 @@ const CookProfilePage = () => {
         </div>
 
         <div>
-          <label className="font-body text-xs block mb-2 text-muted-foreground">Areas served</label>
+          <label className="font-body text-xs block mb-2" style={{ color: "#666" }}>Areas served</label>
           <div className="flex flex-wrap gap-2">
             {areaOptions.map((a) => {
               const selected = areas.includes(a);
@@ -170,21 +179,15 @@ const CookProfilePage = () => {
         </div>
 
         <div>
-          <label className="font-body text-xs block mb-1 text-muted-foreground">Years of experience</label>
-          <input type="number" min="0" max="50" value={experience} onChange={(e) => setExperience(e.target.value)} className={inputCls} />
+          <label className="font-body text-xs block mb-1" style={{ color: "#666" }}>Years of experience</label>
+          <input type="number" min="0" max="50" value={experience} onChange={(e) => setExperience(e.target.value)} className={inputCls} style={{ color: "#2C3B3A" }} />
         </div>
       </div>
 
-      <button onClick={handleSave} disabled={saving} className="w-full py-3 rounded-xl font-body font-semibold text-sm mt-6 flex items-center justify-center gap-2 disabled:opacity-50" style={{ backgroundColor: "#B57E5D", color: "#F9F7F2" }}>
+      <button onClick={handleSave} disabled={saving} className="w-full py-3 rounded-xl font-body font-semibold text-sm mt-6 flex items-center justify-center gap-2 disabled:opacity-50" style={{ backgroundColor: "#B87355", color: "#FAF9F6" }}>
         {saving && <Loader2 className="w-4 h-4 animate-spin" />}
         Save Changes
       </button>
-
-      <button onClick={async () => { await supabase.auth.signOut(); navigate("/cook/login", { replace: true }); }} className="w-full py-3 mt-3 font-body text-sm text-muted-foreground">
-        Sign out
-      </button>
-
-      <CookBottomNav />
     </div>
   );
 };

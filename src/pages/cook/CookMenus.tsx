@@ -1,9 +1,9 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useCook } from "@/context/CookContext";
 import { toast } from "@/hooks/use-toast";
-import { ArrowLeft, Plus, Lock, Loader2, Camera, X } from "lucide-react";
+import { ArrowLeft, Plus, Lock, Loader2 } from "lucide-react";
 import CookBottomNav from "@/components/cook/CookBottomNav";
 
 interface CookMenu {
@@ -12,6 +12,7 @@ interface CookMenu {
   description: string | null;
   meals: string[] | null;
   cuisine: string | null;
+  dietary: string[] | null;
   price_aed: number;
   status: string | null;
   rejection_reason: string | null;
@@ -20,8 +21,11 @@ interface CookMenu {
 
 const cuisineOptions = [
   "Lebanese", "Indian", "Mediterranean", "Continental", "Emirati", "Filipino",
-  "Pakistani", "Italian", "Asian Fusion", "Moroccan", "Other",
+  "Pakistani", "Sri Lankan", "Thai", "Chinese", "Japanese", "Mexican",
+  "American", "Italian", "Keto/Healthy", "Vegan", "Other",
 ];
+
+const dietaryOptions = ["Halal", "Vegetarian", "Vegan", "Gluten-free", "Dairy-free", "Nut-free", "Keto"];
 
 const CookMenus = () => {
   const { cook } = useCook();
@@ -32,22 +36,24 @@ const CookMenus = () => {
   const [editId, setEditId] = useState<string | null>(null);
 
   const [menuName, setMenuName] = useState("");
-  const [description, setDescription] = useState("");
-  const [starter, setStarter] = useState("");
-  const [main, setMain] = useState("");
-  const [side, setSide] = useState("");
   const [cuisine, setCuisine] = useState("");
+  const [starterName, setStarterName] = useState("");
+  const [starterDesc, setStarterDesc] = useState("");
+  const [mainName, setMainName] = useState("");
+  const [mainDesc, setMainDesc] = useState("");
+  const [sideName, setSideName] = useState("");
+  const [sideDesc, setSideDesc] = useState("");
+  const [dietary, setDietary] = useState<string[]>([]);
   const [price, setPrice] = useState("");
-  const [photos, setPhotos] = useState<File[]>([]);
-  const [photoPreviews, setPhotoPreviews] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
-  const photoRef = useRef<HTMLInputElement>(null);
+
+  const isPending = cook?.status === "pending" || cook?.status === "applied";
 
   const fetchMenus = async () => {
     if (!cook) return;
     const { data } = await supabase
       .from("cook_menus")
-      .select("id, menu_name, description, meals, cuisine, price_aed, status, rejection_reason, photo_urls")
+      .select("id, menu_name, description, meals, cuisine, dietary, price_aed, status, rejection_reason, photo_urls")
       .eq("cook_id", cook.id)
       .order("created_at", { ascending: false });
     setMenus((data ?? []) as CookMenu[]);
@@ -57,75 +63,58 @@ const CookMenus = () => {
   useEffect(() => { fetchMenus(); }, [cook]);
 
   const resetForm = () => {
-    setMenuName(""); setDescription(""); setStarter(""); setMain(""); setSide("");
-    setCuisine(""); setPrice(""); setPhotos([]); setPhotoPreviews([]); setEditId(null);
+    setMenuName(""); setCuisine(""); setStarterName(""); setStarterDesc("");
+    setMainName(""); setMainDesc(""); setSideName(""); setSideDesc("");
+    setDietary([]); setPrice(""); setEditId(null);
   };
 
+  const menusForCuisine = (c: string) => menus.filter((m) => m.cuisine === c).length;
+
+  const canAddForCuisine = (c: string) => menusForCuisine(c) < 2;
+
   const openEdit = (m: CookMenu) => {
-    // Can only edit rejected menus
-    if (m.status !== "rejected") return;
+    if (m.status !== "rejected" && m.status !== "pending_review") return;
     setEditId(m.id);
     setMenuName(m.menu_name);
-    setDescription(m.description || "");
-    setStarter(m.meals?.[0] || "");
-    setMain(m.meals?.[1] || "");
-    setSide(m.meals?.[2] || "");
     setCuisine(m.cuisine || "");
+    // Parse meals: [starterName, starterDesc, mainName, mainDesc, sideName, sideDesc]
+    const meals = m.meals || [];
+    setStarterName(meals[0] || "");
+    setStarterDesc(meals[1] || "");
+    setMainName(meals[2] || "");
+    setMainDesc(meals[3] || "");
+    setSideName(meals[4] || "");
+    setSideDesc(meals[5] || "");
+    setDietary(m.dietary || []);
     setPrice(String(m.price_aed));
-    setPhotoPreviews(m.photo_urls || []);
     setShowForm(true);
   };
 
-  const handlePhotoAdd = (files: FileList | null) => {
-    if (!files) return;
-    const newPhotos = [...photos];
-    const newPreviews = [...photoPreviews];
-    for (let i = 0; i < files.length && newPhotos.length < 3; i++) {
-      const f = files[i];
-      if (!["image/jpeg", "image/png", "image/webp"].includes(f.type)) continue;
-      if (f.size > 10 * 1024 * 1024) continue;
-      newPhotos.push(f);
-      newPreviews.push(URL.createObjectURL(f));
-    }
-    setPhotos(newPhotos);
-    setPhotoPreviews(newPreviews);
-  };
-
-  const removePhoto = (idx: number) => {
-    setPhotos(photos.filter((_, i) => i !== idx));
-    setPhotoPreviews(photoPreviews.filter((_, i) => i !== idx));
+  const toggleDietary = (val: string) => {
+    setDietary(dietary.includes(val) ? dietary.filter((x) => x !== val) : [...dietary, val]);
   };
 
   const handleSubmit = async () => {
     if (!cook) return;
-    if (!menuName.trim() || !starter.trim() || !main.trim() || !side.trim() || !cuisine || !price) {
+    if (!menuName.trim() || !cuisine || !starterName.trim() || !mainName.trim() || !sideName.trim() || !price) {
       toast({ title: "Please fill all required fields", variant: "destructive" });
+      return;
+    }
+
+    if (!editId && !canAddForCuisine(cuisine)) {
+      toast({ title: `You already have 2 ${cuisine} menus. Edit an existing one.`, variant: "destructive" });
       return;
     }
 
     setSubmitting(true);
 
-    const uploadedUrls: string[] = [];
-    for (const file of photos) {
-      const ext = file.name.split(".").pop() || "jpg";
-      const path = `${cook.user_id}/menus/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-      const { error } = await supabase.storage.from("cook-photos").upload(path, file, { upsert: true });
-      if (!error) {
-        const { data } = supabase.storage.from("cook-photos").getPublicUrl(path);
-        uploadedUrls.push(data.publicUrl);
-      }
-    }
-
-    const existingUrls = photoPreviews.filter((p) => p.startsWith("http") && !p.startsWith("blob:"));
-    const allUrls = [...existingUrls, ...uploadedUrls].slice(0, 3);
-
     const payload = {
       menu_name: menuName.trim(),
-      description: description.trim() || null,
-      meals: [starter.trim(), main.trim(), side.trim()],
+      description: null,
+      meals: [starterName.trim(), starterDesc.trim(), mainName.trim(), mainDesc.trim(), sideName.trim(), sideDesc.trim()],
       cuisine,
+      dietary,
       price_aed: parseInt(price) || 350,
-      photo_urls: allUrls,
       status: "pending_review",
     };
 
@@ -140,7 +129,20 @@ const CookMenus = () => {
         cook_name: cook.name,
       } as any);
       if (error) toast({ title: "Submit failed: " + error.message, variant: "destructive" });
-      else toast({ title: "Menu submitted ✓", description: "We'll review within 24 hours." });
+      else {
+        toast({ title: "Menu submitted ✓", description: "We'll review within 24 hours." });
+        // Notify operator
+        try {
+          await supabase.functions.invoke("notify-cook", {
+            body: {
+              cook_name: cook.name,
+              cook_email: cook.email,
+              event_type: "menu_submitted",
+              booking_details: { menu: menuName.trim(), cuisine },
+            },
+          });
+        } catch (e) { console.log("Notification skipped:", e); }
+      }
     }
 
     resetForm();
@@ -155,65 +157,96 @@ const CookMenus = () => {
     return { bg: "rgba(181,126,93,0.1)", text: "#B57E5D", label: "Awaiting approval" };
   };
 
-  const inputCls = "w-full py-3 px-4 rounded-xl font-body text-sm border border-gray-200 bg-white text-foreground outline-none focus:ring-1 focus:ring-primary";
+  const inputCls = "w-full py-3 px-4 rounded-xl font-body text-sm border border-gray-200 bg-white outline-none focus:ring-1 focus:ring-[#86A383]";
 
   return (
-    <div className="min-h-screen pb-24 px-4 pt-4 bg-background">
+    <div className="min-h-screen pb-24 px-4 pt-4" style={{ backgroundColor: "#FAF9F6" }}>
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate(-1)}>
-            <ArrowLeft className="w-5 h-5 text-foreground" />
+          <button onClick={() => navigate("/cook/dashboard")}>
+            <ArrowLeft className="w-5 h-5" style={{ color: "#2C3B3A" }} />
           </button>
-          <h1 className="font-display text-foreground" style={{ fontSize: "20px" }}>My Menus</h1>
+          <h1 className="font-display" style={{ fontSize: "20px", color: "#2C3B3A" }}>My Menus</h1>
         </div>
         {!showForm && (
-          <button onClick={() => { resetForm(); setShowForm(true); }} className="flex items-center gap-1 rounded-full px-3 py-1.5 font-body font-semibold" style={{ fontSize: "12px", backgroundColor: "#B57E5D", color: "#F9F7F2" }}>
+          <button
+            onClick={() => { if (isPending) return; resetForm(); setShowForm(true); }}
+            disabled={isPending}
+            className="flex items-center gap-1 rounded-full px-3 py-1.5 font-body font-semibold disabled:opacity-40"
+            style={{ fontSize: "12px", backgroundColor: "#B87355", color: "#FAF9F6" }}
+            title={isPending ? "Available once your profile is approved" : ""}
+          >
             <Plus className="w-4 h-4" /> Add menu
           </button>
         )}
       </div>
+
+      {isPending && !showForm && (
+        <div className="rounded-xl p-3 mb-4" style={{ backgroundColor: "rgba(181,126,93,0.08)", border: "1px solid rgba(181,126,93,0.15)" }}>
+          <p className="font-body text-xs" style={{ color: "#B57E5D" }}>Menu creation will be available once your profile is approved.</p>
+        </div>
+      )}
 
       {!showForm && (
         <div>
           {loading ? (
             <div className="space-y-2">
               {[1, 2].map((i) => (
-                <div key={i} className="rounded-xl animate-pulse bg-card border border-gray-100" style={{ height: "80px" }} />
+                <div key={i} className="rounded-xl animate-pulse bg-white border border-gray-100" style={{ height: "80px" }} />
               ))}
             </div>
           ) : menus.length === 0 ? (
             <div className="flex flex-col items-center py-12">
-              <p className="font-body text-muted-foreground" style={{ fontSize: "13px" }}>
-                No menus yet. Tap "Add menu" to get started.
+              <span style={{ fontSize: "32px" }}>🍽️</span>
+              <p className="font-body font-semibold mt-2" style={{ fontSize: "14px", color: "#2C3B3A" }}>No menus yet</p>
+              <p className="font-body text-center mt-1" style={{ fontSize: "12px", color: "#999" }}>
+                Add your first menu so customers can book you.
               </p>
             </div>
           ) : (
             menus.map((m) => {
               const badge = statusBadge(m.status);
-              const isLocked = m.status === "approved" || m.status === "pending_review";
+              const isLocked = m.status === "approved";
+              const canEdit = m.status === "rejected" || m.status === "pending_review";
               return (
-                <div key={m.id} className={`rounded-xl p-4 mb-3 bg-card border border-gray-100 ${m.status === "rejected" ? "cursor-pointer" : ""}`} onClick={() => openEdit(m)}>
+                <div key={m.id} className={`rounded-xl p-4 mb-3 bg-white border border-gray-100 ${canEdit ? "cursor-pointer" : ""}`} onClick={() => canEdit && openEdit(m)}>
                   <div className="flex justify-between items-start">
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
-                        <span className="font-body font-bold text-foreground" style={{ fontSize: "14px" }}>{m.menu_name}</span>
-                        {isLocked && <Lock className="w-3.5 h-3.5 text-gray-300" />}
+                        <span className="font-body font-bold" style={{ fontSize: "14px", color: "#2C3B3A" }}>{m.menu_name}</span>
+                        {isLocked && <Lock className="w-3.5 h-3.5" style={{ color: "#ccc" }} />}
                       </div>
-                      {m.description && <p className="font-body mt-1 text-muted-foreground" style={{ fontSize: "12px" }}>{m.description}</p>}
                       <p className="font-body mt-1" style={{ fontSize: "12px", color: "#86A383" }}>AED {m.price_aed} · {m.cuisine}</p>
                     </div>
                     <span className="font-body rounded-full px-2.5 py-0.5 shrink-0" style={{ fontSize: "10px", backgroundColor: badge.bg, color: badge.text }}>{badge.label}</span>
                   </div>
-                  {m.meals && m.meals.length > 0 && (
-                    <p className="font-body italic mt-2 text-muted-foreground" style={{ fontSize: "11px" }}>{m.meals.join(" · ")}</p>
+                  {m.meals && m.meals.length >= 6 && (
+                    <div className="mt-2 space-y-1">
+                      <p className="font-body" style={{ fontSize: "11px", color: "#666" }}><strong>Starter:</strong> {m.meals[0]}</p>
+                      <p className="font-body" style={{ fontSize: "11px", color: "#666" }}><strong>Main:</strong> {m.meals[2]}</p>
+                      <p className="font-body" style={{ fontSize: "11px", color: "#666" }}><strong>Side:</strong> {m.meals[4]}</p>
+                    </div>
                   )}
+                  {m.dietary && m.dietary.length > 0 && (
+                    <p className="font-body mt-1" style={{ fontSize: "10px", color: "#999" }}>{m.dietary.join(" · ")}</p>
+                  )}
+                  <p className="font-body mt-2 italic" style={{ fontSize: "10px", color: "#999" }}>
+                    Food photos added by Cooq team after your trial.
+                  </p>
                   {isLocked && (
-                    <p className="font-body mt-2 text-gray-400" style={{ fontSize: "10px" }}>
-                      {m.status === "approved" ? "Contact support to change an approved menu" : "This menu is awaiting review"}
+                    <p className="font-body mt-1" style={{ fontSize: "10px", color: "#999" }}>
+                      Contact cooqdubai@gmail.com to change an approved menu.
                     </p>
                   )}
-                  {m.status === "rejected" && m.rejection_reason && (
-                    <p className="font-body italic mt-2 text-red-400" style={{ fontSize: "11px" }}>{m.rejection_reason}</p>
+                  {m.status === "rejected" && (
+                    <>
+                      {m.rejection_reason && (
+                        <p className="font-body italic mt-1 text-red-400" style={{ fontSize: "11px" }}>{m.rejection_reason}</p>
+                      )}
+                      <p className="font-body mt-1" style={{ fontSize: "10px", color: "#ef4444" }}>
+                        Contact cooqdubai@gmail.com
+                      </p>
+                    </>
                   )}
                   {m.photo_urls && m.photo_urls.length > 0 && (
                     <div className="flex gap-2 mt-2">
@@ -231,60 +264,60 @@ const CookMenus = () => {
 
       {showForm && (
         <div className="space-y-4">
-          <input value={menuName} onChange={(e) => setMenuName(e.target.value)} placeholder='e.g. "Lebanese Family Feast"' className={inputCls} />
+          <input value={menuName} onChange={(e) => setMenuName(e.target.value)} placeholder='Menu name (e.g. "Lebanese Family Feast")' className={inputCls} style={{ color: "#2C3B3A" }} />
 
           <div>
-            <label className="font-body text-xs block mb-1 text-muted-foreground">Description ({description.length}/300)</label>
-            <textarea value={description} onChange={(e) => setDescription(e.target.value.slice(0, 300))} placeholder="A hearty home-cooked spread perfect for families..." rows={2} className={inputCls} style={{ resize: "none" }} />
-          </div>
-
-          <select value={cuisine} onChange={(e) => setCuisine(e.target.value)} className={inputCls}>
-            <option value="">Select cuisine</option>
-            {cuisineOptions.map((c) => (<option key={c} value={c}>{c}</option>))}
-          </select>
-
-          <div>
-            <label className="font-body text-xs block mb-1 text-muted-foreground">Starter</label>
-            <input value={starter} onChange={(e) => setStarter(e.target.value)} placeholder="e.g. Hummus with warm pita" className={inputCls} />
-          </div>
-          <div>
-            <label className="font-body text-xs block mb-1 text-muted-foreground">Main</label>
-            <input value={main} onChange={(e) => setMain(e.target.value)} placeholder="e.g. Grilled chicken shawarma platter" className={inputCls} />
-          </div>
-          <div>
-            <label className="font-body text-xs block mb-1 text-muted-foreground">Side</label>
-            <input value={side} onChange={(e) => setSide(e.target.value)} placeholder="e.g. Fattoush salad with pomegranate" className={inputCls} />
-          </div>
-
-          <div>
-            <label className="font-body text-xs block mb-1 text-muted-foreground">Price per session (AED)</label>
-            <input type="number" min="100" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="350" className={inputCls} />
-          </div>
-
-          <div>
-            <label className="font-body text-xs block mb-2 text-muted-foreground">Food photos (up to 3)</label>
-            <div className="flex gap-2">
-              {photoPreviews.map((p, i) => (
-                <div key={i} className="w-20 h-20 rounded-xl overflow-hidden relative">
-                  <img src={p} alt="" className="w-full h-full object-cover" />
-                  <button onClick={() => removePhoto(i)} className="absolute top-1 right-1 rounded-full p-0.5 bg-black/50">
-                    <X className="w-3 h-3 text-white" />
-                  </button>
-                </div>
+            <label className="font-body text-xs block mb-1" style={{ color: "#666" }}>Cuisine *</label>
+            <select value={cuisine} onChange={(e) => setCuisine(e.target.value)} className={inputCls} style={{ color: "#2C3B3A" }}>
+              <option value="">Select cuisine</option>
+              {cuisineOptions.map((c) => (
+                <option key={c} value={c} disabled={!editId && !canAddForCuisine(c)}>
+                  {c}{!editId && menusForCuisine(c) >= 2 ? " (2/2)" : ""}
+                </option>
               ))}
-              {photoPreviews.length < 3 && (
-                <div className="w-20 h-20 rounded-xl flex flex-col items-center justify-center cursor-pointer bg-gray-50 border-2 border-dashed border-gray-200" onClick={() => photoRef.current?.click()}>
-                  <Camera className="w-5 h-5" style={{ color: "#86A383" }} />
-                  <span className="font-body text-muted-foreground" style={{ fontSize: "9px" }}>Add</span>
-                </div>
-              )}
+            </select>
+          </div>
+
+          <div className="rounded-xl p-4 bg-white border border-gray-100 space-y-3">
+            <p className="font-body text-xs font-semibold" style={{ color: "#2C3B3A" }}>Starter</p>
+            <input value={starterName} onChange={(e) => setStarterName(e.target.value)} placeholder="Dish name (e.g. Hummus with warm pita)" className={inputCls} style={{ color: "#2C3B3A" }} />
+            <input value={starterDesc} onChange={(e) => setStarterDesc(e.target.value)} placeholder="Brief description (optional)" className={inputCls} style={{ color: "#2C3B3A" }} />
+          </div>
+
+          <div className="rounded-xl p-4 bg-white border border-gray-100 space-y-3">
+            <p className="font-body text-xs font-semibold" style={{ color: "#2C3B3A" }}>Main</p>
+            <input value={mainName} onChange={(e) => setMainName(e.target.value)} placeholder="Dish name (e.g. Grilled chicken shawarma)" className={inputCls} style={{ color: "#2C3B3A" }} />
+            <input value={mainDesc} onChange={(e) => setMainDesc(e.target.value)} placeholder="Brief description (optional)" className={inputCls} style={{ color: "#2C3B3A" }} />
+          </div>
+
+          <div className="rounded-xl p-4 bg-white border border-gray-100 space-y-3">
+            <p className="font-body text-xs font-semibold" style={{ color: "#2C3B3A" }}>Side</p>
+            <input value={sideName} onChange={(e) => setSideName(e.target.value)} placeholder="Dish name (e.g. Fattoush salad)" className={inputCls} style={{ color: "#2C3B3A" }} />
+            <input value={sideDesc} onChange={(e) => setSideDesc(e.target.value)} placeholder="Brief description (optional)" className={inputCls} style={{ color: "#2C3B3A" }} />
+          </div>
+
+          <div>
+            <label className="font-body text-xs block mb-2" style={{ color: "#666" }}>Dietary tags</label>
+            <div className="flex flex-wrap gap-2">
+              {dietaryOptions.map((d) => {
+                const selected = dietary.includes(d);
+                return (
+                  <button key={d} type="button" onClick={() => toggleDietary(d)} className="rounded-full font-body" style={{ fontSize: "12px", padding: "6px 12px", backgroundColor: selected ? "rgba(134,163,131,0.15)" : "rgba(0,0,0,0.03)", border: `1px solid ${selected ? "#86A383" : "rgba(0,0,0,0.1)"}`, color: selected ? "#86A383" : "rgba(45,49,46,0.6)" }}>
+                    {d}
+                  </button>
+                );
+              })}
             </div>
-            <input ref={photoRef} type="file" accept="image/jpeg,image/png,image/webp" multiple className="hidden" onChange={(e) => handlePhotoAdd(e.target.files)} />
+          </div>
+
+          <div>
+            <label className="font-body text-xs block mb-1" style={{ color: "#666" }}>Price per session (AED) *</label>
+            <input type="number" min="100" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="350" className={inputCls} style={{ color: "#2C3B3A" }} />
           </div>
 
           <div className="flex gap-3 mt-4">
-            <button onClick={() => { resetForm(); setShowForm(false); }} className="flex-1 py-3 rounded-xl font-body text-sm border border-gray-200 text-muted-foreground">Cancel</button>
-            <button onClick={handleSubmit} disabled={submitting} className="flex-1 py-3 rounded-xl font-body font-semibold text-sm flex items-center justify-center gap-2 disabled:opacity-50" style={{ backgroundColor: "#B57E5D", color: "#F9F7F2" }}>
+            <button onClick={() => { resetForm(); setShowForm(false); }} className="flex-1 py-3 rounded-xl font-body text-sm border border-gray-200" style={{ color: "#999" }}>Cancel</button>
+            <button onClick={handleSubmit} disabled={submitting} className="flex-1 py-3 rounded-xl font-body font-semibold text-sm flex items-center justify-center gap-2 disabled:opacity-50" style={{ backgroundColor: "#B87355", color: "#FAF9F6" }}>
               {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
               {editId ? "Resubmit" : "Submit for Review"}
             </button>

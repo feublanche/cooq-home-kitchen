@@ -31,7 +31,7 @@ const CookProtectedRoute = ({ children }: { children: ReactNode }) => {
         .select("*")
         .eq("user_id", session.user.id)
         .limit(1)
-        .single();
+        .maybeSingle();
 
       if (cancelled) return;
 
@@ -40,15 +40,13 @@ const CookProtectedRoute = ({ children }: { children: ReactNode }) => {
           hasRedirected.current = true;
           navigate("/cook/login", {
             replace: true,
-            state: { error: "Cook account not found. Contact hello@cooq.ae" },
+            state: { error: "Cook account not found. Contact cooqdubai@gmail.com" },
           });
         }
         return;
       }
 
       const cookData = data as unknown as CookRow;
-
-      // Allow pending cooks to see the dashboard with status banner
       setCook(cookData);
       setLoading(false);
       setChecking(false);
@@ -72,7 +70,7 @@ const CookProtectedRoute = ({ children }: { children: ReactNode }) => {
 
   if (checking) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: "#FAF9F6" }}>
         <Loader2 className="w-8 h-8 animate-spin" style={{ color: "#86A383" }} />
       </div>
     );
