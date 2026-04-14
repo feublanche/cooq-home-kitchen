@@ -53,6 +53,7 @@ interface Booking {
   selected_menu_id?: string;
   payment_intent_id?: string;
   proof_status?: string | null;
+  proof_notes?: string | null;
 }
 
 interface QualityPhoto {
@@ -81,6 +82,7 @@ interface CookRecord {
   created_at: string | null;
   bio?: string | null;
   operator_notes?: string | null;
+  doc_notes?: string | null;
 }
 
 interface MenuRecord {
@@ -173,7 +175,12 @@ const Admin = () => {
 
   // Cook documents state
   const [cookDocs, setCookDocs] = useState<{ id: string; cook_id: string; document_type: string; file_url: string; status: string }[]>([]);
-
+  const [docSignedUrls, setDocSignedUrls] = useState<Record<string, string>>({});
+  const [docResubMode, setDocResubMode] = useState<string | null>(null);
+  const [docResubNote, setDocResubNote] = useState("");
+  
+  const [proofResubMode, setProofResubMode] = useState<string | null>(null);
+  const [proofResubNote, setProofResubNote] = useState("");
   const fetchBookings = async () => {
     const { data } = await supabase
       .from("bookings")
@@ -302,12 +309,29 @@ const Admin = () => {
     setSelectedCook(cook);
     setRequestChangesMode(false);
     setOperatorFeedback("");
+    setDocResubMode(null);
+    setDocResubNote("");
     // Fetch cook documents
     const { data } = await supabase
       .from("cook_documents")
       .select("id, cook_id, document_type, file_url, status")
       .eq("cook_id", cook.id);
-    setCookDocs((data ?? []) as any);
+    const docs = (data ?? []) as any;
+    setCookDocs(docs);
+    // Get signed URLs for document photos
+    const urlMap: Record<string, string> = {};
+    for (const doc of docs) {
+      if (doc.file_url) {
+        // file_url is the storage path like "cook-documents/cook_id/filename"
+        // Try to create signed URL from the cook-documents bucket
+        const path = doc.file_url.includes("cook-documents/")
+          ? doc.file_url.split("cook-documents/")[1]
+          : `${cook.id}/${doc.file_url}`;
+        const { data: signedData } = await supabase.storage.from("cook-documents").createSignedUrl(path, 3600);
+        if (signedData?.signedUrl) urlMap[doc.id] = signedData.signedUrl;
+      }
+    }
+    setDocSignedUrls(urlMap);
   };
 
   const handleApproveCook = async () => {
@@ -336,25 +360,48 @@ const Admin = () => {
     toast({ title: "Document verified ✓" });
   };
 
+  const handleDocResubmission = async (docId: string, cookId: string) => {
+    if (!docResubNote.trim()) { toast({ title: "Please provide a reason", variant: "destructive" }); return; }
+    await supabase.from("cook_documents").update({ status: "needs_resubmission" } as any).eq("id", docId);
+    await supabase.from("cooks").update({ doc_notes: docResubNote.trim() } as any).eq("id", cookId);
+    setCookDocs((prev) => prev.map((d) => d.id === docId ? { ...d, status: "needs_resubmission" } : d));
+    toast({ title: "Resubmission requested" });
+    setDocResubMode(null);
+    setDocResubNote("");
+  };
+
+  // ── Operator Notification Helper ──
+  const notifyOperator = async (event_type: string, details: Record<string, any>) => {
+    try {
+      await supabase.functions.invoke("notify-operator", { body: { event_type, details } });
+    } catch (err) { console.error("Operator notification failed:", err); }
+  };
+
   // ── Proof Review Actions ──
   const handleProofApprove = async (bookingId: string) => {
     await supabase.from("bookings").update({ proof_status: "approved", status: "completed" } as any).eq("id", bookingId);
     setBookings((prev) => prev.map((b) => b.id === bookingId ? { ...b, proof_status: "approved", status: "completed" } : b));
-    toast({ title: "Proof approved ✓" });
-  };
-
-  const handleProofResubmit = async (bookingId: string) => {
-    await supabase.from("bookings").update({ proof_status: "resubmit" } as any).eq("id", bookingId);
-    setBookings((prev) => prev.map((b) => b.id === bookingId ? { ...b, proof_status: "resubmit" } : b));
-    // Notify cook
     const booking = bookings.find((b) => b.id === bookingId);
     if (booking) {
       const cook = cooks.find((c) => c.id === booking.cook_id);
-      if (cook) {
-        await notifyCookGeneric(cook.name, cook.email, cook.phone, "proof_resubmit", { date: booking.booking_date });
-      }
+      if (cook) await notifyCookGeneric(cook.name, cook.email, cook.phone, "proof_approved", { date: booking.booking_date });
+      await notifyOperator("proof_approved", { cook_name: booking.cook_name, date: booking.booking_date });
+    }
+    toast({ title: "Proof approved ✓" });
+  };
+
+  const handleProofResubmit = async (bookingId: string, notes: string) => {
+    if (!notes.trim()) { toast({ title: "Please provide a reason", variant: "destructive" }); return; }
+    await supabase.from("bookings").update({ proof_status: "resubmit", proof_notes: notes.trim() } as any).eq("id", bookingId);
+    setBookings((prev) => prev.map((b) => b.id === bookingId ? { ...b, proof_status: "resubmit", proof_notes: notes.trim() } : b));
+    const booking = bookings.find((b) => b.id === bookingId);
+    if (booking) {
+      const cook = cooks.find((c) => c.id === booking.cook_id);
+      if (cook) await notifyCookGeneric(cook.name, cook.email, cook.phone, "proof_resubmit", { date: booking.booking_date, notes: notes.trim() });
     }
     toast({ title: "Resubmission requested" });
+    setProofResubMode(null);
+    setProofResubNote("");
   };
 
   // ── Menu Vetting Actions (cook_menus) ──
@@ -906,14 +953,24 @@ const Admin = () => {
                             ))}
                           </div>
                         )}
-                        <div className="flex gap-2">
-                          <button onClick={() => handleProofApprove(b.id)} className="flex-1 py-2 rounded-lg font-body text-xs font-semibold bg-primary/10 text-primary hover:bg-primary/20 transition-colors">
-                            Approve ✓
-                          </button>
-                          <button onClick={() => handleProofResubmit(b.id)} className="flex-1 py-2 rounded-lg font-body text-xs font-semibold bg-copper/10 text-copper hover:bg-copper/20 transition-colors">
-                            Request Resubmission
-                          </button>
-                        </div>
+                        {proofResubMode !== b.id ? (
+                          <div className="flex gap-2">
+                            <button onClick={() => handleProofApprove(b.id)} className="flex-1 py-2 rounded-lg font-body text-xs font-semibold bg-green-500/10 text-green-600 hover:bg-green-500/20 transition-colors">
+                              Approve ✓
+                            </button>
+                            <button onClick={() => { setProofResubMode(b.id); setProofResubNote(""); }} className="flex-1 py-2 rounded-lg font-body text-xs font-semibold bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 transition-colors">
+                              Request Resubmission
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="mt-2 space-y-2 p-3 rounded-lg bg-amber-50 border border-amber-200">
+                            <textarea value={proofResubNote} onChange={(e) => setProofResubNote(e.target.value)} placeholder="What needs to be re-uploaded?" className="w-full p-2 rounded-lg border border-amber-300 bg-white font-body text-xs text-foreground resize-none outline-none" rows={2} />
+                            <div className="flex gap-2">
+                              <button onClick={() => handleProofResubmit(b.id, proofResubNote)} disabled={!proofResubNote.trim()} className="px-4 py-2 rounded-lg font-body text-xs font-semibold bg-amber-500 text-white disabled:opacity-50">Send Feedback</button>
+                              <button onClick={() => setProofResubMode(null)} className="px-3 py-2 rounded-lg font-body text-xs text-muted-foreground">Cancel</button>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     );
                   })}
@@ -1183,27 +1240,45 @@ const Admin = () => {
                 </div>
               )}
 
-              {/* Documents section */}
+              {/* Documents section - with photos */}
               {cookDocs.length > 0 && (
                 <div className="mb-4">
                   <p className="font-body text-xs font-semibold text-foreground mb-2">Documents</p>
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     {cookDocs.map((doc) => (
-                      <div key={doc.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/30 border border-border">
-                        <div>
-                          <p className="font-body text-xs font-semibold text-foreground capitalize">{doc.document_type.replace("_", " ")}</p>
-                          <p className="font-body text-[10px] text-muted-foreground">{doc.status}</p>
-                        </div>
-                        {doc.status === "verified" ? (
-                          <span className="font-body text-xs font-semibold text-primary">Verified ✓</span>
-                        ) : (
-                          <button
-                            onClick={() => handleVerifyDocument(doc.id)}
-                            className="font-body text-xs font-semibold px-3 py-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
-                          >
-                            Verify
-                          </button>
+                      <div key={doc.id} className="rounded-lg bg-muted/30 border border-border overflow-hidden">
+                        {/* Document photo */}
+                        {docSignedUrls[doc.id] && (
+                          <a href={docSignedUrls[doc.id]} target="_blank" rel="noopener noreferrer">
+                            <img src={docSignedUrls[doc.id]} alt={doc.document_type} className="w-full h-40 object-contain bg-white" />
+                          </a>
                         )}
+                        <div className="p-3">
+                          <div className="flex items-center justify-between mb-2">
+                            <div>
+                              <p className="font-body text-xs font-semibold text-foreground capitalize">{doc.document_type.replace(/_/g, " ")}</p>
+                              <p className="font-body text-[10px] text-muted-foreground capitalize">{doc.status.replace(/_/g, " ")}</p>
+                            </div>
+                            {doc.status === "verified" && (
+                              <span className="font-body text-xs font-semibold text-green-600 bg-green-50 px-2 py-0.5 rounded-full">Verified ✓</span>
+                            )}
+                          </div>
+                          {doc.status !== "verified" && docResubMode !== doc.id && (
+                            <div className="flex gap-2">
+                              <button onClick={() => handleVerifyDocument(doc.id)} className="flex-1 py-2 rounded-lg font-body text-xs font-semibold bg-green-500/10 text-green-600 hover:bg-green-500/20 transition-colors">Verify ✓</button>
+                              <button onClick={() => { setDocResubMode(doc.id); setDocResubNote(""); }} className="flex-1 py-2 rounded-lg font-body text-xs font-semibold bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 transition-colors">Request Resubmission</button>
+                            </div>
+                          )}
+                          {docResubMode === doc.id && (
+                            <div className="mt-2 space-y-2 p-2 rounded-lg bg-amber-50 border border-amber-200">
+                              <textarea value={docResubNote} onChange={(e) => setDocResubNote(e.target.value)} placeholder="What's wrong with this document?" className="w-full p-2 rounded-lg border border-amber-300 bg-white font-body text-xs text-foreground resize-none outline-none" rows={2} />
+                              <div className="flex gap-2">
+                                <button onClick={() => handleDocResubmission(doc.id, doc.cook_id)} disabled={!docResubNote.trim()} className="px-3 py-1.5 rounded-lg font-body text-xs font-semibold bg-amber-500 text-white disabled:opacity-50">Send</button>
+                                <button onClick={() => setDocResubMode(null)} className="px-3 py-1.5 rounded-lg font-body text-xs text-muted-foreground">Cancel</button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>
