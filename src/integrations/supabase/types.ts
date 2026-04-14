@@ -313,6 +313,39 @@ export type Database = {
           },
         ]
       }
+      cook_notifications: {
+        Row: {
+          cook_id: string
+          created_at: string
+          id: string
+          message: string
+          read: boolean
+          related_id: string | null
+          title: string
+          type: string
+        }
+        Insert: {
+          cook_id: string
+          created_at?: string
+          id?: string
+          message: string
+          read?: boolean
+          related_id?: string | null
+          title: string
+          type?: string
+        }
+        Update: {
+          cook_id?: string
+          created_at?: string
+          id?: string
+          message?: string
+          read?: boolean
+          related_id?: string | null
+          title?: string
+          type?: string
+        }
+        Relationships: []
+      }
       cooks: {
         Row: {
           area: string | null
