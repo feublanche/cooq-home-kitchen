@@ -381,21 +381,27 @@ const Admin = () => {
   const handleProofApprove = async (bookingId: string) => {
     await supabase.from("bookings").update({ proof_status: "approved", status: "completed" } as any).eq("id", bookingId);
     setBookings((prev) => prev.map((b) => b.id === bookingId ? { ...b, proof_status: "approved", status: "completed" } : b));
-    toast({ title: "Proof approved ✓" });
-  };
-
-  const handleProofResubmit = async (bookingId: string) => {
-    await supabase.from("bookings").update({ proof_status: "resubmit" } as any).eq("id", bookingId);
-    setBookings((prev) => prev.map((b) => b.id === bookingId ? { ...b, proof_status: "resubmit" } : b));
-    // Notify cook
     const booking = bookings.find((b) => b.id === bookingId);
     if (booking) {
       const cook = cooks.find((c) => c.id === booking.cook_id);
-      if (cook) {
-        await notifyCookGeneric(cook.name, cook.email, cook.phone, "proof_resubmit", { date: booking.booking_date });
-      }
+      if (cook) await notifyCookGeneric(cook.name, cook.email, cook.phone, "proof_approved", { date: booking.booking_date });
+      await notifyOperator("proof_approved", { cook_name: booking.cook_name, date: booking.booking_date });
+    }
+    toast({ title: "Proof approved ✓" });
+  };
+
+  const handleProofResubmit = async (bookingId: string, notes: string) => {
+    if (!notes.trim()) { toast({ title: "Please provide a reason", variant: "destructive" }); return; }
+    await supabase.from("bookings").update({ proof_status: "resubmit", proof_notes: notes.trim() } as any).eq("id", bookingId);
+    setBookings((prev) => prev.map((b) => b.id === bookingId ? { ...b, proof_status: "resubmit", proof_notes: notes.trim() } : b));
+    const booking = bookings.find((b) => b.id === bookingId);
+    if (booking) {
+      const cook = cooks.find((c) => c.id === booking.cook_id);
+      if (cook) await notifyCookGeneric(cook.name, cook.email, cook.phone, "proof_resubmit", { date: booking.booking_date, notes: notes.trim() });
     }
     toast({ title: "Resubmission requested" });
+    setProofResubMode(null);
+    setProofResubNote("");
   };
 
   // ── Menu Vetting Actions (cook_menus) ──
