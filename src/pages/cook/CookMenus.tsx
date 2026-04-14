@@ -16,6 +16,7 @@ interface CookMenu {
   price_aed: number;
   status: string | null;
   rejection_reason: string | null;
+  admin_notes: string | null;
   photo_urls: string[] | null;
 }
 
@@ -55,7 +56,7 @@ const CookMenus = () => {
     if (!cook) return;
     const { data } = await supabase
       .from("cook_menus")
-      .select("id, menu_name, description, meals, cuisine, dietary, price_aed, status, rejection_reason, photo_urls")
+      .select("id, menu_name, description, meals, cuisine, dietary, price_aed, status, rejection_reason, admin_notes, photo_urls")
       .eq("cook_id", cook.id)
       .order("created_at", { ascending: false });
     setMenus((data ?? []) as CookMenu[]);
@@ -74,7 +75,7 @@ const CookMenus = () => {
   const canAddForCuisine = (c: string) => menusForCuisine(c) < 2;
 
   const openEdit = (m: CookMenu) => {
-    if (m.status !== "rejected" && m.status !== "pending_review" && m.status !== "needs_review") return;
+    if (m.status !== "rejected" && m.status !== "needs_review") return;
     setEditId(m.id);
     setMenuName(m.menu_name);
     setCuisine(m.cuisine || "");
@@ -115,12 +116,25 @@ const CookMenus = () => {
       dietary,
       price_aed: 350,
       status: "pending_review",
+      admin_notes: null,
     };
+
+    const isResubmit = !!editId;
 
     if (editId) {
       const { error } = await supabase.from("cook_menus").update(payload as any).eq("id", editId);
       if (error) toast({ title: "Update failed", variant: "destructive" });
-      else toast({ title: "Menu resubmitted for review ✓" });
+      else {
+        toast({ title: "Menu resubmitted for review ✓" });
+        try {
+          await supabase.functions.invoke("notify-operator", {
+            body: {
+              event_type: isResubmit ? "menu_resubmitted" : "menu_submitted",
+              details: { cook_name: cook.name, menu_name: menuName.trim() },
+            },
+          });
+        } catch {}
+      }
     } else {
       const { error } = await supabase.from("cook_menus").insert({
         ...payload,
@@ -131,15 +145,13 @@ const CookMenus = () => {
       else {
         toast({ title: "Menu submitted ✓", description: "We'll review within 24 hours." });
         try {
-          await supabase.functions.invoke("notify-cook", {
+          await supabase.functions.invoke("notify-operator", {
             body: {
-              cook_name: cook.name,
-              cook_email: cook.email,
               event_type: "menu_submitted",
-              booking_details: { menu: menuName.trim(), cuisine },
+              details: { cook_name: cook.name, menu_name: menuName.trim() },
             },
           });
-        } catch (e) { console.log("Notification skipped:", e); }
+        } catch {}
       }
     }
 
@@ -151,7 +163,7 @@ const CookMenus = () => {
 
   const statusBadge = (s: string | null) => {
     if (s === "approved") return { bg: "rgba(134,163,131,0.15)", text: "#86A383", label: "Live ✓" };
-    if (s === "rejected") return { bg: "rgba(239,68,68,0.08)", text: "#ef4444", label: "Not approved" };
+    if (s === "rejected") return { bg: "rgba(239,68,68,0.08)", text: "#ef4444", label: "Rejected" };
     if (s === "needs_review") return { bg: "rgba(245,158,11,0.1)", text: "#D97706", label: "Changes requested" };
     return { bg: "rgba(181,126,93,0.1)", text: "#B57E5D", label: "Awaiting approval" };
   };
@@ -206,7 +218,10 @@ const CookMenus = () => {
             menus.map((m) => {
               const badge = statusBadge(m.status);
               const isLocked = m.status === "approved";
-              const canEdit = m.status === "rejected" || m.status === "pending_review" || m.status === "needs_review";
+              const isPendingApproval = m.status === "pending_review" || m.status === "pending_approval";
+              const canEdit = m.status === "rejected" || m.status === "needs_review";
+              const feedbackNotes = m.admin_notes || m.rejection_reason;
+
               return (
                 <div key={m.id} className={`rounded-xl p-4 mb-3 bg-white border border-gray-100 ${canEdit ? "cursor-pointer" : ""}`} onClick={() => canEdit && openEdit(m)}>
                   <div className="flex justify-between items-start">
@@ -219,6 +234,7 @@ const CookMenus = () => {
                     </div>
                     <span className="font-body rounded-full px-2.5 py-0.5 shrink-0" style={{ fontSize: "10px", backgroundColor: badge.bg, color: badge.text }}>{badge.label}</span>
                   </div>
+
                   {m.meals && m.meals.length >= 6 && (
                     <div className="mt-2 space-y-1">
                       <p className="font-body" style={{ fontSize: "11px", color: "#666" }}><strong>Starter:</strong> {m.meals[0]}</p>
@@ -226,27 +242,45 @@ const CookMenus = () => {
                       <p className="font-body" style={{ fontSize: "11px", color: "#666" }}><strong>Side:</strong> {m.meals[4]}</p>
                     </div>
                   )}
+
                   {m.dietary && m.dietary.length > 0 && (
                     <p className="font-body mt-1" style={{ fontSize: "10px", color: "#999" }}>{m.dietary.join(" · ")}</p>
                   )}
-                  <p className="font-body mt-2 italic" style={{ fontSize: "10px", color: "#999" }}>
-                    Food photos will be added by the Cooq team after your menu is approved.
-                  </p>
-                  {isLocked && (
-                    <p className="font-body mt-1" style={{ fontSize: "10px", color: "#999" }}>
-                      Contact cooqdubai@gmail.com to change an approved menu.
+
+                  {/* Feedback notes for needs_review or rejected */}
+                  {(m.status === "needs_review" || m.status === "rejected") && feedbackNotes && (
+                    <div className="mt-2 rounded-lg p-2.5" style={{
+                      backgroundColor: m.status === "rejected" ? "rgba(239,68,68,0.06)" : "rgba(245,158,11,0.08)",
+                      border: `1px solid ${m.status === "rejected" ? "rgba(239,68,68,0.15)" : "rgba(245,158,11,0.2)"}`,
+                    }}>
+                      <p className="font-body" style={{ fontSize: "11px", color: m.status === "rejected" ? "#ef4444" : "#D97706" }}>
+                        {feedbackNotes}
+                      </p>
+                    </div>
+                  )}
+
+                  {canEdit && (
+                    <button className="mt-2 font-body text-xs font-semibold" style={{ color: "#D97706" }}>
+                      ✏️ Tap to edit & resubmit
+                    </button>
+                  )}
+
+                  {isPendingApproval && (
+                    <p className="font-body mt-2 italic" style={{ fontSize: "10px", color: "#B57E5D" }}>
+                      No edits allowed while under review.
                     </p>
                   )}
-                  {m.status === "rejected" && (
-                    <>
-                      {m.rejection_reason && (
-                        <p className="font-body italic mt-1 text-red-400" style={{ fontSize: "11px" }}>{m.rejection_reason}</p>
-                      )}
-                      <p className="font-body mt-1" style={{ fontSize: "10px", color: "#ef4444" }}>
-                        Contact cooqdubai@gmail.com
-                      </p>
-                    </>
+
+                  {isLocked && (
+                    <p className="font-body mt-2" style={{ fontSize: "10px", color: "#999" }}>
+                      🔒 Contact admin.cooq@gmail.com to make changes
+                    </p>
                   )}
+
+                  <p className="font-body mt-1 italic" style={{ fontSize: "10px", color: "#ccc" }}>
+                    Food photos will be added by the Cooq team after approval.
+                  </p>
+
                   {m.photo_urls && m.photo_urls.length > 0 && (
                     <div className="flex gap-2 mt-2">
                       {m.photo_urls.map((url, i) => (
@@ -309,7 +343,6 @@ const CookMenus = () => {
             </div>
           </div>
 
-          {/* Photo message */}
           <div className="rounded-xl p-3" style={{ backgroundColor: "rgba(134,163,131,0.06)", border: "1px solid rgba(134,163,131,0.15)" }}>
             <p className="font-body text-xs" style={{ color: "#999" }}>
               Food photos will be added by the Cooq team after your menu is approved.

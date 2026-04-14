@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useCook } from "@/context/CookContext";
 import { toast } from "@/hooks/use-toast";
-import { ChevronRight, MapPin, Calendar, Clock, LogOut, Loader2 } from "lucide-react";
+import { ChevronRight, MapPin, Calendar, Clock, LogOut, Loader2, Bell } from "lucide-react";
 import cooqLogo from "@/assets/cooq-logo.png";
 import CookBottomNav from "@/components/cook/CookBottomNav";
 import { format, parseISO } from "date-fns";
@@ -19,22 +19,50 @@ interface BookingSummary {
   proof_status: string | null;
 }
 
+interface Notification {
+  id: string;
+  title: string;
+  message: string;
+  type: string;
+  read: boolean;
+  created_at: string;
+}
+
 const CookDashboard = () => {
-  const { cook, loading: cookLoading } = useCook();
+  const { cook, setCook, loading: cookLoading } = useCook();
   const navigate = useNavigate();
   const [upcoming, setUpcoming] = useState<BookingSummary[]>([]);
   const [stats, setStats] = useState({ upcoming: 0, completed: 0, earned: 0, monthlyEarnings: 0 });
   const [pendingCount, setPendingCount] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [menuNotification, setMenuNotification] = useState<string | null>(null);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [showNotifications, setShowNotifications] = useState(false);
 
   const isApproved = cook?.status === "approved" || cook?.status === "active";
-  const isPending = cook?.status === "pending" || cook?.status === "applied" || cook?.status === "reviewed" || cook?.status === "needs_review";
+  const isPending = cook?.status === "pending" || cook?.status === "applied" || cook?.status === "reviewed";
+  const isNeedsReview = cook?.status === "needs_review";
   const isSuspended = cook?.status === "suspended" || cook?.status === "rejected";
-  const hasOperatorNotes = cook?.status === "needs_review" && (cook as any)?.operator_notes;
+
+  const fetchNotifications = useCallback(async () => {
+    if (!cook) return;
+    const { data } = await supabase
+      .from("cook_notifications")
+      .select("*")
+      .eq("cook_id", cook.id)
+      .order("created_at", { ascending: false })
+      .limit(20);
+    setNotifications((data ?? []) as Notification[]);
+  }, [cook]);
+
+  const markAsRead = async (id: string) => {
+    await supabase.from("cook_notifications").update({ read: true } as any).eq("id", id);
+    setNotifications((prev) => prev.map((n) => n.id === id ? { ...n, read: true } : n));
+  };
+
+  const unreadCount = notifications.filter((n) => !n.read).length;
 
   const fetchData = useCallback(async () => {
-    if (!cook || !isApproved) { setLoading(false); return; }
+    if (!cook || (!isApproved && !isNeedsReview)) { setLoading(false); return; }
 
     const [upcomingRes, completedRes, paidRes, pendingRes, monthlyRes] = await Promise.all([
       supabase
@@ -81,9 +109,9 @@ const CookDashboard = () => {
     setUpcoming((upcomingRes.data as BookingSummary[]) ?? []);
     setPendingCount(pendingRes.count ?? 0);
     setLoading(false);
-  }, [cook, isApproved]);
+  }, [cook, isApproved, isNeedsReview]);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => { fetchData(); fetchNotifications(); }, [fetchData, fetchNotifications]);
 
   // Realtime for new bookings
   useEffect(() => {
@@ -92,28 +120,24 @@ const CookDashboard = () => {
       .channel("cook-dash-" + cook.id)
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "bookings", filter: "cook_id=eq." + cook.id }, () => {
         fetchData();
+        fetchNotifications();
         toast({ title: "New booking received!", description: "Tap Orders to view." });
       })
       .subscribe();
     return () => { supabase.removeChannel(ch); };
-  }, [cook, fetchData, isApproved]);
+  }, [cook, fetchData, fetchNotifications, isApproved]);
 
-  // Listen for menu approval/rejection
+  // Realtime for notifications
   useEffect(() => {
-    if (!cook || !isApproved) return;
+    if (!cook) return;
     const ch = supabase
-      .channel("cook-menus-" + cook.id)
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "cook_menus", filter: "cook_id=eq." + cook.id }, (payload) => {
-        const newRow = payload.new as any;
-        if (newRow.status === "approved") {
-          setMenuNotification(`Your menu "${newRow.menu_name}" has been approved ✓`);
-        } else if (newRow.status === "rejected") {
-          setMenuNotification(`Your menu "${newRow.menu_name}" was not approved. See feedback in Menus.`);
-        }
+      .channel("cook-notif-" + cook.id)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "cook_notifications", filter: "cook_id=eq." + cook.id }, () => {
+        fetchNotifications();
       })
       .subscribe();
     return () => { supabase.removeChannel(ch); };
-  }, [cook, isApproved]);
+  }, [cook, fetchNotifications]);
 
   const firstName = cook?.name?.split(" ")[0] || "Cook";
   const initials = cook?.name?.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase() || "?";
@@ -128,8 +152,19 @@ const CookDashboard = () => {
     navigate("/cook/login", { replace: true });
   };
 
-  // Loading state
-  if (cookLoading) {
+  const handleEditProfile = () => {
+    navigate("/cook/profile");
+  };
+
+  // Loading state — max 2s spinner
+  useEffect(() => {
+    if (cookLoading) {
+      const timeout = setTimeout(() => setLoading(false), 2000);
+      return () => clearTimeout(timeout);
+    }
+  }, [cookLoading]);
+
+  if (cookLoading && loading) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: "#FAF9F6" }}>
         <Loader2 className="w-8 h-8 animate-spin" style={{ color: "#86A383" }} />
@@ -137,29 +172,66 @@ const CookDashboard = () => {
     );
   }
 
+  const headerBar = (
+    <div className="flex items-center justify-between px-4 py-3 mb-2">
+      <img src={cooqLogo} alt="Cooq" className="h-7" />
+      <div className="flex items-center gap-3">
+        {/* Notification bell */}
+        <div className="relative">
+          <button onClick={() => setShowNotifications(!showNotifications)}>
+            <Bell className="w-5 h-5" style={{ color: "#2C3B3A" }} />
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 min-w-[16px] h-4 rounded-full flex items-center justify-center text-white font-body" style={{ fontSize: "9px", backgroundColor: "#ef4444", padding: "0 4px" }}>
+                {unreadCount}
+              </span>
+            )}
+          </button>
+
+          {showNotifications && (
+            <div className="absolute right-0 top-8 w-72 max-h-80 overflow-y-auto rounded-xl shadow-lg border border-gray-100 z-50" style={{ backgroundColor: "#fff" }}>
+              <div className="p-3 border-b border-gray-100">
+                <p className="font-body font-semibold text-sm" style={{ color: "#2C3B3A" }}>Notifications</p>
+              </div>
+              {notifications.length === 0 ? (
+                <p className="p-4 font-body text-xs text-center" style={{ color: "#999" }}>No notifications yet</p>
+              ) : (
+                notifications.map((n) => (
+                  <button
+                    key={n.id}
+                    onClick={() => markAsRead(n.id)}
+                    className="w-full text-left p-3 border-b border-gray-50 hover:bg-gray-50 transition-colors"
+                    style={{ backgroundColor: n.read ? "transparent" : "rgba(134,163,131,0.05)" }}
+                  >
+                    <p className="font-body font-semibold" style={{ fontSize: "12px", color: "#2C3B3A" }}>{n.title}</p>
+                    <p className="font-body mt-0.5" style={{ fontSize: "11px", color: "#666" }}>{n.message}</p>
+                    <p className="font-body mt-0.5" style={{ fontSize: "9px", color: "#999" }}>
+                      {formatDate(n.created_at)}
+                    </p>
+                  </button>
+                ))
+              )}
+            </div>
+          )}
+        </div>
+
+        <button onClick={handleSignOut} className="flex items-center gap-1 font-body text-xs" style={{ color: "#999" }}>
+          <LogOut className="w-4 h-4" /> Sign out
+        </button>
+      </div>
+    </div>
+  );
+
   // Pending state
   if (isPending) {
     return (
       <div className="min-h-screen px-4 py-6" style={{ backgroundColor: "#FAF9F6" }}>
-        <div className="flex items-center justify-between mb-6">
-          <img src={cooqLogo} alt="Cooq" className="h-7" />
-          <button onClick={handleSignOut} className="flex items-center gap-1 font-body text-xs" style={{ color: "#999" }}>
-            <LogOut className="w-4 h-4" /> Sign out
-          </button>
-        </div>
+        {headerBar}
         <h2 className="font-display italic text-xl mb-4" style={{ color: "#2C3B3A" }}>Hi {firstName} 👋</h2>
-        {hasOperatorNotes ? (
-          <div className="rounded-xl p-4 mb-4" style={{ backgroundColor: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.3)" }}>
-            <p className="font-body text-sm font-semibold mb-1" style={{ color: "#D97706" }}>⚠️ Changes Requested</p>
-            <p className="font-body text-sm" style={{ color: "#92400E" }}>{(cook as any)?.operator_notes}</p>
-          </div>
-        ) : (
-          <div className="rounded-xl p-4 mb-4" style={{ backgroundColor: "rgba(181,126,93,0.1)", border: "1px solid rgba(181,126,93,0.25)" }}>
-            <p className="font-body text-sm" style={{ color: "#B57E5D" }}>
-              ⏳ Your application is under review. We'll WhatsApp you within 48 hours.
-            </p>
-          </div>
-        )}
+        <div className="rounded-xl p-4 mb-4" style={{ backgroundColor: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.3)" }}>
+          <p className="font-body text-sm" style={{ color: "#D97706" }}>
+            ⏳ Your application is under review. We'll be in touch within 48 hours.
+          </p>
+        </div>
         <div className="rounded-xl p-4 bg-white border border-gray-100">
           <p className="font-body text-sm mb-3" style={{ color: "#666" }}>
             While you wait, prepare your Emirates ID and health card — you'll need to upload them once approved.
@@ -172,6 +244,29 @@ const CookDashboard = () => {
             Upload documents →
           </button>
         </div>
+        <CookBottomNav />
+      </div>
+    );
+  }
+
+  // Needs review state
+  if (isNeedsReview) {
+    return (
+      <div className="min-h-screen pb-24 px-4 py-6" style={{ backgroundColor: "#FAF9F6" }}>
+        {headerBar}
+        <h2 className="font-display italic text-xl mb-4" style={{ color: "#2C3B3A" }}>Hi {firstName} 👋</h2>
+        <div className="rounded-xl p-4 mb-4" style={{ backgroundColor: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.3)" }}>
+          <p className="font-body text-sm font-semibold mb-1" style={{ color: "#D97706" }}>⚠️ Profile update needed</p>
+          <p className="font-body text-sm" style={{ color: "#92400E" }}>{cook?.operator_notes || "Please update your profile."}</p>
+          <button
+            onClick={handleEditProfile}
+            className="mt-3 px-4 py-2 rounded-lg font-body font-semibold text-sm"
+            style={{ backgroundColor: "#D97706", color: "#fff" }}
+          >
+            Edit Profile
+          </button>
+        </div>
+        <CookBottomNav />
       </div>
     );
   }
@@ -180,16 +275,11 @@ const CookDashboard = () => {
   if (isSuspended) {
     return (
       <div className="min-h-screen px-4 py-6" style={{ backgroundColor: "#FAF9F6" }}>
-        <div className="flex items-center justify-between mb-6">
-          <img src={cooqLogo} alt="Cooq" className="h-7" />
-          <button onClick={handleSignOut} className="flex items-center gap-1 font-body text-xs" style={{ color: "#999" }}>
-            <LogOut className="w-4 h-4" /> Sign out
-          </button>
-        </div>
+        {headerBar}
         <div className="rounded-xl p-4" style={{ backgroundColor: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)" }}>
           <p className="font-body text-sm text-red-600">
             Your account is paused. Contact{" "}
-            <a href="mailto:cooqdubai@gmail.com" className="underline">cooqdubai@gmail.com</a>.
+            <a href="mailto:admin.cooq@gmail.com" className="underline">admin.cooq@gmail.com</a>.
           </p>
         </div>
       </div>
@@ -203,6 +293,44 @@ const CookDashboard = () => {
       <div className="sticky top-0 z-20 flex items-center justify-between px-4 py-3 border-b" style={{ backgroundColor: "#FAF9F6", borderColor: "rgba(0,0,0,0.06)" }}>
         <img src={cooqLogo} alt="Cooq" className="h-7" />
         <div className="flex items-center gap-3">
+          {/* Notification bell */}
+          <div className="relative">
+            <button onClick={() => setShowNotifications(!showNotifications)}>
+              <Bell className="w-5 h-5" style={{ color: "#2C3B3A" }} />
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-[16px] h-4 rounded-full flex items-center justify-center text-white font-body" style={{ fontSize: "9px", backgroundColor: "#ef4444", padding: "0 4px" }}>
+                  {unreadCount}
+                </span>
+              )}
+            </button>
+
+            {showNotifications && (
+              <div className="absolute right-0 top-8 w-72 max-h-80 overflow-y-auto rounded-xl shadow-lg border border-gray-100 z-50" style={{ backgroundColor: "#fff" }}>
+                <div className="p-3 border-b border-gray-100">
+                  <p className="font-body font-semibold text-sm" style={{ color: "#2C3B3A" }}>Notifications</p>
+                </div>
+                {notifications.length === 0 ? (
+                  <p className="p-4 font-body text-xs text-center" style={{ color: "#999" }}>No notifications yet</p>
+                ) : (
+                  notifications.map((n) => (
+                    <button
+                      key={n.id}
+                      onClick={() => markAsRead(n.id)}
+                      className="w-full text-left p-3 border-b border-gray-50 hover:bg-gray-50 transition-colors"
+                      style={{ backgroundColor: n.read ? "transparent" : "rgba(134,163,131,0.05)" }}
+                    >
+                      <p className="font-body font-semibold" style={{ fontSize: "12px", color: "#2C3B3A" }}>{n.title}</p>
+                      <p className="font-body mt-0.5" style={{ fontSize: "11px", color: "#666" }}>{n.message}</p>
+                      <p className="font-body mt-0.5" style={{ fontSize: "9px", color: "#999" }}>
+                        {formatDate(n.created_at)}
+                      </p>
+                    </button>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+
           {cook?.photo_url ? (
             <img src={cook.photo_url} alt="" className="w-8 h-8 rounded-full object-cover" />
           ) : (
@@ -221,14 +349,6 @@ const CookDashboard = () => {
       <div className="mx-4 mt-3 rounded-xl p-3" style={{ backgroundColor: "rgba(134,163,131,0.1)", border: "1px solid rgba(134,163,131,0.2)" }}>
         <p className="font-body text-sm" style={{ color: "#86A383" }}>✓ You're live on Cooq!</p>
       </div>
-
-      {/* Menu notification banner */}
-      {menuNotification && (
-        <div className="mx-4 mt-2 rounded-xl p-3 flex justify-between items-center" style={{ backgroundColor: "rgba(134,163,131,0.08)", border: "1px solid rgba(134,163,131,0.2)" }}>
-          <p className="font-body text-xs" style={{ color: "#86A383" }}>{menuNotification}</p>
-          <button onClick={() => setMenuNotification(null)} className="font-body text-xs ml-2" style={{ color: "#999" }}>✕</button>
-        </div>
-      )}
 
       {/* Stats */}
       <div className="mt-4 px-4 flex gap-3 overflow-x-auto pb-2">
