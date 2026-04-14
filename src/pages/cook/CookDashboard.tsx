@@ -27,8 +27,9 @@ const CookDashboard = () => {
   const [menuNotification, setMenuNotification] = useState<string | null>(null);
 
   const isApproved = cook?.status === "approved" || cook?.status === "active";
-  const isPending = cook?.status === "pending" || cook?.status === "applied" || cook?.status === "reviewed";
+  const isPending = cook?.status === "pending" || cook?.status === "applied" || cook?.status === "reviewed" || cook?.status === "needs_review";
   const isSuspended = cook?.status === "suspended" || cook?.status === "rejected";
+  const hasOperatorNotes = cook?.status === "needs_review" && (cook as any)?.operator_notes;
 
   const fetchData = useCallback(async () => {
     if (!cook || !isApproved) { setLoading(false); return; }
