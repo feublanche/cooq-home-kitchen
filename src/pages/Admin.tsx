@@ -95,7 +95,9 @@ interface MenuRecord {
   serves: number | null;
   status: string | null;
   rejection_reason: string | null;
+  admin_notes: string | null;
   created_at: string | null;
+  photo_urls: string[] | null;
 }
 
 const tabs = [
@@ -164,8 +166,10 @@ const Admin = () => {
   const [showPendingPayouts, setShowPendingPayouts] = useState(false);
 
   // Menu vetting state
-  const [rejectMenuId, setRejectMenuId] = useState<string | null>(null);
-  const [rejectReason, setRejectReason] = useState("");
+  const [menuActionMode, setMenuActionMode] = useState<Record<string, "approve" | "changes" | "reject" | null>>({});
+  const [menuPhotoFile, setMenuPhotoFile] = useState<File | null>(null);
+  const [menuActionNote, setMenuActionNote] = useState<Record<string, string>>({});
+  const [menuActionLoading, setMenuActionLoading] = useState<string | null>(null);
 
   // Cook documents state
   const [cookDocs, setCookDocs] = useState<{ id: string; cook_id: string; document_type: string; file_url: string; status: string }[]>([]);
@@ -354,39 +358,62 @@ const Admin = () => {
   };
 
   // ── Menu Vetting Actions (cook_menus) ──
-  const handleMenuApprove = async (menu: MenuRecord) => {
-    setMenus((prev) => prev.map((m) => (m.id === menu.id ? { ...m, status: "approved" } : m)));
-    await supabase.from("cook_menus").update({ status: "approved" }).eq("id", menu.id);
-
-    // Fetch cook email for notification
-    if (menu.cook_id) {
-      const cook = cooks.find((c) => c.id === menu.cook_id);
-      if (cook) {
-        await notifyCookGeneric(cook.name, cook.email, cook.phone, "menu_approved", { menu: menu.menu_name });
-      }
+  const handleMenuApproveWithPhoto = async (menu: MenuRecord) => {
+    if (!menuPhotoFile) {
+      toast({ title: "Please upload a food photo first", variant: "destructive" });
+      return;
     }
-    toast({ title: "Menu Approved ✓", description: `${menu.cook_name}'s menu "${menu.menu_name}" approved.` });
+    setMenuActionLoading(menu.id);
+    try {
+      const ext = menuPhotoFile.name.split(".").pop() || "jpg";
+      const path = `${menu.id}/photo.${ext}`;
+      const { error: uploadErr } = await supabase.storage.from("menu-photos").upload(path, menuPhotoFile, { upsert: true });
+      if (uploadErr) throw uploadErr;
+      const { data: urlData } = supabase.storage.from("menu-photos").getPublicUrl(path);
+      const photoUrl = urlData.publicUrl;
+
+      await supabase.from("cook_menus").update({ status: "approved", photo_urls: [photoUrl] } as any).eq("id", menu.id);
+      setMenus((prev) => prev.map((m) => (m.id === menu.id ? { ...m, status: "approved", photo_urls: [photoUrl] } : m)));
+
+      if (menu.cook_id) {
+        const cook = cooks.find((c) => c.id === menu.cook_id);
+        if (cook) await notifyCookGeneric(cook.name, cook.email, cook.phone, "menu_approved", { menu: menu.menu_name });
+      }
+      toast({ title: "Menu Approved ✓", description: `Photo uploaded and menu is now live.` });
+    } catch (err: any) {
+      toast({ title: "Error: " + (err.message || "Upload failed"), variant: "destructive" });
+    }
+    setMenuActionLoading(null);
+    setMenuPhotoFile(null);
+    setMenuActionMode((prev) => ({ ...prev, [menu.id]: null }));
   };
 
-  const handleMenuReject = async (menu: MenuRecord) => {
-    if (!rejectReason.trim()) return;
-    setMenus((prev) =>
-      prev.map((m) => (m.id === menu.id ? { ...m, status: "needs_review", rejection_reason: rejectReason } : m))
-    );
-    await supabase
-      .from("cook_menus")
-      .update({ status: "needs_review", rejection_reason: rejectReason })
-      .eq("id", menu.id);
-
+  const handleMenuRequestChanges = async (menu: MenuRecord) => {
+    const note = menuActionNote[menu.id]?.trim();
+    if (!note) { toast({ title: "Please describe what needs to change", variant: "destructive" }); return; }
+    setMenuActionLoading(menu.id);
+    await supabase.from("cook_menus").update({ status: "needs_review", admin_notes: note } as any).eq("id", menu.id);
+    setMenus((prev) => prev.map((m) => (m.id === menu.id ? { ...m, status: "needs_review", admin_notes: note } : m)));
     if (menu.cook_id) {
       const cook = cooks.find((c) => c.id === menu.cook_id);
-      if (cook) {
-        await notifyCookGeneric(cook.name, cook.email, cook.phone, "menu_rejected", { menu: menu.menu_name });
-      }
+      if (cook) await notifyCookGeneric(cook.name, cook.email, cook.phone, "menu_rejected", { menu: menu.menu_name });
     }
-    toast({ title: "Changes requested", description: `${menu.cook_name}'s menu sent back for review.` });
-    setRejectMenuId(null);
-    setRejectReason("");
+    toast({ title: "Changes requested" });
+    setMenuActionLoading(null);
+    setMenuActionMode((prev) => ({ ...prev, [menu.id]: null }));
+    setMenuActionNote((prev) => ({ ...prev, [menu.id]: "" }));
+  };
+
+  const handleMenuRejectFinal = async (menu: MenuRecord) => {
+    const note = menuActionNote[menu.id]?.trim();
+    if (!note) { toast({ title: "Please provide a reason", variant: "destructive" }); return; }
+    setMenuActionLoading(menu.id);
+    await supabase.from("cook_menus").update({ status: "rejected", admin_notes: note } as any).eq("id", menu.id);
+    setMenus((prev) => prev.map((m) => (m.id === menu.id ? { ...m, status: "rejected", admin_notes: note } : m)));
+    toast({ title: "Menu rejected" });
+    setMenuActionLoading(null);
+    setMenuActionMode((prev) => ({ ...prev, [menu.id]: null }));
+    setMenuActionNote((prev) => ({ ...prev, [menu.id]: "" }));
   };
 
   // ── Photo Review ──
@@ -733,6 +760,7 @@ const Admin = () => {
             <div className="space-y-3">
               {menus.map((m) => {
                 const ms = m.status || "pending_review";
+                const mode = menuActionMode[m.id] || null;
                 return (
                   <div key={m.id} className="bg-card rounded-xl p-4 border border-border" style={{ boxShadow: "var(--shadow-card)" }}>
                     <div className="flex justify-between items-start mb-2">
@@ -741,28 +769,9 @@ const Admin = () => {
                         <p className="font-body text-xs text-foreground">{m.menu_name}</p>
                         <p className="font-body text-xs text-copper mt-0.5">{m.cuisine || "—"}</p>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <select
-                          value={ms}
-                          onChange={async (e) => {
-                            const newStatus = e.target.value;
-                            if (newStatus === "approved") {
-                              handleMenuApprove(m);
-                            } else if (newStatus === "needs_review") {
-                              setRejectMenuId(m.id);
-                            } else if (newStatus === "pending_review") {
-                              setMenus((prev) => prev.map((x) => (x.id === m.id ? { ...x, status: "pending_review" } : x)));
-                              await supabase.from("cook_menus").update({ status: "pending_review", rejection_reason: null }).eq("id", m.id);
-                              toast({ title: "Menu reset to pending" });
-                            }
-                          }}
-                          className={`font-body text-xs font-semibold px-2 py-1 rounded-lg border-0 cursor-pointer ${menuStatusColors[ms] || ""}`}
-                        >
-                          <option value="pending_review">Pending</option>
-                          <option value="approved">Approved</option>
-                          <option value="needs_review">Request Changes</option>
-                        </select>
-                      </div>
+                      <span className={`font-body text-[10px] font-semibold px-2 py-0.5 rounded-full ${menuStatusColors[ms] || ""}`}>
+                        {ms === "pending_review" ? "Pending" : ms === "approved" ? "Approved" : ms === "needs_review" ? "Changes Requested" : ms === "rejected" ? "Rejected" : ms}
+                      </span>
                     </div>
 
                     {/* Meals */}
@@ -787,31 +796,65 @@ const Admin = () => {
                       </div>
                     )}
 
-                    <p className="font-body text-xs text-muted-foreground">
-                      AED {m.price_aed} · serves {m.serves || "—"}
-                    </p>
-
-                    {ms === "rejected" && m.rejection_reason && (
-                      <p className="font-body text-xs text-destructive/70 italic mt-1">{m.rejection_reason}</p>
+                    {/* Photo preview */}
+                    {m.photo_urls && m.photo_urls.length > 0 && (
+                      <div className="flex gap-2 mb-2">
+                        {m.photo_urls.map((url, i) => (
+                          <img key={i} src={url} alt="" className="w-16 h-16 rounded-lg object-cover" />
+                        ))}
+                      </div>
                     )}
 
-                    {/* Reject reason input */}
-                    {rejectMenuId === m.id && (
-                      <div className="mt-3 space-y-2">
-                        <textarea
-                          value={rejectReason}
-                          onChange={(e) => setRejectReason(e.target.value)}
-                          placeholder="Reason for rejection..."
-                          className="w-full p-2 rounded-lg border border-border bg-card font-body text-xs text-foreground resize-none outline-none focus:border-primary"
-                          rows={2}
-                        />
-                        <button
-                          onClick={() => handleMenuReject(m)}
-                          disabled={!rejectReason.trim()}
-                          className="font-body text-xs px-3 py-1.5 rounded-lg bg-destructive/10 text-destructive hover:bg-destructive/20 disabled:opacity-50 transition-colors"
-                        >
-                          Confirm Reject
-                        </button>
+                    {(ms === "needs_review" || ms === "rejected") && (m as any).admin_notes && (
+                      <p className="font-body text-xs text-destructive/70 italic mt-1">Notes: {(m as any).admin_notes}</p>
+                    )}
+
+                    {/* Action buttons */}
+                    {!mode && (
+                      <div className="flex gap-2 mt-3">
+                        <button onClick={() => setMenuActionMode((p) => ({ ...p, [m.id]: "approve" }))} className="flex-1 py-2 rounded-lg font-body text-xs font-semibold bg-green-500/10 text-green-600 hover:bg-green-500/20 transition-colors">Approve</button>
+                        <button onClick={() => setMenuActionMode((p) => ({ ...p, [m.id]: "changes" }))} className="flex-1 py-2 rounded-lg font-body text-xs font-semibold bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 transition-colors">Request Changes</button>
+                        <button onClick={() => setMenuActionMode((p) => ({ ...p, [m.id]: "reject" }))} className="flex-1 py-2 rounded-lg font-body text-xs font-semibold bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors">Reject</button>
+                      </div>
+                    )}
+
+                    {/* Approve: photo upload required */}
+                    {mode === "approve" && (
+                      <div className="mt-3 space-y-2 p-3 rounded-lg bg-green-50 border border-green-200">
+                        <p className="font-body text-xs font-semibold text-green-700">Upload food photo to approve</p>
+                        <input type="file" accept="image/*" onChange={(e) => setMenuPhotoFile(e.target.files?.[0] || null)} className="font-body text-xs" />
+                        <div className="flex gap-2">
+                          <button onClick={() => handleMenuApproveWithPhoto(m)} disabled={menuActionLoading === m.id || !menuPhotoFile} className="px-4 py-2 rounded-lg font-body text-xs font-semibold bg-green-500 text-white disabled:opacity-50 flex items-center gap-1">
+                            {menuActionLoading === m.id && <Loader2 className="w-3 h-3 animate-spin" />} Approve & Publish
+                          </button>
+                          <button onClick={() => { setMenuActionMode((p) => ({ ...p, [m.id]: null })); setMenuPhotoFile(null); }} className="px-3 py-2 rounded-lg font-body text-xs text-muted-foreground">Cancel</button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Request Changes: comment required */}
+                    {mode === "changes" && (
+                      <div className="mt-3 space-y-2 p-3 rounded-lg bg-amber-50 border border-amber-200">
+                        <textarea value={menuActionNote[m.id] || ""} onChange={(e) => setMenuActionNote((p) => ({ ...p, [m.id]: e.target.value }))} placeholder="What needs to change?" className="w-full p-2 rounded-lg border border-amber-300 bg-white font-body text-xs text-foreground resize-none outline-none" rows={2} />
+                        <div className="flex gap-2">
+                          <button onClick={() => handleMenuRequestChanges(m)} disabled={menuActionLoading === m.id} className="px-4 py-2 rounded-lg font-body text-xs font-semibold bg-amber-500 text-white disabled:opacity-50 flex items-center gap-1">
+                            {menuActionLoading === m.id && <Loader2 className="w-3 h-3 animate-spin" />} Send Feedback
+                          </button>
+                          <button onClick={() => setMenuActionMode((p) => ({ ...p, [m.id]: null }))} className="px-3 py-2 rounded-lg font-body text-xs text-muted-foreground">Cancel</button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Reject: comment required */}
+                    {mode === "reject" && (
+                      <div className="mt-3 space-y-2 p-3 rounded-lg bg-red-50 border border-red-200">
+                        <textarea value={menuActionNote[m.id] || ""} onChange={(e) => setMenuActionNote((p) => ({ ...p, [m.id]: e.target.value }))} placeholder="Reason for rejection..." className="w-full p-2 rounded-lg border border-red-300 bg-white font-body text-xs text-foreground resize-none outline-none" rows={2} />
+                        <div className="flex gap-2">
+                          <button onClick={() => handleMenuRejectFinal(m)} disabled={menuActionLoading === m.id} className="px-4 py-2 rounded-lg font-body text-xs font-semibold bg-destructive text-white disabled:opacity-50 flex items-center gap-1">
+                            {menuActionLoading === m.id && <Loader2 className="w-3 h-3 animate-spin" />} Reject Menu
+                          </button>
+                          <button onClick={() => setMenuActionMode((p) => ({ ...p, [m.id]: null }))} className="px-3 py-2 rounded-lg font-body text-xs text-muted-foreground">Cancel</button>
+                        </div>
                       </div>
                     )}
                   </div>

@@ -250,6 +250,7 @@ export type Database = {
       }
       cook_menus: {
         Row: {
+          admin_notes: string | null
           cook_id: string | null
           cook_name: string
           created_at: string | null
@@ -266,6 +267,7 @@ export type Database = {
           status: string | null
         }
         Insert: {
+          admin_notes?: string | null
           cook_id?: string | null
           cook_name: string
           created_at?: string | null
@@ -282,6 +284,7 @@ export type Database = {
           status?: string | null
         }
         Update: {
+          admin_notes?: string | null
           cook_id?: string | null
           cook_name?: string
           created_at?: string | null
