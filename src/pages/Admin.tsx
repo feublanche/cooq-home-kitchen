@@ -178,7 +178,7 @@ const Admin = () => {
   const [docSignedUrls, setDocSignedUrls] = useState<Record<string, string>>({});
   const [docResubMode, setDocResubMode] = useState<string | null>(null);
   const [docResubNote, setDocResubNote] = useState("");
-  const [proofSignedUrls, setProofSignedUrls] = useState<Record<string, string[]>>({});
+  
   const [proofResubMode, setProofResubMode] = useState<string | null>(null);
   const [proofResubNote, setProofResubNote] = useState("");
   const fetchBookings = async () => {
