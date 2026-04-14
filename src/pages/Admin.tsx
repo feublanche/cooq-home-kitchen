@@ -186,9 +186,9 @@ const Admin = () => {
   const fetchCooks = async () => {
     const { data } = await supabase
       .from("cooks")
-      .select("id, name, email, phone, cuisine, area, years_experience, health_card, visa_type, status, created_at")
+      .select("id, name, email, phone, cuisine, area, years_experience, health_card, visa_type, status, created_at, bio, operator_notes")
       .order("created_at", { ascending: false });
-    if (data) setCooks(data as CookRecord[]);
+    if (data) setCooks(data as unknown as CookRecord[]);
   };
 
   const fetchMenus = async () => {
