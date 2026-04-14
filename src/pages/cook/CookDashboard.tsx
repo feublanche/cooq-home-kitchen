@@ -248,6 +248,16 @@ const CookDashboard = () => {
         ))}
       </div>
 
+      {/* Monthly earnings */}
+      <div className="mx-4 mt-3 rounded-xl p-3" style={{ backgroundColor: "rgba(134,163,131,0.08)", border: "1px solid rgba(134,163,131,0.15)" }}>
+        <p className="font-body font-semibold" style={{ fontSize: "14px", color: "#86A383" }}>
+          This month's earnings: AED {loading ? "—" : stats.monthlyEarnings}
+        </p>
+        <p className="font-body mt-1" style={{ fontSize: "10px", color: "#999" }}>
+          Cooq processes cook payments monthly.
+        </p>
+      </div>
+
       {/* New order alert */}
       {pendingCount > 0 && (
         <div className="mx-4 mt-3 rounded-xl p-3 flex justify-between items-center cursor-pointer" style={{ backgroundColor: "#B87355" }} onClick={() => navigate("/cook/orders")}>
