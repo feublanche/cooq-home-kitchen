@@ -38,6 +38,7 @@ const CookSignup = () => {
   const [phone, setPhone] = useState("");
   const [agreed, setAgreed] = useState(false);
   const [dataConsent, setDataConsent] = useState(false);
+  const [agreementConsent, setAgreementConsent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [userId, setUserId] = useState("");
