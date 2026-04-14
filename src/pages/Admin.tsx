@@ -78,6 +78,8 @@ interface CookRecord {
   visa_type: string | null;
   status: string | null;
   created_at: string | null;
+  bio?: string | null;
+  operator_notes?: string | null;
 }
 
 interface MenuRecord {
@@ -122,7 +124,9 @@ const menuStatusColors: Record<string, string> = {
 
 const cookStatusColors: Record<string, string> = {
   applied: "bg-copper/10 text-copper",
+  pending: "bg-copper/10 text-copper",
   reviewed: "bg-amber-500/10 text-amber-500",
+  needs_review: "bg-amber-500/10 text-amber-500",
   approved: "bg-primary/10 text-primary",
   active: "bg-primary/20 text-primary font-bold",
   suspended: "bg-destructive/10 text-destructive",
@@ -148,6 +152,12 @@ const Admin = () => {
   const [availableCooks, setAvailableCooks] = useState<CookRecord[]>([]);
   const [selectedCookId, setSelectedCookId] = useState<string | null>(null);
   const [assigning, setAssigning] = useState(false);
+
+  // Cook detail drawer state
+  const [cookDrawerOpen, setCookDrawerOpen] = useState(false);
+  const [selectedCook, setSelectedCook] = useState<CookRecord | null>(null);
+  const [requestChangesMode, setRequestChangesMode] = useState(false);
+  const [operatorFeedback, setOperatorFeedback] = useState("");
 
   // Financial state
   const [showPendingPayouts, setShowPendingPayouts] = useState(false);
