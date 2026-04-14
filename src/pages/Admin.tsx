@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, forwardRef } from "react";
+import { useEffect, useState, forwardRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import cooqLogo from "@/assets/cooq-logo.png";
@@ -78,6 +78,8 @@ interface CookRecord {
   visa_type: string | null;
   status: string | null;
   created_at: string | null;
+  bio?: string | null;
+  operator_notes?: string | null;
 }
 
 interface MenuRecord {
@@ -122,7 +124,9 @@ const menuStatusColors: Record<string, string> = {
 
 const cookStatusColors: Record<string, string> = {
   applied: "bg-copper/10 text-copper",
+  pending: "bg-copper/10 text-copper",
   reviewed: "bg-amber-500/10 text-amber-500",
+  needs_review: "bg-amber-500/10 text-amber-500",
   approved: "bg-primary/10 text-primary",
   active: "bg-primary/20 text-primary font-bold",
   suspended: "bg-destructive/10 text-destructive",
@@ -148,6 +152,11 @@ const Admin = () => {
   const [availableCooks, setAvailableCooks] = useState<CookRecord[]>([]);
   const [selectedCookId, setSelectedCookId] = useState<string | null>(null);
   const [assigning, setAssigning] = useState(false);
+
+  // Cook detail drawer state
+  const [selectedCook, setSelectedCook] = useState<CookRecord | null>(null);
+  const [requestChangesMode, setRequestChangesMode] = useState(false);
+  const [operatorFeedback, setOperatorFeedback] = useState("");
 
   // Financial state
   const [showPendingPayouts, setShowPendingPayouts] = useState(false);
@@ -176,9 +185,9 @@ const Admin = () => {
   const fetchCooks = async () => {
     const { data } = await supabase
       .from("cooks")
-      .select("id, name, email, phone, cuisine, area, years_experience, health_card, visa_type, status, created_at")
+      .select("id, name, email, phone, cuisine, area, years_experience, health_card, visa_type, status, created_at, bio, operator_notes")
       .order("created_at", { ascending: false });
-    if (data) setCooks(data as CookRecord[]);
+    if (data) setCooks(data as unknown as CookRecord[]);
   };
 
   const fetchMenus = async () => {
@@ -271,10 +280,39 @@ const Admin = () => {
   };
 
   // ── Cook Status Update ──
-  const updateCookStatus = async (cookId: string, newStatus: string) => {
-    setCooks((prev) => prev.map((c) => (c.id === cookId ? { ...c, status: newStatus } : c)));
-    await supabase.from("cooks").update({ status: newStatus }).eq("id", cookId);
+  const updateCookStatus = async (cookId: string, newStatus: string, notes?: string) => {
+    const updateData: Record<string, unknown> = { status: newStatus };
+    if (notes !== undefined) updateData.operator_notes = notes;
+    setCooks((prev) => prev.map((c) => (c.id === cookId ? { ...c, status: newStatus, operator_notes: notes ?? c.operator_notes } : c)));
+    await supabase.from("cooks").update(updateData as any).eq("id", cookId);
     toast({ title: `Cook status updated to "${newStatus}" ✓` });
+  };
+
+  // ── Cook Drawer Actions ──
+  const openCookDrawer = (cook: CookRecord) => {
+    setSelectedCook(cook);
+    setRequestChangesMode(false);
+    setOperatorFeedback("");
+  };
+
+  const handleApproveCook = async () => {
+    if (!selectedCook) return;
+    await updateCookStatus(selectedCook.id, "approved");
+    setSelectedCook(null);
+  };
+
+  const handleRequestChanges = async () => {
+    if (!selectedCook || !operatorFeedback.trim()) return;
+    await updateCookStatus(selectedCook.id, "needs_review", operatorFeedback.trim());
+    setSelectedCook(null);
+    setRequestChangesMode(false);
+    setOperatorFeedback("");
+  };
+
+  const handleSuspendCook = async () => {
+    if (!selectedCook) return;
+    await updateCookStatus(selectedCook.id, "suspended");
+    setSelectedCook(null);
   };
 
   // ── Menu Vetting Actions (cook_menus) ──
@@ -430,17 +468,49 @@ const Admin = () => {
               Review/Approve new Cook applications (Visa/EID check)
             </p>
             <div className="grid grid-cols-3 gap-3 mb-6">
-              <StatCard label="Pending" value={pendingCount} />
-              <StatCard label="Active Cooks" value={cooks.filter((c) => c.status === "active").length} />
-              <StatCard label="Total" value={bookings.length} />
+              <StatCard label="Pending" value={cooks.filter((c) => c.status === "applied" || c.status === "pending").length} />
+              <StatCard label="Active Cooks" value={cooks.filter((c) => c.status === "approved" || c.status === "active").length} />
+              <StatCard label="Total Cooks" value={cooks.length} />
             </div>
-            <div className="bg-card rounded-xl p-4 border border-border mb-4" style={{ boxShadow: "var(--shadow-card)" }}>
-              <p className="font-body text-sm font-semibold text-foreground mb-2">Alerts</p>
-              <div className="space-y-2">
-                <AlertItem icon={<AlertTriangle className="w-4 h-4 text-copper" />} text='Late check-ins or missing "Proof Photos"' />
-                <AlertItem icon={<ShieldCheck className="w-4 h-4 text-primary" />} text="All visa/health certificates up to date" />
-              </div>
-            </div>
+            {(() => {
+              const confirmedNoPhoto = bookings.filter(
+                (b) => b.status === "confirmed" && !photos.some((p) => p.booking_id === b.id)
+              );
+              const completedNoPhoto = bookings.filter(
+                (b) => b.status === "completed" && !photos.some((p) => p.booking_id === b.id)
+              );
+              const alerts: { icon: React.ReactNode; text: string }[] = [];
+              if (confirmedNoPhoto.length > 0) {
+                alerts.push({
+                  icon: <AlertTriangle className="w-4 h-4 text-copper" />,
+                  text: `${confirmedNoPhoto.length} confirmed booking(s) missing proof photos`,
+                });
+              }
+              if (completedNoPhoto.length > 0) {
+                alerts.push({
+                  icon: <AlertTriangle className="w-4 h-4 text-copper" />,
+                  text: `${completedNoPhoto.length} completed booking(s) with no proof photos uploaded`,
+                });
+              }
+              if (expiringCooks.length > 0) {
+                alerts.push({
+                  icon: <AlertTriangle className="w-4 h-4 text-copper" />,
+                  text: `${expiringCooks.length} cook(s) with DHA health cards expiring within 30 days`,
+                });
+              }
+              return (
+                <div className="bg-card rounded-xl p-4 border border-border mb-4" style={{ boxShadow: "var(--shadow-card)" }}>
+                  <p className="font-body text-sm font-semibold text-foreground mb-2">Alerts</p>
+                  <div className="space-y-2">
+                    {alerts.length > 0 ? (
+                      alerts.map((a, i) => <AlertItem key={i} icon={a.icon} text={a.text} />)
+                    ) : (
+                      <AlertItem icon={<CheckCircle2 className="w-4 h-4 text-primary" />} text="No alerts — everything looks good ✓" />
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Toggle */}
             <div className="flex gap-2 mb-4">
@@ -553,7 +623,13 @@ const Admin = () => {
             {supplyView === "cooks" && (
               <div className="space-y-3">
                 {cooks.map((c) => (
-                  <div key={c.id} className="bg-card rounded-xl p-4 border border-border" style={{ boxShadow: "var(--shadow-card)" }}>
+                  <button
+                    type="button"
+                    key={c.id}
+                    onClick={() => openCookDrawer(c)}
+                    className="w-full text-left bg-card rounded-xl p-4 border border-border hover:border-primary/40 transition-colors"
+                    style={{ boxShadow: "var(--shadow-card)" }}
+                  >
                     <div className="flex justify-between items-start mb-2">
                       <div>
                         <p className="font-body text-sm font-semibold text-foreground">{c.name}</p>
@@ -563,74 +639,10 @@ const Admin = () => {
                         {c.status || "applied"}
                       </span>
                     </div>
-                    <p className="font-body text-xs text-foreground mb-1">
-                      {c.cuisine?.join(" · ") || "—"} · {c.area || "—"}
+                    <p className="font-body text-xs text-foreground">
+                      {c.cuisine?.join(" · ") || "—"} · {c.area || "—"} · {c.years_experience ?? 0}y exp
                     </p>
-                    <div className="flex items-center gap-3 font-body text-xs text-muted-foreground mb-2">
-                      <span>{c.years_experience ?? 0}y exp</span>
-                      <span className="flex items-center gap-1">
-                        {c.health_card ? (
-                          <CheckCircle2 className="w-3 h-3 text-primary" />
-                        ) : (
-                          <XCircle className="w-3 h-3 text-muted-foreground" />
-                        )}
-                        Health Card
-                      </span>
-                      <span>Visa: {c.visa_type || "—"}</span>
-                    </div>
-                    <div className="flex gap-2">
-                      {c.status === "applied" && (
-                        <button
-                          onClick={() => updateCookStatus(c.id, "reviewed")}
-                          className="font-body text-xs px-3 py-1.5 rounded-lg bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 transition-colors"
-                        >
-                          Mark Reviewed
-                        </button>
-                      )}
-                      {c.status === "reviewed" && (
-                        <>
-                          <button
-                            onClick={() => updateCookStatus(c.id, "approved")}
-                            className="font-body text-xs px-3 py-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
-                          >
-                            Approve ✓
-                          </button>
-                          <button
-                            onClick={() => updateCookStatus(c.id, "rejected")}
-                            className="font-body text-xs px-3 py-1.5 rounded-lg bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors"
-                          >
-                            Reject ✗
-                          </button>
-                        </>
-                      )}
-                      {c.status === "approved" && (
-                        <button
-                          onClick={() => updateCookStatus(c.id, "active")}
-                          className="font-body text-xs px-3 py-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
-                        >
-                          Set Active
-                        </button>
-                      )}
-                      {(c.status === "active" || c.status === "approved") && (
-                        <button
-                          type="button"
-                          onClick={() => updateCookStatus(c.id, "suspended")}
-                          className="font-body text-xs px-3 py-1.5 rounded-lg bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors"
-                        >
-                          Suspend
-                        </button>
-                      )}
-                      {c.status === "suspended" && (
-                        <button
-                          type="button"
-                          onClick={() => updateCookStatus(c.id, "approved")}
-                          className="font-body text-xs px-3 py-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
-                        >
-                          Reinstate
-                        </button>
-                      )}
-                    </div>
-                  </div>
+                  </button>
                 ))}
                 {cooks.length === 0 && (
                   <p className="font-body text-sm text-muted-foreground text-center py-8">No cooks registered</p>
@@ -1023,6 +1035,100 @@ const Admin = () => {
           </div>
         )}
       </div>
+
+      {/* Cook Detail Drawer */}
+      <Drawer open={!!selectedCook} onOpenChange={(open) => { if (!open) { setSelectedCook(null); setRequestChangesMode(false); setOperatorFeedback(""); } }}>
+        <DrawerContent>
+          <DrawerHeader>
+            <DrawerTitle className="font-display text-lg">Cook Details</DrawerTitle>
+          </DrawerHeader>
+          {selectedCook && (
+            <div className="px-4 pb-6">
+              <div className="flex justify-between items-start mb-4">
+                <div>
+                  <p className="font-body text-base font-semibold text-foreground">{selectedCook.name}</p>
+                  <p className="font-body text-xs text-muted-foreground">{selectedCook.email} · {selectedCook.phone || "—"}</p>
+                </div>
+                <span className={`font-body text-[10px] font-semibold px-2 py-0.5 rounded-full ${cookStatusColors[selectedCook.status || "applied"] || ""}`}>
+                  {selectedCook.status || "applied"}
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1 font-body text-xs mb-4">
+                <p className="text-muted-foreground">Cuisines</p><p className="text-foreground">{selectedCook.cuisine?.join(", ") || "—"}</p>
+                <p className="text-muted-foreground">Area</p><p className="text-foreground">{selectedCook.area || "—"}</p>
+                <p className="text-muted-foreground">Experience</p><p className="text-foreground">{selectedCook.years_experience ?? 0} years</p>
+                <p className="text-muted-foreground">Health Card</p><p className="text-foreground">{selectedCook.health_card ? "Yes ✓" : "No ✗"}</p>
+                <p className="text-muted-foreground">Visa</p><p className="text-foreground">{selectedCook.visa_type || "—"}</p>
+                <p className="text-muted-foreground">Applied</p><p className="text-foreground">{selectedCook.created_at ? new Date(selectedCook.created_at).toLocaleDateString("en-GB") : "—"}</p>
+              </div>
+              {selectedCook.bio && (
+                <div className="mb-4">
+                  <p className="font-body text-xs text-muted-foreground mb-1">Bio</p>
+                  <p className="font-body text-xs text-foreground">{selectedCook.bio}</p>
+                </div>
+              )}
+              {selectedCook.operator_notes && (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
+                  <p className="font-body text-xs font-semibold text-amber-800 mb-1">Operator Notes</p>
+                  <p className="font-body text-xs text-amber-700">{selectedCook.operator_notes}</p>
+                </div>
+              )}
+
+              {requestChangesMode ? (
+                <div className="space-y-3">
+                  <textarea
+                    value={operatorFeedback}
+                    onChange={(e) => setOperatorFeedback(e.target.value)}
+                    placeholder="Type your feedback for the cook..."
+                    className="w-full rounded-xl border border-border bg-card p-3 font-body text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-primary min-h-[80px]"
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={handleRequestChanges}
+                      disabled={!operatorFeedback.trim()}
+                      className="flex-1 py-2.5 rounded-xl font-body font-semibold text-sm bg-amber-500 text-white hover:bg-amber-600 disabled:opacity-50 transition-colors"
+                    >
+                      Send Feedback
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setRequestChangesMode(false)}
+                      className="px-4 py-2.5 rounded-xl font-body text-sm text-muted-foreground hover:bg-muted transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={handleApproveCook}
+                    className="flex-1 py-2.5 rounded-xl font-body font-semibold text-sm bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+                  >
+                    Approve ✓
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRequestChangesMode(true)}
+                    className="flex-1 py-2.5 rounded-xl font-body font-semibold text-sm bg-amber-500 text-white hover:bg-amber-600 transition-colors"
+                  >
+                    Request Changes
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSuspendCook}
+                    className="flex-1 py-2.5 rounded-xl font-body font-semibold text-sm bg-destructive text-destructive-foreground hover:bg-destructive/90 transition-colors"
+                  >
+                    Suspend
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </DrawerContent>
+      </Drawer>
 
       {/* Assign Cook Drawer */}
       <Drawer open={assignDrawerOpen} onOpenChange={setAssignDrawerOpen}>

@@ -315,6 +315,7 @@ export type Database = {
           health_card_expiry: string | null
           id: string
           name: string
+          operator_notes: string | null
           phone: string | null
           photo_url: string | null
           status: string | null
@@ -333,6 +334,7 @@ export type Database = {
           health_card_expiry?: string | null
           id?: string
           name: string
+          operator_notes?: string | null
           phone?: string | null
           photo_url?: string | null
           status?: string | null
@@ -351,6 +353,7 @@ export type Database = {
           health_card_expiry?: string | null
           id?: string
           name?: string
+          operator_notes?: string | null
           phone?: string | null
           photo_url?: string | null
           status?: string | null
