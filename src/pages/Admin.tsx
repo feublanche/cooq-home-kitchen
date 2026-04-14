@@ -455,27 +455,7 @@ const Admin = () => {
     setMenuActionNote((prev) => ({ ...prev, [menu.id]: "" }));
   };
 
-  // ── Photo Review ──
-  const handlePhotoReview = async (photoId: string, approved: boolean) => {
-    await supabase
-      .from("quality_photos")
-      .update({ reviewed: true, approved } as any)
-      .eq("id", photoId);
-    setPhotos((prev) =>
-      prev.map((p) => (p.id === photoId ? { ...p, reviewed: true, approved } : p))
-    );
-    toast({
-      title: approved ? "Photo Approved ✓" : "Photo Rejected",
-      description: approved ? "Proof of quality verified." : "Photo did not meet standards.",
-    });
-  };
 
-  // ── Mark as Paid ──
-  const markAsPaid = async (id: string) => {
-    setBookings((prev) => prev.map((b) => (b.id === id ? { ...b, paid: true } : b)));
-    await supabase.from("bookings").update({ paid: true }).eq("id", id);
-    toast({ title: "Marked ✓" });
-  };
 
   const totalRevenue = bookings.reduce((sum, b) => sum + (b.total_aed || 0), 0);
   const pendingCount = bookings.filter((b) => b.status === "pending").length;
