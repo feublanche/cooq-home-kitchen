@@ -11,11 +11,6 @@ const cuisineOptions = [
   "American", "Italian", "Keto/Healthy", "Vegan", "Other",
 ];
 
-const areaOptions = [
-  "Dubai Marina", "JBR", "JLT", "Downtown Dubai", "Business Bay", "DIFC",
-  "Jumeirah", "Umm Suqeim", "Al Barsha", "Arabian Ranches", "Mirdif",
-  "Palm Jumeirah", "Deira/Bur Dubai", "All Dubai",
-];
 
 const CookProfilePage = () => {
   const { cook, setCook } = useCook();
@@ -24,7 +19,7 @@ const CookProfilePage = () => {
 
   const [bio, setBio] = useState(cook?.bio || "");
   const [cuisines, setCuisines] = useState<string[]>(cook?.cuisine || []);
-  const [areas, setAreas] = useState<string[]>(cook?.area?.split(", ").filter(Boolean) || []);
+  
   const [experience, setExperience] = useState(String(cook?.years_experience || ""));
   const [photoUrl, setPhotoUrl] = useState(cook?.photo_url || "");
   const [photoFile, setPhotoFile] = useState<File | null>(null);
@@ -34,7 +29,7 @@ const CookProfilePage = () => {
     if (cook) {
       setBio(cook.bio || "");
       setCuisines(cook.cuisine || []);
-      setAreas(cook.area?.split(", ").filter(Boolean) || []);
+      
       setExperience(String(cook.years_experience || ""));
       setPhotoUrl(cook.photo_url || "");
     }
@@ -75,7 +70,6 @@ const CookProfilePage = () => {
       .update({
         bio: bio.trim() || null,
         cuisine: cuisines,
-        area: areas.join(", "),
         years_experience: parseInt(experience) || 0,
         photo_url: newPhotoUrl,
       } as any)
@@ -84,7 +78,7 @@ const CookProfilePage = () => {
     if (error) {
       toast({ title: "Save failed: " + error.message, variant: "destructive" });
     } else {
-      setCook({ ...cook, bio: bio.trim() || null, cuisine: cuisines, area: areas.join(", "), years_experience: parseInt(experience) || 0, photo_url: newPhotoUrl });
+      setCook({ ...cook, bio: bio.trim() || null, cuisine: cuisines, years_experience: parseInt(experience) || 0, photo_url: newPhotoUrl });
       toast({ title: "Profile updated ✓" });
     }
     setSaving(false);
@@ -147,7 +141,7 @@ const CookProfilePage = () => {
       <div className="space-y-4">
         <div>
           <label className="font-body text-xs block mb-1" style={{ color: "#666" }}>Bio ({bio.length}/200)</label>
-          <textarea value={bio} onChange={(e) => setBio(e.target.value.slice(0, 200))} placeholder="Tell families about your cooking..." rows={3} className={inputCls} style={{ resize: "none", color: "#2C3B3A" }} />
+          <textarea value={bio} onChange={(e) => setBio(e.target.value.slice(0, 200))} placeholder="Tell us about your cooking style and specialities" rows={3} className={inputCls} style={{ resize: "none", color: "#2C3B3A" }} />
         </div>
 
         <div>
@@ -164,19 +158,6 @@ const CookProfilePage = () => {
           </div>
         </div>
 
-        <div>
-          <label className="font-body text-xs block mb-2" style={{ color: "#666" }}>Areas served</label>
-          <div className="flex flex-wrap gap-2">
-            {areaOptions.map((a) => {
-              const selected = areas.includes(a);
-              return (
-                <button key={a} type="button" onClick={() => toggleChip(a, areas, setAreas)} className="rounded-full font-body" style={{ fontSize: "12px", padding: "6px 12px", backgroundColor: selected ? "rgba(134,163,131,0.15)" : "rgba(0,0,0,0.03)", border: `1px solid ${selected ? "#86A383" : "rgba(0,0,0,0.1)"}`, color: selected ? "#86A383" : "rgba(45,49,46,0.6)" }}>
-                  {a}
-                </button>
-              );
-            })}
-          </div>
-        </div>
 
         <div>
           <label className="font-body text-xs block mb-1" style={{ color: "#666" }}>Years of experience</label>
