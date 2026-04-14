@@ -953,14 +953,24 @@ const Admin = () => {
                             ))}
                           </div>
                         )}
-                        <div className="flex gap-2">
-                          <button onClick={() => handleProofApprove(b.id)} className="flex-1 py-2 rounded-lg font-body text-xs font-semibold bg-primary/10 text-primary hover:bg-primary/20 transition-colors">
-                            Approve ✓
-                          </button>
-                          <button onClick={() => handleProofResubmit(b.id)} className="flex-1 py-2 rounded-lg font-body text-xs font-semibold bg-copper/10 text-copper hover:bg-copper/20 transition-colors">
-                            Request Resubmission
-                          </button>
-                        </div>
+                        {proofResubMode !== b.id ? (
+                          <div className="flex gap-2">
+                            <button onClick={() => handleProofApprove(b.id)} className="flex-1 py-2 rounded-lg font-body text-xs font-semibold bg-green-500/10 text-green-600 hover:bg-green-500/20 transition-colors">
+                              Approve ✓
+                            </button>
+                            <button onClick={() => { setProofResubMode(b.id); setProofResubNote(""); }} className="flex-1 py-2 rounded-lg font-body text-xs font-semibold bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 transition-colors">
+                              Request Resubmission
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="mt-2 space-y-2 p-3 rounded-lg bg-amber-50 border border-amber-200">
+                            <textarea value={proofResubNote} onChange={(e) => setProofResubNote(e.target.value)} placeholder="What needs to be re-uploaded?" className="w-full p-2 rounded-lg border border-amber-300 bg-white font-body text-xs text-foreground resize-none outline-none" rows={2} />
+                            <div className="flex gap-2">
+                              <button onClick={() => handleProofResubmit(b.id, proofResubNote)} disabled={!proofResubNote.trim()} className="px-4 py-2 rounded-lg font-body text-xs font-semibold bg-amber-500 text-white disabled:opacity-50">Send Feedback</button>
+                              <button onClick={() => setProofResubMode(null)} className="px-3 py-2 rounded-lg font-body text-xs text-muted-foreground">Cancel</button>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     );
                   })}
