@@ -11,8 +11,8 @@ const sections = [
   { title: "Confidentiality", body: "You must keep all customer information (name, address, dietary preferences) strictly confidential. You must not disclose, share, or use customer data for any purpose outside of fulfilling your Cooq booking." },
   { title: "Cancellations", body: "You must provide at least 48 hours notice to cancel a booking. Repeated cancellations may result in suspension from the platform." },
   { title: "Termination", body: "Cooq may suspend or terminate your access to the platform at any time for breach of this agreement, quality issues, or any conduct that damages Cooq's reputation or customer trust."},
-  { title: "Governing Law", "This agreement is governed by the laws of the United Arab Emirates. Any disputes shall be subject to the jurisdiction of Dubai courts.},
-    { title: "Contact", "admin.cooq@gmail.com"},
+  { title: "Governing Law", body: "This agreement is governed by the laws of the United Arab Emirates. Any disputes shall be subject to the jurisdiction of Dubai courts." },
+  { title: "Contact", body: "admin.cooq@gmail.com" },
 ];
 
 const CookAgreement = () => {
