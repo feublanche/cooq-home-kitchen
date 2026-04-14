@@ -828,26 +828,54 @@ const Admin = () => {
           <div>
             <h2 className="font-display text-xl text-foreground mb-1">Quality Audit</h2>
             <p className="font-body text-xs text-muted-foreground mb-4">
-              Auto-trigger Stripe transfer 24h after session completion (minus platform commission)
+              Review proof photos uploaded by cooks after sessions
             </p>
-            <div className="bg-card rounded-xl p-4 border border-border mb-4" style={{ boxShadow: "var(--shadow-card)" }}>
-              <p className="font-body text-sm font-semibold text-foreground mb-2">Session Completion Queue</p>
-              <p className="font-body text-xs text-muted-foreground mb-3">
-                Receives info about client/phone number to confirm appointment
-              </p>
-              {bookings
-                .filter((b) => b.status === "completed")
-                .slice(0, 5)
-                .map((b) => (
-                  <div key={b.id} className="flex justify-between py-2 border-b border-border last:border-0 font-body text-sm">
-                    <span className="text-foreground">{b.cook_name} → {b.customer_name}</span>
-                    <span className="text-copper font-semibold">AED {b.total_aed}</span>
-                  </div>
-                ))}
-              {bookings.filter((b) => b.status === "completed").length === 0 && (
-                <p className="font-body text-xs text-muted-foreground">No completed sessions yet</p>
-              )}
-            </div>
+            {(() => {
+              const proofBookings = bookings.filter((b) => b.proof_status === "pending_review");
+              return proofBookings.length === 0 ? (
+                <div className="bg-card rounded-xl p-6 border border-border text-center" style={{ boxShadow: "var(--shadow-card)" }}>
+                  <Camera className="w-10 h-10 text-copper mx-auto mb-3" />
+                  <p className="font-body text-sm text-muted-foreground">No proof photos pending review</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {proofBookings.map((b) => {
+                    const bPhotos = photos.filter((p) => p.booking_id === b.id);
+                    return (
+                      <div key={b.id} className="bg-card rounded-xl p-4 border border-border" style={{ boxShadow: "var(--shadow-card)" }}>
+                        <div className="flex justify-between items-start mb-2">
+                          <div>
+                            <p className="font-body text-sm font-semibold text-foreground">{b.cook_name}</p>
+                            <p className="font-body text-xs text-muted-foreground">{b.customer_name} · {b.booking_date || "—"}</p>
+                          </div>
+                          <span className="font-body text-[10px] font-semibold px-2 py-0.5 rounded-full bg-copper/10 text-copper">Pending Review</span>
+                        </div>
+                        {bPhotos.length > 0 && (
+                          <div className="grid grid-cols-2 gap-3 mb-3">
+                            {bPhotos.map((p) => (
+                              <div key={p.id} className="relative rounded-lg overflow-hidden aspect-square bg-muted">
+                                <img src={p.photo_url} alt={p.photo_type} className="w-full h-full object-cover" />
+                                <div className="absolute bottom-0 left-0 right-0 bg-foreground/70 px-2 py-1">
+                                  <p className="font-body text-[10px] text-background capitalize">{p.photo_type.replace("_", " ")}</p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        <div className="flex gap-2">
+                          <button onClick={() => handleProofApprove(b.id)} className="flex-1 py-2 rounded-lg font-body text-xs font-semibold bg-primary/10 text-primary hover:bg-primary/20 transition-colors">
+                            Approve ✓
+                          </button>
+                          <button onClick={() => handleProofResubmit(b.id)} className="flex-1 py-2 rounded-lg font-body text-xs font-semibold bg-copper/10 text-copper hover:bg-copper/20 transition-colors">
+                            Request Resubmission
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
           </div>
         )}
 
