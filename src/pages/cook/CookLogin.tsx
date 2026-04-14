@@ -53,7 +53,10 @@ const CookLogin = () => {
     setLoading(true);
     const { error: otpErr } = await supabase.auth.signInWithOtp({
       email: email.trim(),
-      options: { shouldCreateUser: false },
+      options: {
+        shouldCreateUser: false,
+        emailRedirectTo: "https://cooq-home-kitchen.lovable.app/cook/dashboard",
+      },
     });
     setLoading(false);
     if (otpErr) { setError(otpErr.message); return; }
