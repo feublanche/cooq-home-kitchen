@@ -44,6 +44,7 @@ export type Database = {
           party_size: number | null
           payment_intent_id: string | null
           phone: string
+          proof_status: string | null
           punctuality_rating: number | null
           rated_at: string | null
           rating: number | null
@@ -86,6 +87,7 @@ export type Database = {
           party_size?: number | null
           payment_intent_id?: string | null
           phone: string
+          proof_status?: string | null
           punctuality_rating?: number | null
           rated_at?: string | null
           rating?: number | null
@@ -128,6 +130,7 @@ export type Database = {
           party_size?: number | null
           payment_intent_id?: string | null
           phone?: string
+          proof_status?: string | null
           punctuality_rating?: number | null
           rated_at?: string | null
           rating?: number | null
