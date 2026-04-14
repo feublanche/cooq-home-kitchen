@@ -15,13 +15,15 @@ interface BookingSummary {
   booking_date: string | null;
   menu_selected: string;
   status: string | null;
+  total_aed: number | null;
+  proof_status: string | null;
 }
 
 const CookDashboard = () => {
   const { cook, loading: cookLoading } = useCook();
   const navigate = useNavigate();
   const [upcoming, setUpcoming] = useState<BookingSummary[]>([]);
-  const [stats, setStats] = useState({ upcoming: 0, completed: 0, earned: 0 });
+  const [stats, setStats] = useState({ upcoming: 0, completed: 0, earned: 0, monthlyEarnings: 0 });
   const [pendingCount, setPendingCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [menuNotification, setMenuNotification] = useState<string | null>(null);
