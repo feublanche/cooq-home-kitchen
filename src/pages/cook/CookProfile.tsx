@@ -71,8 +71,8 @@ const CookProfilePage = () => {
       photo_url: newPhotoUrl,
     };
 
-    // If cook was in needs_review, reset to pending on save
-    if (isNeedsReview) {
+    // If cook is approved or needs_review, reset to pending on save so operator re-reviews
+    if (isNeedsReview || cook.status === "approved" || cook.status === "active") {
       updatePayload.status = "pending";
       updatePayload.operator_notes = null;
     }
@@ -85,19 +85,20 @@ const CookProfilePage = () => {
     if (error) {
       toast({ title: "Save failed: " + error.message, variant: "destructive" });
     } else {
+      const statusChanged = isNeedsReview || cook.status === "approved" || cook.status === "active";
       const updatedCook = {
         ...cook,
         bio: bio.trim() || null,
         cuisine: cuisines,
         years_experience: parseInt(experience) || 0,
         photo_url: newPhotoUrl,
-        ...(isNeedsReview ? { status: "pending", operator_notes: null } : {}),
+        ...(statusChanged ? { status: "pending", operator_notes: null } : {}),
       };
       setCook(updatedCook);
       toast({ title: "Profile updated ✓" });
 
-      // Notify operator if profile was updated after review
-      if (isNeedsReview) {
+      // Notify operator if profile was updated and status reset
+      if (statusChanged) {
         try {
           await supabase.functions.invoke("notify-operator", {
             body: {
@@ -139,6 +140,15 @@ const CookProfilePage = () => {
           </p>
           <p className="font-body text-xs mt-1" style={{ color: "#92400E" }}>
             Saving will resubmit your profile for review.
+          </p>
+        </div>
+      )}
+
+      {/* Info banner for approved cooks */}
+      {(cook?.status === "approved" || cook?.status === "active") && (
+        <div className="rounded-xl p-3 mb-4" style={{ backgroundColor: "rgba(134,163,131,0.08)", border: "1px solid rgba(134,163,131,0.2)" }}>
+          <p className="font-body text-xs" style={{ color: "#86A383" }}>
+            ℹ️ Saving changes will resubmit your profile for review. Your listing stays live until the review is complete.
           </p>
         </div>
       )}
@@ -205,7 +215,7 @@ const CookProfilePage = () => {
 
       <button onClick={handleSave} disabled={saving} className="w-full py-3 rounded-xl font-body font-semibold text-sm mt-6 flex items-center justify-center gap-2 disabled:opacity-50" style={{ backgroundColor: "#B87355", color: "#FAF9F6" }}>
         {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-        {isNeedsReview ? "Save & Resubmit for Review" : "Save Changes"}
+        {isNeedsReview ? "Save & Resubmit for Review" : (cook?.status === "approved" || cook?.status === "active") ? "Save & Resubmit for Review" : "Save Changes"}
       </button>
     </div>
   );
