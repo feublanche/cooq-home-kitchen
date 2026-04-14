@@ -166,8 +166,7 @@ const Admin = () => {
   const [showPendingPayouts, setShowPendingPayouts] = useState(false);
 
   // Menu vetting state
-  const [rejectMenuId, setRejectMenuId] = useState<string | null>(null);
-  const [rejectReason, setRejectReason] = useState("");
+  const [menuActionMode, setMenuActionMode] = useState<Record<string, "approve" | "changes" | "reject" | null>>({});
   const [menuActionMode, setMenuActionMode] = useState<Record<string, "approve" | "changes" | "reject" | null>>({});
   const [menuPhotoFile, setMenuPhotoFile] = useState<File | null>(null);
   const [menuActionNote, setMenuActionNote] = useState<Record<string, string>>({});
