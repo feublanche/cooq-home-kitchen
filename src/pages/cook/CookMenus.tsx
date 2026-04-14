@@ -214,7 +214,7 @@ const CookMenus = () => {
                         <span className="font-body font-bold" style={{ fontSize: "14px", color: "#2C3B3A" }}>{m.menu_name}</span>
                         {isLocked && <Lock className="w-3.5 h-3.5" style={{ color: "#ccc" }} />}
                       </div>
-                      <p className="font-body mt-1" style={{ fontSize: "12px", color: "#86A383" }}>AED {m.price_aed} · {m.cuisine}</p>
+                      <p className="font-body mt-1" style={{ fontSize: "12px", color: "#86A383" }}>{m.cuisine}</p>
                     </div>
                     <span className="font-body rounded-full px-2.5 py-0.5 shrink-0" style={{ fontSize: "10px", backgroundColor: badge.bg, color: badge.text }}>{badge.label}</span>
                   </div>

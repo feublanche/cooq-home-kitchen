@@ -8,7 +8,8 @@ import CookBottomNav from "@/components/cook/CookBottomNav";
 const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const SLOTS = [
   { key: "morning", label: "Morning (8am–12pm)" },
-  { key: "afternoon", label: "Afternoon (2pm–6pm)" },
+  { key: "afternoon", label: "Afternoon (12pm–4pm)" },
+  { key: "evening", label: "Evening (4pm–8pm)" },
 ];
 
 type DayState = { on: boolean; slots: string[] };
