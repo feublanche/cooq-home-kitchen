@@ -1139,6 +1139,33 @@ const Admin = () => {
                 </div>
               )}
 
+              {/* Documents section */}
+              {cookDocs.length > 0 && (
+                <div className="mb-4">
+                  <p className="font-body text-xs font-semibold text-foreground mb-2">Documents</p>
+                  <div className="space-y-2">
+                    {cookDocs.map((doc) => (
+                      <div key={doc.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/30 border border-border">
+                        <div>
+                          <p className="font-body text-xs font-semibold text-foreground capitalize">{doc.document_type.replace("_", " ")}</p>
+                          <p className="font-body text-[10px] text-muted-foreground">{doc.status}</p>
+                        </div>
+                        {doc.status === "verified" ? (
+                          <span className="font-body text-xs font-semibold text-primary">Verified ✓</span>
+                        ) : (
+                          <button
+                            onClick={() => handleVerifyDocument(doc.id)}
+                            className="font-body text-xs font-semibold px-3 py-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                          >
+                            Verify
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {requestChangesMode ? (
                 <div className="space-y-3">
                   <textarea
