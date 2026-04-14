@@ -1,0 +1,1 @@
+ALTER TABLE public.cooks ADD COLUMN IF NOT EXISTS operator_notes text;
