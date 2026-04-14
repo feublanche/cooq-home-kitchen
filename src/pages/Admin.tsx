@@ -293,10 +293,16 @@ const Admin = () => {
   };
 
   // ── Cook Drawer Actions ──
-  const openCookDrawer = (cook: CookRecord) => {
+  const openCookDrawer = async (cook: CookRecord) => {
     setSelectedCook(cook);
     setRequestChangesMode(false);
     setOperatorFeedback("");
+    // Fetch cook documents
+    const { data } = await supabase
+      .from("cook_documents")
+      .select("id, cook_id, document_type, file_url, status")
+      .eq("cook_id", cook.id);
+    setCookDocs((data ?? []) as any);
   };
 
   const handleApproveCook = async () => {
