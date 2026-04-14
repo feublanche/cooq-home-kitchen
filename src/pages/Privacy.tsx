@@ -6,9 +6,9 @@ const sections = [
   { title: "How We Use Your Data", body: "To match you with a cook, process bookings, and send updates." },
   { title: "Who We Share It With", body: "Your address is shared with your cook on session day only. Your data is never sold." },
   { title: "Data Storage", body: "[TO BE COMPLETED]" },
-  { title: "Your Rights", body: "Request data deletion at hello@cooq.ae" },
+  { title: "Your Rights", body: "Request data deletion at admin.cooq@gmail.com" },
   { title: "Cookies", body: "Essential authentication cookies only." },
-  { title: "Contact", body: "hello@cooq.ae" },
+  { title: "Contact", body: "admin.cooq@gmail.com" },
 ];
 
 const Privacy = () => {
@@ -18,7 +18,7 @@ const Privacy = () => {
       <div className="max-w-[700px] mx-auto px-6 py-12">
         <button onClick={() => navigate("/")} className="mb-6"><ArrowLeft className="w-5 h-5 text-[#2D312E]" /></button>
         <h1 className="font-display text-[32px] text-[#2D312E] mb-2">Privacy Policy</h1>
-        <p className="text-gray-400 text-sm mb-8">Last updated: [PLACEHOLDER]</p>
+        <p className="text-gray-400 text-sm mb-8">Last updated: April 2026</p>
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-8">
           <p className="text-amber-700 text-sm">⚠️ This document is a placeholder. Full policy will be added before public launch.</p>
         </div>
