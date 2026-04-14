@@ -924,6 +924,7 @@ const Admin = () => {
             })()}
           </div>
         )}
+      </div>
 
 
       {/* Cook Detail Drawer */}
