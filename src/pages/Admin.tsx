@@ -53,7 +53,7 @@ interface Booking {
   selected_menu_id?: string;
   payment_intent_id?: string;
   proof_status?: string | null;
-}
+  proof_notes?: string | null;
 
 interface QualityPhoto {
   id: string;
@@ -81,6 +81,7 @@ interface CookRecord {
   created_at: string | null;
   bio?: string | null;
   operator_notes?: string | null;
+  doc_notes?: string | null;
 }
 
 interface MenuRecord {
@@ -173,7 +174,12 @@ const Admin = () => {
 
   // Cook documents state
   const [cookDocs, setCookDocs] = useState<{ id: string; cook_id: string; document_type: string; file_url: string; status: string }[]>([]);
-
+  const [docSignedUrls, setDocSignedUrls] = useState<Record<string, string>>({});
+  const [docResubMode, setDocResubMode] = useState<string | null>(null);
+  const [docResubNote, setDocResubNote] = useState("");
+  const [proofSignedUrls, setProofSignedUrls] = useState<Record<string, string[]>>({});
+  const [proofResubMode, setProofResubMode] = useState<string | null>(null);
+  const [proofResubNote, setProofResubNote] = useState("");
   const fetchBookings = async () => {
     const { data } = await supabase
       .from("bookings")
