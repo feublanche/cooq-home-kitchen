@@ -325,6 +325,33 @@ const Admin = () => {
     setSelectedCook(null);
   };
 
+  const handleVerifyDocument = async (docId: string) => {
+    await supabase.from("cook_documents").update({ status: "verified" } as any).eq("id", docId);
+    setCookDocs((prev) => prev.map((d) => d.id === docId ? { ...d, status: "verified" } : d));
+    toast({ title: "Document verified ✓" });
+  };
+
+  // ── Proof Review Actions ──
+  const handleProofApprove = async (bookingId: string) => {
+    await supabase.from("bookings").update({ proof_status: "approved", status: "completed" } as any).eq("id", bookingId);
+    setBookings((prev) => prev.map((b) => b.id === bookingId ? { ...b, proof_status: "approved", status: "completed" } : b));
+    toast({ title: "Proof approved ✓" });
+  };
+
+  const handleProofResubmit = async (bookingId: string) => {
+    await supabase.from("bookings").update({ proof_status: "resubmit" } as any).eq("id", bookingId);
+    setBookings((prev) => prev.map((b) => b.id === bookingId ? { ...b, proof_status: "resubmit" } : b));
+    // Notify cook
+    const booking = bookings.find((b) => b.id === bookingId);
+    if (booking) {
+      const cook = cooks.find((c) => c.id === booking.cook_id);
+      if (cook) {
+        await notifyCookGeneric(cook.name, cook.email, cook.phone, "proof_resubmit", { date: booking.booking_date });
+      }
+    }
+    toast({ title: "Resubmission requested" });
+  };
+
   // ── Menu Vetting Actions (cook_menus) ──
   const handleMenuApprove = async (menu: MenuRecord) => {
     setMenus((prev) => prev.map((m) => (m.id === menu.id ? { ...m, status: "approved" } : m)));
