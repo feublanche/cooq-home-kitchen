@@ -360,6 +360,23 @@ const Admin = () => {
     toast({ title: "Document verified ✓" });
   };
 
+  const handleDocResubmission = async (docId: string, cookId: string) => {
+    if (!docResubNote.trim()) { toast({ title: "Please provide a reason", variant: "destructive" }); return; }
+    await supabase.from("cook_documents").update({ status: "needs_resubmission" } as any).eq("id", docId);
+    await supabase.from("cooks").update({ doc_notes: docResubNote.trim() } as any).eq("id", cookId);
+    setCookDocs((prev) => prev.map((d) => d.id === docId ? { ...d, status: "needs_resubmission" } : d));
+    toast({ title: "Resubmission requested" });
+    setDocResubMode(null);
+    setDocResubNote("");
+  };
+
+  // ── Operator Notification Helper ──
+  const notifyOperator = async (event_type: string, details: Record<string, any>) => {
+    try {
+      await supabase.functions.invoke("notify-operator", { body: { event_type, details } });
+    } catch (err) { console.error("Operator notification failed:", err); }
+  };
+
   // ── Proof Review Actions ──
   const handleProofApprove = async (bookingId: string) => {
     await supabase.from("bookings").update({ proof_status: "approved", status: "completed" } as any).eq("id", bookingId);
