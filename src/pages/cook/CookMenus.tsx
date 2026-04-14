@@ -74,7 +74,7 @@ const CookMenus = () => {
   const canAddForCuisine = (c: string) => menusForCuisine(c) < 2;
 
   const openEdit = (m: CookMenu) => {
-    if (m.status !== "rejected" && m.status !== "pending_review") return;
+    if (m.status !== "rejected" && m.status !== "pending_review" && m.status !== "needs_review") return;
     setEditId(m.id);
     setMenuName(m.menu_name);
     setCuisine(m.cuisine || "");
@@ -152,6 +152,7 @@ const CookMenus = () => {
   const statusBadge = (s: string | null) => {
     if (s === "approved") return { bg: "rgba(134,163,131,0.15)", text: "#86A383", label: "Live ✓" };
     if (s === "rejected") return { bg: "rgba(239,68,68,0.08)", text: "#ef4444", label: "Not approved" };
+    if (s === "needs_review") return { bg: "rgba(245,158,11,0.1)", text: "#D97706", label: "Changes requested" };
     return { bg: "rgba(181,126,93,0.1)", text: "#B57E5D", label: "Awaiting approval" };
   };
 
