@@ -125,6 +125,7 @@ const cookStatusColors: Record<string, string> = {
   reviewed: "bg-amber-500/10 text-amber-500",
   approved: "bg-primary/10 text-primary",
   active: "bg-primary/20 text-primary font-bold",
+  suspended: "bg-destructive/10 text-destructive",
   rejected: "bg-destructive/10 text-destructive/50",
 };
 
@@ -443,17 +444,24 @@ const Admin = () => {
 
             {/* Toggle */}
             <div className="flex gap-2 mb-4">
-              {(["bookings", "cooks"] as const).map((v) => (
-                <button
-                  key={v}
-                  onClick={() => setSupplyView(v)}
-                  className={`px-4 py-2 rounded-lg font-body text-xs font-semibold transition-colors ${
-                    supplyView === v ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"
-                  }`}
-                >
-                  {v === "bookings" ? "Bookings" : "Cooks"}
-                </button>
-              ))}
+              <button
+                type="button"
+                onClick={() => setSupplyView("bookings")}
+                className={`px-4 py-2 rounded-lg font-body text-xs font-semibold transition-colors ${
+                  supplyView === "bookings" ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"
+                }`}
+              >
+                Bookings
+              </button>
+              <button
+                type="button"
+                onClick={() => setSupplyView("cooks")}
+                className={`px-4 py-2 rounded-lg font-body text-xs font-semibold transition-colors ${
+                  supplyView === "cooks" ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"
+                }`}
+              >
+                Cooks
+              </button>
             </div>
 
             {supplyView === "bookings" && (
