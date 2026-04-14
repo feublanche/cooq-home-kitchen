@@ -89,6 +89,7 @@ const CookSignup = () => {
             email: email.trim(),
             phone: phone.trim(),
             status: "pending",
+            agreement_accepted_at: new Date().toISOString(),
           } as any);
         }
 
@@ -108,6 +109,7 @@ const CookSignup = () => {
     if (!phone.trim()) newErrors.phone = "Phone number is required";
     if (!agreed) newErrors.agreed = "Please agree to the cook terms";
     if (!dataConsent) newErrors.dataConsent = "Please provide data consent";
+    if (!agreementConsent) newErrors.agreementConsent = "Please agree to the Cook Partner Agreement";
     setErrors(newErrors);
     if (Object.keys(newErrors).length > 0) return;
 
@@ -362,6 +364,20 @@ const CookSignup = () => {
                   </span>
                 </label>
                 {errors.dataConsent && <p className="font-body text-xs text-red-500 mt-1">{errors.dataConsent}</p>}
+
+                <label className="flex items-start gap-2 cursor-pointer mt-2">
+                  <input
+                    type="checkbox"
+                    checked={agreementConsent}
+                    onChange={(e) => setAgreementConsent(e.target.checked)}
+                    className="accent-[#86A383] mt-1"
+                  />
+                  <span className="font-body text-xs" style={{ color: "#666" }}>
+                    I have read and agree to the Cooq{" "}
+                    <a href="/cook-agreement" target="_blank" rel="noopener noreferrer" className="underline" style={{ color: "#86A383" }}>Cook Partner Agreement</a>.
+                  </span>
+                </label>
+                {errors.agreementConsent && <p className="font-body text-xs text-red-500 mt-1">{errors.agreementConsent}</p>}
               </div>
             </div>
 
