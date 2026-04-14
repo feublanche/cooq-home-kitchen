@@ -1,1 +1,9 @@
 project_id = "zzpzejpblhxwoixttdcm"
+
+[auth]
+site_url = "https://cooq-home-kitchen.lovable.app"
+additional_redirect_urls = [
+  "https://cooq-home-kitchen.lovable.app/cook/dashboard",
+  "https://cooq-home-kitchen.lovable.app/cook/signup",
+  "https://id-preview--05c81ae4-5027-41f2-932f-4e46db255c4b.lovable.app",
+]
