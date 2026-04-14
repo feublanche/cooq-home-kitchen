@@ -54,6 +54,7 @@ interface Booking {
   payment_intent_id?: string;
   proof_status?: string | null;
   proof_notes?: string | null;
+}
 
 interface QualityPhoto {
   id: string;
