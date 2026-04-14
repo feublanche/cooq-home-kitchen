@@ -22,28 +22,14 @@ const schema = z.object({
 type FormData = z.infer<typeof schema>;
 
 const cuisineOptions = [
-  "Arabic",
-  "Lebanese",
-  "Emirati",
-  "Moroccan",
-  "Indian",
-  "Pakistani",
-  "Filipino",
-  "Mediterranean",
-  "Asian Fusion",
-  "Italian",
-  "Other",
+  "Lebanese", "Indian", "Mediterranean", "Continental", "Emirati", "Filipino",
+  "Pakistani", "Sri Lankan", "Thai", "Chinese", "Japanese", "Mexican",
+  "American", "Italian", "Keto/Healthy", "Vegan", "Other",
 ];
 
 const dietaryOptions = [
-  "Vegetarian",
-  "Vegan",
-  "Gluten-Free",
-  "Dairy-Free",
-  "Nut-Free",
-  "Pork-Free",
-  "Kid-Friendly",
-  "Keto",
+  "Gluten-free", "Dairy-free", "Nut-free", "Low-carb", "Keto", "High-protein",
+  "Vegan-friendly", "Vegetarian-friendly", "Family-friendly", "Postpartum/Nourishing", "Diabetic-friendly",
 ];
 
 const mealFields = [
@@ -95,7 +81,6 @@ const CookMenuSubmit = () => {
   const onSubmit = async (d: FormData) => {
     if (!cook) return;
     setSubmitting(true);
-    console.log("Inserting menu for cook:", cook.id);
     try {
       const { data, error } = await supabase
         .from("cook_menus")
@@ -113,17 +98,14 @@ const CookMenuSubmit = () => {
         .select();
 
       if (error) {
-        console.error("Menu insert error:", error);
         toast({ title: `Failed: ${error.message}`, variant: "destructive" });
       } else {
-        console.log("Menu inserted successfully:", data);
         toast({ title: "Menu submitted ✓", description: "We'll review within 24 hours." });
         reset();
         setDietary([]);
         fetchMenus();
       }
     } catch (err: any) {
-      console.error("Menu insert exception:", err);
       toast({ title: `Error: ${err.message}`, variant: "destructive" });
     } finally {
       setSubmitting(false);
@@ -160,7 +142,6 @@ const CookMenuSubmit = () => {
         Reviewed within 24 hours
       </p>
 
-      {/* Existing menus */}
       <p
         className="uppercase tracking-wider mb-3"
         style={{ fontSize: "10px", fontFamily: "'DM Mono', monospace", color: "#B57E5D" }}
@@ -211,7 +192,6 @@ const CookMenuSubmit = () => {
       </p>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        {/* Menu name */}
         <div>
           <input {...register("menu_name")} placeholder="e.g. Lebanese Family Week" style={inputStyle} />
           {errors.menu_name && (
@@ -221,7 +201,6 @@ const CookMenuSubmit = () => {
           )}
         </div>
 
-        {/* Cuisine */}
         <div>
           <select {...register("cuisine")} style={{ ...inputStyle, appearance: "none" }}>
             <option value="">Select cuisine</option>
@@ -238,7 +217,6 @@ const CookMenuSubmit = () => {
           )}
         </div>
 
-        {/* Meals — Proteins + Sides */}
         {mealFields.map((field) => (
           <div key={field.name}>
             <label className="font-body mb-1 block" style={{ fontSize: "12px", color: "rgba(249,247,242,0.5)" }}>
@@ -253,7 +231,6 @@ const CookMenuSubmit = () => {
           </div>
         ))}
 
-        {/* Dietary */}
         <div>
           <label className="font-body mb-2 block" style={{ fontSize: "12px", color: "rgba(249,247,242,0.5)" }}>
             Dietary options
@@ -282,7 +259,12 @@ const CookMenuSubmit = () => {
           </div>
         </div>
 
-        {/* Notes */}
+        <div className="rounded-xl p-3" style={{ backgroundColor: "rgba(134,163,131,0.08)", border: "1px solid rgba(134,163,131,0.15)" }}>
+          <p className="font-body text-xs" style={{ color: "rgba(249,247,242,0.5)" }}>
+            Food photos will be added by the Cooq team after your menu is approved.
+          </p>
+        </div>
+
         <div className="relative">
           <label className="font-body mb-1 block" style={{ fontSize: "12px", color: "rgba(249,247,242,0.5)" }}>
             Notes (optional)

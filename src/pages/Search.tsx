@@ -6,10 +6,11 @@ import cooqLogo from "@/assets/cooq-logo.png";
 import StepProgress from "@/components/StepProgress";
 
 const cuisineOptions = [
-  "Lebanese", "Indian", "Mediterranean", "Continental", "Emirati", "Keto", "Vegan",
-  "Filipino", "Pakistani", "Sri Lankan", "Thai", "Chinese", "Japanese", "Mexican", "American", "Italian",
+  "Lebanese", "Indian", "Mediterranean", "Continental", "Emirati", "Filipino",
+  "Pakistani", "Sri Lankan", "Thai", "Chinese", "Japanese", "Mexican",
+  "American", "Italian", "Keto/Healthy", "Vegan", "Other",
 ];
-const dietaryOptions = ["Gluten-free", "Dairy-free", "Nut-free", "Egg-free", "No restrictions"];
+const dietaryOptions = ["Gluten-free", "Dairy-free", "Nut-free", "Low-carb", "Keto", "High-protein", "Vegan-friendly", "Vegetarian-friendly", "Family-friendly", "Postpartum/Nourishing", "Diabetic-friendly", "No restrictions"];
 const frequencyOptions = [
   { key: "once", label: "Try once" },
   { key: "weekly", label: "Once a week" },

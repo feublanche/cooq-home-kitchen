@@ -25,7 +25,10 @@ const cuisineOptions = [
   "American", "Italian", "Keto/Healthy", "Vegan", "Other",
 ];
 
-const dietaryOptions = ["Halal", "Vegetarian", "Vegan", "Gluten-free", "Dairy-free", "Nut-free", "Keto"];
+const dietaryOptions = [
+  "Gluten-free", "Dairy-free", "Nut-free", "Low-carb", "Keto", "High-protein",
+  "Vegan-friendly", "Vegetarian-friendly", "Family-friendly", "Postpartum/Nourishing", "Diabetic-friendly",
+];
 
 const CookMenus = () => {
   const { cook } = useCook();
@@ -44,7 +47,6 @@ const CookMenus = () => {
   const [sideName, setSideName] = useState("");
   const [sideDesc, setSideDesc] = useState("");
   const [dietary, setDietary] = useState<string[]>([]);
-  const [price, setPrice] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   const isPending = cook?.status === "pending" || cook?.status === "applied";
@@ -65,11 +67,10 @@ const CookMenus = () => {
   const resetForm = () => {
     setMenuName(""); setCuisine(""); setStarterName(""); setStarterDesc("");
     setMainName(""); setMainDesc(""); setSideName(""); setSideDesc("");
-    setDietary([]); setPrice(""); setEditId(null);
+    setDietary([]); setEditId(null);
   };
 
   const menusForCuisine = (c: string) => menus.filter((m) => m.cuisine === c).length;
-
   const canAddForCuisine = (c: string) => menusForCuisine(c) < 2;
 
   const openEdit = (m: CookMenu) => {
@@ -77,7 +78,6 @@ const CookMenus = () => {
     setEditId(m.id);
     setMenuName(m.menu_name);
     setCuisine(m.cuisine || "");
-    // Parse meals: [starterName, starterDesc, mainName, mainDesc, sideName, sideDesc]
     const meals = m.meals || [];
     setStarterName(meals[0] || "");
     setStarterDesc(meals[1] || "");
@@ -86,7 +86,6 @@ const CookMenus = () => {
     setSideName(meals[4] || "");
     setSideDesc(meals[5] || "");
     setDietary(m.dietary || []);
-    setPrice(String(m.price_aed));
     setShowForm(true);
   };
 
@@ -96,7 +95,7 @@ const CookMenus = () => {
 
   const handleSubmit = async () => {
     if (!cook) return;
-    if (!menuName.trim() || !cuisine || !starterName.trim() || !mainName.trim() || !sideName.trim() || !price) {
+    if (!menuName.trim() || !cuisine || !starterName.trim() || !mainName.trim() || !sideName.trim()) {
       toast({ title: "Please fill all required fields", variant: "destructive" });
       return;
     }
@@ -114,7 +113,7 @@ const CookMenus = () => {
       meals: [starterName.trim(), starterDesc.trim(), mainName.trim(), mainDesc.trim(), sideName.trim(), sideDesc.trim()],
       cuisine,
       dietary,
-      price_aed: parseInt(price) || 350,
+      price_aed: 350,
       status: "pending_review",
     };
 
@@ -131,7 +130,6 @@ const CookMenus = () => {
       if (error) toast({ title: "Submit failed: " + error.message, variant: "destructive" });
       else {
         toast({ title: "Menu submitted ✓", description: "We'll review within 24 hours." });
-        // Notify operator
         try {
           await supabase.functions.invoke("notify-cook", {
             body: {
@@ -231,7 +229,7 @@ const CookMenus = () => {
                     <p className="font-body mt-1" style={{ fontSize: "10px", color: "#999" }}>{m.dietary.join(" · ")}</p>
                   )}
                   <p className="font-body mt-2 italic" style={{ fontSize: "10px", color: "#999" }}>
-                    Food photos added by Cooq team after your trial.
+                    Food photos will be added by the Cooq team after your menu is approved.
                   </p>
                   {isLocked && (
                     <p className="font-body mt-1" style={{ fontSize: "10px", color: "#999" }}>
@@ -310,9 +308,11 @@ const CookMenus = () => {
             </div>
           </div>
 
-          <div>
-            <label className="font-body text-xs block mb-1" style={{ color: "#666" }}>Price per session (AED) *</label>
-            <input type="number" min="100" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="350" className={inputCls} style={{ color: "#2C3B3A" }} />
+          {/* Photo message */}
+          <div className="rounded-xl p-3" style={{ backgroundColor: "rgba(134,163,131,0.06)", border: "1px solid rgba(134,163,131,0.15)" }}>
+            <p className="font-body text-xs" style={{ color: "#999" }}>
+              Food photos will be added by the Cooq team after your menu is approved.
+            </p>
           </div>
 
           <div className="flex gap-3 mt-4">

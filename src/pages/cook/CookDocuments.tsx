@@ -207,7 +207,7 @@ const CookDocuments = () => {
 
       <div className="mt-6 rounded-xl p-4" style={{ backgroundColor: "rgba(134,163,131,0.06)", border: "1px solid rgba(134,163,131,0.15)" }}>
         <p className="font-body" style={{ fontSize: "12px", color: "#999" }}>
-          Documents are securely stored and only visible to the Cooq team. We verify them as part of your onboarding.
+          Your documents are encrypted and stored securely. They are used solely to verify your identity and are never shared with customers. Cooq complies with UAE data protection regulations.
         </p>
       </div>
 

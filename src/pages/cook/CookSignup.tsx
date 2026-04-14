@@ -11,17 +11,18 @@ const cuisineOptions = [
   "American", "Italian", "Keto/Healthy", "Vegan", "Other",
 ];
 
-const areaOptions = [
-  "Dubai Marina", "JBR", "JLT", "Downtown Dubai", "Business Bay", "DIFC",
-  "Jumeirah", "Umm Suqeim", "Al Barsha", "Arabian Ranches", "Mirdif",
-  "Palm Jumeirah", "Deira/Bur Dubai", "All Dubai",
-];
-
 const experienceOptions = [
   "Less than 1 year", "1–3 years", "3–5 years", "5–10 years", "10+ years",
 ];
 
 const dayOptions = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const dayToNumber: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+
+const timeSlotOptions = [
+  { key: "morning", label: "Morning (8am–12pm)" },
+  { key: "afternoon", label: "Afternoon (12pm–4pm)" },
+  { key: "evening", label: "Evening (4pm–8pm)" },
+];
 
 const PUBLISHED_URL = "https://cooq-home-kitchen.lovable.app";
 
@@ -43,9 +44,9 @@ const CookSignup = () => {
   // Step 2
   const [bio, setBio] = useState("");
   const [cuisines, setCuisines] = useState<string[]>([]);
-  const [areas, setAreas] = useState<string[]>([]);
   const [experience, setExperience] = useState("");
   const [days, setDays] = useState<string[]>([]);
+  const [daySlots, setDaySlots] = useState<Record<string, string[]>>({});
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -76,7 +77,6 @@ const CookSignup = () => {
       if (event === "SIGNED_IN" && session && waitingForLink) {
         setWaitingForLink(false);
 
-        // Upsert cook row
         const { data: existing } = await supabase
           .from("cooks").select("id").eq("user_id", session.user.id).maybeSingle();
 
@@ -135,6 +135,23 @@ const CookSignup = () => {
     setter(list.includes(value) ? list.filter((x) => x !== value) : [...list, value]);
   };
 
+  const toggleDay = (day: string) => {
+    if (days.includes(day)) {
+      setDays(days.filter((d) => d !== day));
+      setDaySlots((prev) => { const next = { ...prev }; delete next[day]; return next; });
+    } else {
+      setDays([...days, day]);
+    }
+  };
+
+  const toggleSlot = (day: string, slot: string) => {
+    setDaySlots((prev) => {
+      const current = prev[day] || [];
+      const updated = current.includes(slot) ? current.filter((s) => s !== slot) : [...current, slot];
+      return { ...prev, [day]: updated };
+    });
+  };
+
   const parseExperience = (val: string): number => {
     if (val === "Less than 1 year") return 0;
     if (val === "1–3 years") return 2;
@@ -147,7 +164,6 @@ const CookSignup = () => {
   const handleSubmitProfile = async () => {
     if (!bio.trim()) { toast.error("Please write a short bio"); return; }
     if (cuisines.length === 0) { toast.error("Select at least one cuisine"); return; }
-    if (areas.length === 0) { toast.error("Select at least one area"); return; }
     if (!experience) { toast.error("Select your years of experience"); return; }
 
     setSubmitting(true);
@@ -166,7 +182,6 @@ const CookSignup = () => {
     const updatePayload: any = {
       bio: bio.trim(),
       cuisine: cuisines,
-      area: areas.join(", "),
       years_experience: parseExperience(experience),
       status: "pending",
     };
@@ -179,6 +194,18 @@ const CookSignup = () => {
 
     if (updateError) { toast.error("Profile update failed: " + updateError.message); setSubmitting(false); return; }
 
+    // Save availability to cook_availability table
+    const { data: cookData } = await supabase.from("cooks").select("id").eq("user_id", userId).maybeSingle();
+    if (cookData && days.length > 0) {
+      const rows = days.map((day) => ({
+        cook_id: cookData.id,
+        day_of_week: dayToNumber[day],
+        available: true,
+        time_slots: daySlots[day] || [],
+      }));
+      await supabase.from("cook_availability").upsert(rows as any[], { onConflict: "cook_id,day_of_week" });
+    }
+
     try {
       await supabase.functions.invoke("notify-cook", {
         body: {
@@ -188,7 +215,6 @@ const CookSignup = () => {
           event_type: "cook_signup",
           booking_details: {
             cuisines: cuisines.join(", "),
-            areas: areas.join(", "),
             experience,
           },
         },
@@ -345,7 +371,7 @@ const CookSignup = () => {
               Complete Your Profile
             </h1>
             <p className="font-body text-xs text-center mb-6" style={{ color: "#999" }}>
-              Tell us about yourself so families can find you
+              Tell us about yourself so customers can find you
             </p>
 
             {/* Photo upload */}
@@ -370,7 +396,7 @@ const CookSignup = () => {
             <div className="space-y-4">
               <div>
                 <label className="font-body text-xs block mb-1" style={{ color: "#666" }}>Short bio * ({bio.length}/200)</label>
-                <textarea value={bio} onChange={(e) => setBio(e.target.value.slice(0, 200))} placeholder="Tell families a little about yourself and your cooking style." rows={3} className={inputCls} style={{ resize: "none", color: "#2C3B3A" }} />
+                <textarea value={bio} onChange={(e) => setBio(e.target.value.slice(0, 200))} placeholder="Tell us about your cooking style and specialities" rows={3} className={inputCls} style={{ resize: "none", color: "#2C3B3A" }} />
               </div>
 
               <div>
@@ -388,20 +414,6 @@ const CookSignup = () => {
               </div>
 
               <div>
-                <label className="font-body text-xs block mb-2" style={{ color: "#666" }}>Areas you serve *</label>
-                <div className="flex flex-wrap gap-2">
-                  {areaOptions.map((a) => {
-                    const selected = areas.includes(a);
-                    return (
-                      <button key={a} type="button" onClick={() => toggleChip(a, areas, setAreas)} className="rounded-full font-body" style={{ fontSize: "12px", padding: "6px 12px", backgroundColor: selected ? "rgba(134,163,131,0.15)" : "rgba(0,0,0,0.03)", border: `1px solid ${selected ? "#86A383" : "rgba(0,0,0,0.1)"}`, color: selected ? "#86A383" : "rgba(45,49,46,0.6)" }}>
-                        {a}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div>
                 <label className="font-body text-xs block mb-1" style={{ color: "#666" }}>Years of experience *</label>
                 <select value={experience} onChange={(e) => setExperience(e.target.value)} className={inputCls} style={{ color: "#2C3B3A" }}>
                   <option value="">Select</option>
@@ -410,17 +422,37 @@ const CookSignup = () => {
               </div>
 
               <div>
-                <label className="font-body text-xs block mb-2" style={{ color: "#666" }}>Days available</label>
-                <div className="flex flex-wrap gap-2">
+                <label className="font-body text-xs block mb-2" style={{ color: "#666" }}>Availability *</label>
+                <div className="flex flex-wrap gap-2 mb-3">
                   {dayOptions.map((d) => {
                     const selected = days.includes(d);
                     return (
-                      <button key={d} type="button" onClick={() => toggleChip(d, days, setDays)} className="rounded-full font-body" style={{ fontSize: "12px", padding: "6px 14px", backgroundColor: selected ? "rgba(134,163,131,0.15)" : "rgba(0,0,0,0.03)", border: `1px solid ${selected ? "#86A383" : "rgba(0,0,0,0.1)"}`, color: selected ? "#86A383" : "rgba(45,49,46,0.6)" }}>
+                      <button key={d} type="button" onClick={() => toggleDay(d)} className="rounded-full font-body" style={{ fontSize: "12px", padding: "6px 14px", backgroundColor: selected ? "rgba(134,163,131,0.15)" : "rgba(0,0,0,0.03)", border: `1px solid ${selected ? "#86A383" : "rgba(0,0,0,0.1)"}`, color: selected ? "#86A383" : "rgba(45,49,46,0.6)" }}>
                         {d}
                       </button>
                     );
                   })}
                 </div>
+
+                {days.length > 0 && (
+                  <div className="space-y-2">
+                    {days.map((day) => (
+                      <div key={day} className="rounded-lg p-3" style={{ backgroundColor: "rgba(134,163,131,0.05)", border: "1px solid rgba(134,163,131,0.12)" }}>
+                        <p className="font-body text-xs font-semibold mb-2" style={{ color: "#2C3B3A" }}>{day}</p>
+                        <div className="flex flex-wrap gap-2">
+                          {timeSlotOptions.map((slot) => {
+                            const selected = (daySlots[day] || []).includes(slot.key);
+                            return (
+                              <button key={slot.key} type="button" onClick={() => toggleSlot(day, slot.key)} className="rounded-full font-body" style={{ fontSize: "11px", padding: "4px 10px", backgroundColor: selected ? "rgba(134,163,131,0.15)" : "rgba(0,0,0,0.03)", border: `1px solid ${selected ? "#86A383" : "rgba(0,0,0,0.1)"}`, color: selected ? "#86A383" : "rgba(45,49,46,0.6)" }}>
+                                {slot.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 
