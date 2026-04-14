@@ -36,10 +36,10 @@ const CookDashboard = () => {
   const fetchData = useCallback(async () => {
     if (!cook || !isApproved) { setLoading(false); return; }
 
-    const [upcomingRes, completedRes, paidRes, pendingRes] = await Promise.all([
+    const [upcomingRes, completedRes, paidRes, pendingRes, monthlyRes] = await Promise.all([
       supabase
         .from("bookings")
-        .select("id, customer_name, area, booking_date, menu_selected, status")
+        .select("id, customer_name, area, booking_date, menu_selected, status, total_aed, proof_status")
         .eq("cook_id", cook.id)
         .eq("status", "confirmed")
         .order("booking_date", { ascending: true })
@@ -60,15 +60,23 @@ const CookDashboard = () => {
         .select("id", { count: "exact" })
         .eq("cook_id", cook.id)
         .eq("status", "pending"),
+      supabase
+        .from("bookings")
+        .select("total_aed, proof_status")
+        .eq("cook_id", cook.id)
+        .eq("proof_status", "approved")
+        .gte("booking_date", new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split("T")[0]),
     ]);
 
     const completedCount = completedRes.count ?? 0;
     const earningsRate = completedCount >= 10 ? 0.80 : 0.75;
+    const monthlyTotal = (monthlyRes.data ?? []).reduce((s: number, b: any) => s + Math.round((b.total_aed ?? 0) * earningsRate), 0);
 
     setStats({
       upcoming: upcomingRes.data?.length ?? 0,
       completed: completedCount,
       earned: (paidRes.data ?? []).reduce((s, b) => s + Math.round((b.total_aed ?? 0) * earningsRate), 0),
+      monthlyEarnings: monthlyTotal,
     });
     setUpcoming((upcomingRes.data as BookingSummary[]) ?? []);
     setPendingCount(pendingRes.count ?? 0);
