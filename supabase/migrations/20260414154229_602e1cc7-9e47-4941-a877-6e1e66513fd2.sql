@@ -1,0 +1,1 @@
+ALTER TABLE public.cooks ADD COLUMN agreement_accepted_at timestamptz DEFAULT NULL;
