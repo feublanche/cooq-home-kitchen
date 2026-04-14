@@ -5,17 +5,12 @@ import cooqLogo from "@/assets/cooq-logo.png";
 import { toast } from "@/hooks/use-toast";
 import {
   ShieldCheck,
-  MapPin,
   UtensilsCrossed,
   ClipboardCheck,
   AlertTriangle,
   Camera,
-  DollarSign,
   ArrowLeft,
-  Users,
-  Clock,
   CheckCircle2,
-  XCircle,
   Loader2,
   LogOut,
   Search,
@@ -83,6 +78,7 @@ interface CookRecord {
   bio?: string | null;
   operator_notes?: string | null;
   doc_notes?: string | null;
+  photo_url?: string | null;
 }
 
 interface MenuRecord {
@@ -104,12 +100,8 @@ interface MenuRecord {
 
 const tabs = [
   { id: "supply", label: "Supply Manager", icon: ShieldCheck },
-  { id: "marketplace", label: "Marketplace", icon: MapPin },
   { id: "vetting", label: "Menu Vetting", icon: UtensilsCrossed },
   { id: "quality", label: "Quality Audit", icon: ClipboardCheck },
-  { id: "triage", label: "Triage Support", icon: AlertTriangle },
-  { id: "proof", label: "Proof of Quality", icon: Camera },
-  { id: "finance", label: "Financial", icon: DollarSign },
 ] as const;
 
 type TabId = (typeof tabs)[number]["id"];
@@ -164,8 +156,7 @@ const Admin = () => {
   const [requestChangesMode, setRequestChangesMode] = useState(false);
   const [operatorFeedback, setOperatorFeedback] = useState("");
 
-  // Financial state
-  const [showPendingPayouts, setShowPendingPayouts] = useState(false);
+
 
   // Menu vetting state
   const [menuActionMode, setMenuActionMode] = useState<Record<string, "approve" | "changes" | "reject" | null>>({});
@@ -201,7 +192,7 @@ const Admin = () => {
   const fetchCooks = async () => {
     const { data } = await supabase
       .from("cooks")
-      .select("id, name, email, phone, cuisine, area, years_experience, health_card, visa_type, status, created_at, bio, operator_notes")
+      .select("id, name, email, phone, cuisine, area, years_experience, health_card, visa_type, status, created_at, bio, operator_notes, photo_url")
       .order("created_at", { ascending: false });
     if (data) setCooks(data as unknown as CookRecord[]);
   };
@@ -463,33 +454,6 @@ const Admin = () => {
     setMenuActionNote((prev) => ({ ...prev, [menu.id]: "" }));
   };
 
-  // ── Photo Review ──
-  const handlePhotoReview = async (photoId: string, approved: boolean) => {
-    await supabase
-      .from("quality_photos")
-      .update({ reviewed: true, approved } as any)
-      .eq("id", photoId);
-    setPhotos((prev) =>
-      prev.map((p) => (p.id === photoId ? { ...p, reviewed: true, approved } : p))
-    );
-    toast({
-      title: approved ? "Photo Approved ✓" : "Photo Rejected",
-      description: approved ? "Proof of quality verified." : "Photo did not meet standards.",
-    });
-  };
-
-  // ── Mark as Paid ──
-  const markAsPaid = async (id: string) => {
-    setBookings((prev) => prev.map((b) => (b.id === id ? { ...b, paid: true } : b)));
-    await supabase.from("bookings").update({ paid: true }).eq("id", id);
-    toast({ title: "Marked ✓" });
-  };
-
-  const totalRevenue = bookings.reduce((sum, b) => sum + (b.total_aed || 0), 0);
-  const pendingCount = bookings.filter((b) => b.status === "pending").length;
-  const confirmedCount = bookings.filter((b) => b.status === "confirmed").length;
-  const completedCount = bookings.filter((b) => b.status === "completed").length;
-
   // Supply search filter
   const filteredBookings = bookings.filter((b) => {
     if (!searchQuery) return true;
@@ -501,16 +465,6 @@ const Admin = () => {
     );
   });
 
-  // Financial pending payouts
-  const pendingPayouts = bookings.filter((b) => b.status === "completed" && !b.paid);
-  const pendingPayoutTotal = pendingPayouts.reduce((s, b) => s + Math.round((b.total_aed || 0) * 0.75), 0);
-
-  // Proof of Quality: group photos by booking_id
-  const photosByBooking = photos.reduce<Record<string, QualityPhoto[]>>((acc, p) => {
-    if (!acc[p.booking_id]) acc[p.booking_id] = [];
-    acc[p.booking_id].push(p);
-    return acc;
-  }, {});
 
   return (
     <div className="min-h-screen bg-background">
@@ -764,40 +718,7 @@ const Admin = () => {
           </div>
         )}
 
-        {/* ── Marketplace ── */}
-        {activeTab === "marketplace" && (
-          <div>
-            <h2 className="font-display text-xl text-foreground mb-1">Marketplace</h2>
-            <p className="font-body text-xs text-muted-foreground mb-4">
-              Live tracking of all active sessions in Dubai
-            </p>
-            <div className="bg-card rounded-xl p-6 border border-border text-center" style={{ boxShadow: "var(--shadow-card)" }}>
-              <MapPin className="w-10 h-10 text-copper mx-auto mb-3" />
-              <p className="font-body text-sm font-semibold text-foreground mb-1">Map View</p>
-              <p className="font-body text-xs text-muted-foreground">
-                Live tracking of all active sessions across Dubai neighborhoods. Coming soon.
-              </p>
-            </div>
-            <div className="mt-4 bg-card rounded-xl p-4 border border-border" style={{ boxShadow: "var(--shadow-card)" }}>
-              <p className="font-body text-sm font-semibold text-foreground mb-2">Active Sessions Today</p>
-              {bookings.filter((b) => b.status === "confirmed").length === 0 ? (
-                <p className="font-body text-xs text-muted-foreground">No active sessions</p>
-              ) : (
-                bookings
-                  .filter((b) => b.status === "confirmed")
-                  .slice(0, 5)
-                  .map((b) => (
-                    <div key={b.id} className="flex justify-between py-2 border-b border-border last:border-0 font-body text-sm">
-                      <span className="text-foreground">{b.cook_name}</span>
-                      <span className="text-muted-foreground">{b.area || "—"}</span>
-                    </div>
-                  ))
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* ── Menu Vetting Queue (reads from cook_menus) ── */}
+        {/* ── Menu Vetting Queue ── */}
         {activeTab === "vetting" && (
           <div>
             <h2 className="font-display text-xl text-foreground mb-1">Menu Vetting Queue</h2>
@@ -820,30 +741,20 @@ const Admin = () => {
                         {ms === "pending_review" ? "Pending" : ms === "approved" ? "Approved" : ms === "needs_review" ? "Changes Requested" : ms === "rejected" ? "Rejected" : ms}
                       </span>
                     </div>
-
-                    {/* Meals */}
                     {m.meals && m.meals.length > 0 && (
                       <div className="mb-2">
                         {m.meals.map((meal, i) => (
-                          <p key={i} className="font-body text-xs text-foreground">
-                            {i + 1}. {meal}
-                          </p>
+                          <p key={i} className="font-body text-xs text-foreground">{i + 1}. {meal}</p>
                         ))}
                       </div>
                     )}
-
-                    {/* Dietary pills */}
                     {m.dietary && m.dietary.length > 0 && (
                       <div className="flex flex-wrap gap-1 mb-2">
                         {m.dietary.map((d) => (
-                          <span key={d} className="font-body text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary">
-                            {d}
-                          </span>
+                          <span key={d} className="font-body text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary">{d}</span>
                         ))}
                       </div>
                     )}
-
-                    {/* Photo preview */}
                     {m.photo_urls && m.photo_urls.length > 0 && (
                       <div className="flex gap-2 mb-2">
                         {m.photo_urls.map((url, i) => (
@@ -851,12 +762,9 @@ const Admin = () => {
                         ))}
                       </div>
                     )}
-
-                    {(ms === "needs_review" || ms === "rejected") && (m as any).admin_notes && (
-                      <p className="font-body text-xs text-destructive/70 italic mt-1">Notes: {(m as any).admin_notes}</p>
+                    {(ms === "needs_review" || ms === "rejected") && m.admin_notes && (
+                      <p className="font-body text-xs text-destructive/70 italic mt-1">Notes: {m.admin_notes}</p>
                     )}
-
-                    {/* Action buttons */}
                     {!mode && (
                       <div className="flex gap-2 mt-3">
                         <button onClick={() => setMenuActionMode((p) => ({ ...p, [m.id]: "approve" }))} className="flex-1 py-2 rounded-lg font-body text-xs font-semibold bg-green-500/10 text-green-600 hover:bg-green-500/20 transition-colors">Approve</button>
@@ -864,8 +772,6 @@ const Admin = () => {
                         <button onClick={() => setMenuActionMode((p) => ({ ...p, [m.id]: "reject" }))} className="flex-1 py-2 rounded-lg font-body text-xs font-semibold bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors">Reject</button>
                       </div>
                     )}
-
-                    {/* Approve: photo upload required */}
                     {mode === "approve" && (
                       <div className="mt-3 space-y-2 p-3 rounded-lg bg-green-50 border border-green-200">
                         <p className="font-body text-xs font-semibold text-green-700">Upload food photo to approve</p>
@@ -878,8 +784,6 @@ const Admin = () => {
                         </div>
                       </div>
                     )}
-
-                    {/* Request Changes: comment required */}
                     {mode === "changes" && (
                       <div className="mt-3 space-y-2 p-3 rounded-lg bg-amber-50 border border-amber-200">
                         <textarea value={menuActionNote[m.id] || ""} onChange={(e) => setMenuActionNote((p) => ({ ...p, [m.id]: e.target.value }))} placeholder="What needs to change?" className="w-full p-2 rounded-lg border border-amber-300 bg-white font-body text-xs text-foreground resize-none outline-none" rows={2} />
@@ -891,8 +795,6 @@ const Admin = () => {
                         </div>
                       </div>
                     )}
-
-                    {/* Reject: comment required */}
                     {mode === "reject" && (
                       <div className="mt-3 space-y-2 p-3 rounded-lg bg-red-50 border border-red-200">
                         <textarea value={menuActionNote[m.id] || ""} onChange={(e) => setMenuActionNote((p) => ({ ...p, [m.id]: e.target.value }))} placeholder="Reason for rejection..." className="w-full p-2 rounded-lg border border-red-300 bg-white font-body text-xs text-foreground resize-none outline-none" rows={2} />
@@ -966,7 +868,7 @@ const Admin = () => {
                           <div className="mt-2 space-y-2 p-3 rounded-lg bg-amber-50 border border-amber-200">
                             <textarea value={proofResubNote} onChange={(e) => setProofResubNote(e.target.value)} placeholder="What needs to be re-uploaded?" className="w-full p-2 rounded-lg border border-amber-300 bg-white font-body text-xs text-foreground resize-none outline-none" rows={2} />
                             <div className="flex gap-2">
-                              <button onClick={() => handleProofResubmit(b.id, proofResubNote)} disabled={!proofResubNote.trim()} className="px-4 py-2 rounded-lg font-body text-xs font-semibold bg-amber-500 text-white disabled:opacity-50">Send Feedback</button>
+                              <button onClick={() => handleProofResubmit(b.id, proofResubNote)} disabled={!proofResubNote.trim()} className="px-4 py-2 rounded-lg font-body text-xs font-semibold bg-amber-500 text-white disabled:opacity-50">Send</button>
                               <button onClick={() => setProofResubMode(null)} className="px-3 py-2 rounded-lg font-body text-xs text-muted-foreground">Cancel</button>
                             </div>
                           </div>
@@ -979,228 +881,8 @@ const Admin = () => {
             })()}
           </div>
         )}
-
-        {/* ── Triage Support ── */}
-        {activeTab === "triage" && (
-          <div>
-            <h2 className="font-display text-xl text-foreground mb-1">Triage Support</h2>
-            <p className="font-body text-xs text-muted-foreground mb-4">
-              Handle late check-ins, no-shows, and safety reports
-            </p>
-            <div className="space-y-4">
-              <div className="bg-card rounded-xl p-4 border border-border" style={{ boxShadow: "var(--shadow-card)" }}>
-                <div className="flex items-center gap-2 mb-2">
-                  <Clock className="w-4 h-4 text-copper" />
-                  <p className="font-body text-sm font-semibold text-foreground">Logistics (Automated)</p>
-                </div>
-                <p className="font-body text-xs text-muted-foreground">
-                  Late check-ins trigger auto-SMS/WhatsApp to cook. No-shows trigger auto-rebooking options for client.
-                </p>
-              </div>
-              <div className="bg-card rounded-xl p-4 border border-border" style={{ boxShadow: "var(--shadow-card)" }}>
-                <div className="flex items-center gap-2 mb-2">
-                  <AlertTriangle className="w-4 h-4 text-destructive" />
-                  <p className="font-body text-sm font-semibold text-foreground">Quality/Safety (Human)</p>
-                </div>
-                <p className="font-body text-xs text-muted-foreground">
-                  Client reports "Cook is unsafe/rude" during the session. This requires immediate human intervention.
-                </p>
-              </div>
-              <div className="bg-card rounded-xl p-4 border border-border" style={{ boxShadow: "var(--shadow-card)" }}>
-                <div className="flex items-center gap-2 mb-2">
-                  <Users className="w-4 h-4 text-primary" />
-                  <p className="font-body text-sm font-semibold text-foreground">Re-assignment</p>
-                </div>
-                <p className="font-body text-xs text-muted-foreground">
-                  Re-assign sessions for "No-Shows" to backup cooks in the same area.
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ── Proof of Quality (Review Only) ── */}
-        {activeTab === "proof" && (
-          <div>
-            <h2 className="font-display text-xl text-foreground mb-1">Proof of Quality</h2>
-            <p className="font-body text-xs text-muted-foreground mb-4">
-              Review photos uploaded by Cooqs after each session
-            </p>
-
-            {Object.keys(photosByBooking).length === 0 ? (
-              <div className="bg-card rounded-xl p-6 border border-border text-center" style={{ boxShadow: "var(--shadow-card)" }}>
-                <Camera className="w-10 h-10 text-copper mx-auto mb-3" />
-                <p className="font-body text-sm text-muted-foreground">No photos uploaded yet</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {Object.entries(photosByBooking).map(([bookingId, bPhotos]) => {
-                  const booking = bookings.find((b) => b.id === bookingId);
-                  return (
-                    <div key={bookingId} className="bg-card rounded-xl p-4 border border-border" style={{ boxShadow: "var(--shadow-card)" }}>
-                      <div className="mb-3">
-                        <p className="font-body text-sm font-semibold text-foreground">
-                          {bPhotos[0].cook_name}
-                        </p>
-                        <p className="font-body text-xs text-muted-foreground">
-                          {booking ? `${booking.customer_name} · ${booking.booking_date || "—"} · ${booking.area || "—"}` : `Booking ${bookingId.slice(0, 8)}...`}
-                        </p>
-                      </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        {bPhotos.map((p) => (
-                          <div key={p.id} className="relative">
-                            <div className="rounded-lg overflow-hidden aspect-square bg-muted">
-                              <img src={p.photo_url} alt={p.photo_type} className="w-full h-full object-cover" />
-                              <div className="absolute bottom-0 left-0 right-0 bg-foreground/70 px-2 py-1">
-                                <p className="font-body text-[10px] text-background capitalize">{p.photo_type}</p>
-                              </div>
-                            </div>
-                            {p.reviewed ? (
-                              <div className={`absolute top-1 right-1 px-1.5 py-0.5 rounded text-[9px] font-body font-semibold ${p.approved ? "bg-primary/90 text-background" : "bg-destructive/90 text-background"}`}>
-                                {p.approved ? "Approved ✓" : "Rejected"}
-                              </div>
-                            ) : (
-                              <div className="flex gap-1 mt-1">
-                                <button
-                                  onClick={() => handlePhotoReview(p.id, true)}
-                                  className="flex-1 p-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors flex items-center justify-center"
-                                >
-                                  <CheckCircle2 className="w-4 h-4" />
-                                </button>
-                                <button
-                                  onClick={() => handlePhotoReview(p.id, false)}
-                                  className="flex-1 p-1.5 rounded-lg bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors flex items-center justify-center"
-                                >
-                                  <XCircle className="w-4 h-4" />
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* ── Financial Dashboard ── */}
-        {activeTab === "finance" && (
-          <div>
-            <h2 className="font-display text-xl text-foreground mb-1">Financial Dashboard</h2>
-            <p className="font-body text-xs text-muted-foreground mb-4">
-              Escrow management, payout triggers, and revenue tracking
-            </p>
-
-            {/* Pending Payouts toggle */}
-            <div className="flex items-center gap-3 mb-4">
-              <button
-                onClick={() => setShowPendingPayouts(!showPendingPayouts)}
-                className={`font-body text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors ${
-                  showPendingPayouts ? "bg-copper/20 text-copper" : "bg-muted text-muted-foreground"
-                }`}
-              >
-                Pending Payouts
-              </button>
-            </div>
-
-            {showPendingPayouts ? (
-              <div>
-                <p className="font-body text-sm font-semibold text-copper mb-3">
-                  Total pending: AED {pendingPayoutTotal}
-                </p>
-                <div className="space-y-3">
-                  {pendingPayouts.map((b) => (
-                    <div key={b.id} className="bg-card rounded-xl p-4 border border-border" style={{ boxShadow: "var(--shadow-card)" }}>
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <p className="font-body text-sm font-semibold text-foreground">{b.cook_name}</p>
-                          <p className="font-body text-xs text-muted-foreground">{b.customer_name} · {b.booking_date || "—"}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-body text-sm font-semibold text-primary">
-                            Cook share: AED {Math.round((b.total_aed || 0) * 0.75)}
-                          </p>
-                          <button
-                            onClick={() => markAsPaid(b.id)}
-                            className="font-body text-xs font-semibold px-3 py-1 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors mt-1"
-                          >
-                            Mark as Paid
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                  {pendingPayouts.length === 0 && (
-                    <p className="font-body text-sm text-muted-foreground text-center py-8">No pending payouts</p>
-                  )}
-                </div>
-              </div>
-            ) : (
-              <>
-                <div className="grid grid-cols-2 gap-3 mb-6">
-                  <StatCard label="Total Revenue" value={`AED ${totalRevenue}`} />
-                  <StatCard label="Completed" value={completedCount} />
-                  <StatCard label="Pending Payouts" value={pendingPayouts.length} />
-                  <StatCard label="Bookings" value={bookings.length} />
-                </div>
-                <div className="bg-card rounded-xl p-4 border border-border mb-4" style={{ boxShadow: "var(--shadow-card)" }}>
-                  <p className="font-body text-sm font-semibold text-foreground mb-2">Escrow Management</p>
-                  <p className="font-body text-xs text-muted-foreground">
-                    Check customer payments upon booking. Funds held in escrow until proof of quality is verified.
-                  </p>
-                </div>
-                <div className="bg-card rounded-xl p-4 border border-border" style={{ boxShadow: "var(--shadow-card)" }}>
-                  <p className="font-body text-sm font-semibold text-foreground mb-2">Payout Trigger</p>
-                  <p className="font-body text-xs text-muted-foreground">
-                    Release funds to cook's wallet only after "Proof of Quality" photos are uploaded and 2 hours have passed without a major client complaint.
-                  </p>
-                </div>
-                <div className="mt-4">
-                  <p className="font-body text-xs font-semibold tracking-[0.15em] uppercase text-copper mb-3">Recent Bookings</p>
-                  {loading ? (
-                    <p className="font-body text-muted-foreground text-center py-4">Loading...</p>
-                  ) : bookings.length === 0 ? (
-                    <p className="font-body text-muted-foreground text-center py-4">No bookings yet.</p>
-                  ) : (
-                    <div className="space-y-3">
-                      {bookings.slice(0, 10).map((b) => (
-                        <div key={b.id} className="bg-card rounded-xl p-4 border border-border" style={{ boxShadow: "var(--shadow-card)" }}>
-                          <div className="flex items-start justify-between mb-2">
-                            <div>
-                              <p className="font-body text-sm font-semibold text-foreground">{b.customer_name}</p>
-                              <p className="font-body text-xs text-muted-foreground">
-                                {b.cook_name} · {b.area || "—"}
-                              </p>
-                            </div>
-                            <select
-                              value={b.status}
-                              onChange={(e) => updateStatus(b.id, e.target.value)}
-                              className={`font-body text-xs font-semibold px-2 py-1 rounded-lg border-0 ${statusColors[b.status] || ""}`}
-                            >
-                              <option value="pending">Pending</option>
-                              <option value="confirmed">Confirmed</option>
-                              <option value="completed">Completed</option>
-                              <option value="cancelled">Cancelled</option>
-                            </select>
-                          </div>
-                          <div className="font-body text-xs text-muted-foreground">
-                            <p>Menu: {b.menu_selected}</p>
-                            <p>Grocery: {b.grocery_addon ? "Yes" : "No"}</p>
-                          </div>
-                          <p className="font-body text-sm font-semibold text-copper mt-1">AED {b.total_aed}</p>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </>
-            )}
-          </div>
-        )}
       </div>
+
 
       {/* Cook Detail Drawer */}
       <Drawer open={!!selectedCook} onOpenChange={(open) => { if (!open) { setSelectedCook(null); setRequestChangesMode(false); setOperatorFeedback(""); } }}>
@@ -1210,6 +892,18 @@ const Admin = () => {
           </DrawerHeader>
           {selectedCook && (
             <div className="px-4 pb-6">
+              {/* Cook photo */}
+              <div className="flex justify-center mb-4">
+                {selectedCook.photo_url ? (
+                  <img src={selectedCook.photo_url} alt={selectedCook.name} className="w-20 h-20 rounded-full object-cover border-2 border-primary/20" />
+                ) : (
+                  <div className="w-20 h-20 rounded-full flex items-center justify-center" style={{ backgroundColor: "rgba(134,163,131,0.15)" }}>
+                    <span className="font-display text-xl" style={{ color: "#86A383" }}>
+                      {selectedCook.name?.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase() || "?"}
+                    </span>
+                  </div>
+                )}
+              </div>
               <div className="flex justify-between items-start mb-4">
                 <div>
                   <p className="font-body text-base font-semibold text-foreground">{selectedCook.name}</p>
@@ -1240,7 +934,6 @@ const Admin = () => {
                 </div>
               )}
 
-              {/* Documents section - with photos */}
               {cookDocs.length > 0 && (
                 <div className="mb-4">
                   <p className="font-body text-xs font-semibold text-foreground mb-2">Documents</p>
