@@ -121,6 +121,7 @@ const menuStatusColors: Record<string, string> = {
   pending_review: "bg-copper/10 text-copper",
   approved: "bg-primary/10 text-primary",
   rejected: "bg-destructive/10 text-destructive",
+  needs_review: "bg-amber-500/10 text-amber-500",
 };
 
 const cookStatusColors: Record<string, string> = {
