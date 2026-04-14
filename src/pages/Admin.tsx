@@ -1034,6 +1034,7 @@ const Admin = () => {
           )}
         </DrawerContent>
       </Drawer>
+      )}
 
       {/* Assign Cook Drawer */}
       <Drawer open={assignDrawerOpen} onOpenChange={setAssignDrawerOpen}>
