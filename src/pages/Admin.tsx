@@ -83,6 +83,7 @@ interface CookRecord {
   bio?: string | null;
   operator_notes?: string | null;
   doc_notes?: string | null;
+  photo_url?: string | null;
 }
 
 interface MenuRecord {
@@ -104,12 +105,8 @@ interface MenuRecord {
 
 const tabs = [
   { id: "supply", label: "Supply Manager", icon: ShieldCheck },
-  { id: "marketplace", label: "Marketplace", icon: MapPin },
   { id: "vetting", label: "Menu Vetting", icon: UtensilsCrossed },
   { id: "quality", label: "Quality Audit", icon: ClipboardCheck },
-  { id: "triage", label: "Triage Support", icon: AlertTriangle },
-  { id: "proof", label: "Proof of Quality", icon: Camera },
-  { id: "finance", label: "Financial", icon: DollarSign },
 ] as const;
 
 type TabId = (typeof tabs)[number]["id"];
@@ -201,7 +198,7 @@ const Admin = () => {
   const fetchCooks = async () => {
     const { data } = await supabase
       .from("cooks")
-      .select("id, name, email, phone, cuisine, area, years_experience, health_card, visa_type, status, created_at, bio, operator_notes")
+      .select("id, name, email, phone, cuisine, area, years_experience, health_card, visa_type, status, created_at, bio, operator_notes, photo_url")
       .order("created_at", { ascending: false });
     if (data) setCooks(data as unknown as CookRecord[]);
   };
@@ -764,260 +761,7 @@ const Admin = () => {
           </div>
         )}
 
-        {/* ── Marketplace ── */}
-        {activeTab === "marketplace" && (
-          <div>
-            <h2 className="font-display text-xl text-foreground mb-1">Marketplace</h2>
-            <p className="font-body text-xs text-muted-foreground mb-4">
-              Live tracking of all active sessions in Dubai
-            </p>
-            <div className="bg-card rounded-xl p-6 border border-border text-center" style={{ boxShadow: "var(--shadow-card)" }}>
-              <MapPin className="w-10 h-10 text-copper mx-auto mb-3" />
-              <p className="font-body text-sm font-semibold text-foreground mb-1">Map View</p>
-              <p className="font-body text-xs text-muted-foreground">
-                Live tracking of all active sessions across Dubai neighborhoods. Coming soon.
-              </p>
-            </div>
-            <div className="mt-4 bg-card rounded-xl p-4 border border-border" style={{ boxShadow: "var(--shadow-card)" }}>
-              <p className="font-body text-sm font-semibold text-foreground mb-2">Active Sessions Today</p>
-              {bookings.filter((b) => b.status === "confirmed").length === 0 ? (
-                <p className="font-body text-xs text-muted-foreground">No active sessions</p>
-              ) : (
-                bookings
-                  .filter((b) => b.status === "confirmed")
-                  .slice(0, 5)
-                  .map((b) => (
-                    <div key={b.id} className="flex justify-between py-2 border-b border-border last:border-0 font-body text-sm">
-                      <span className="text-foreground">{b.cook_name}</span>
-                      <span className="text-muted-foreground">{b.area || "—"}</span>
-                    </div>
-                  ))
-              )}
-            </div>
-          </div>
-        )}
 
-        {/* ── Menu Vetting Queue (reads from cook_menus) ── */}
-        {activeTab === "vetting" && (
-          <div>
-            <h2 className="font-display text-xl text-foreground mb-1">Menu Vetting Queue</h2>
-            <p className="font-body text-xs text-muted-foreground mb-4">
-              Review proposed menus for balance, appeal, and accurate ingredient lists
-            </p>
-            <div className="space-y-3">
-              {menus.map((m) => {
-                const ms = m.status || "pending_review";
-                const mode = menuActionMode[m.id] || null;
-                return (
-                  <div key={m.id} className="bg-card rounded-xl p-4 border border-border" style={{ boxShadow: "var(--shadow-card)" }}>
-                    <div className="flex justify-between items-start mb-2">
-                      <div>
-                        <p className="font-body text-sm font-semibold text-foreground">{m.cook_name}</p>
-                        <p className="font-body text-xs text-foreground">{m.menu_name}</p>
-                        <p className="font-body text-xs text-copper mt-0.5">{m.cuisine || "—"}</p>
-                      </div>
-                      <span className={`font-body text-[10px] font-semibold px-2 py-0.5 rounded-full ${menuStatusColors[ms] || ""}`}>
-                        {ms === "pending_review" ? "Pending" : ms === "approved" ? "Approved" : ms === "needs_review" ? "Changes Requested" : ms === "rejected" ? "Rejected" : ms}
-                      </span>
-                    </div>
-
-                    {/* Meals */}
-                    {m.meals && m.meals.length > 0 && (
-                      <div className="mb-2">
-                        {m.meals.map((meal, i) => (
-                          <p key={i} className="font-body text-xs text-foreground">
-                            {i + 1}. {meal}
-                          </p>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* Dietary pills */}
-                    {m.dietary && m.dietary.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mb-2">
-                        {m.dietary.map((d) => (
-                          <span key={d} className="font-body text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary">
-                            {d}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* Photo preview */}
-                    {m.photo_urls && m.photo_urls.length > 0 && (
-                      <div className="flex gap-2 mb-2">
-                        {m.photo_urls.map((url, i) => (
-                          <img key={i} src={url} alt="" className="w-16 h-16 rounded-lg object-cover" />
-                        ))}
-                      </div>
-                    )}
-
-                    {(ms === "needs_review" || ms === "rejected") && (m as any).admin_notes && (
-                      <p className="font-body text-xs text-destructive/70 italic mt-1">Notes: {(m as any).admin_notes}</p>
-                    )}
-
-                    {/* Action buttons */}
-                    {!mode && (
-                      <div className="flex gap-2 mt-3">
-                        <button onClick={() => setMenuActionMode((p) => ({ ...p, [m.id]: "approve" }))} className="flex-1 py-2 rounded-lg font-body text-xs font-semibold bg-green-500/10 text-green-600 hover:bg-green-500/20 transition-colors">Approve</button>
-                        <button onClick={() => setMenuActionMode((p) => ({ ...p, [m.id]: "changes" }))} className="flex-1 py-2 rounded-lg font-body text-xs font-semibold bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 transition-colors">Request Changes</button>
-                        <button onClick={() => setMenuActionMode((p) => ({ ...p, [m.id]: "reject" }))} className="flex-1 py-2 rounded-lg font-body text-xs font-semibold bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors">Reject</button>
-                      </div>
-                    )}
-
-                    {/* Approve: photo upload required */}
-                    {mode === "approve" && (
-                      <div className="mt-3 space-y-2 p-3 rounded-lg bg-green-50 border border-green-200">
-                        <p className="font-body text-xs font-semibold text-green-700">Upload food photo to approve</p>
-                        <input type="file" accept="image/*" onChange={(e) => setMenuPhotoFile(e.target.files?.[0] || null)} className="font-body text-xs" />
-                        <div className="flex gap-2">
-                          <button onClick={() => handleMenuApproveWithPhoto(m)} disabled={menuActionLoading === m.id || !menuPhotoFile} className="px-4 py-2 rounded-lg font-body text-xs font-semibold bg-green-500 text-white disabled:opacity-50 flex items-center gap-1">
-                            {menuActionLoading === m.id && <Loader2 className="w-3 h-3 animate-spin" />} Approve & Publish
-                          </button>
-                          <button onClick={() => { setMenuActionMode((p) => ({ ...p, [m.id]: null })); setMenuPhotoFile(null); }} className="px-3 py-2 rounded-lg font-body text-xs text-muted-foreground">Cancel</button>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Request Changes: comment required */}
-                    {mode === "changes" && (
-                      <div className="mt-3 space-y-2 p-3 rounded-lg bg-amber-50 border border-amber-200">
-                        <textarea value={menuActionNote[m.id] || ""} onChange={(e) => setMenuActionNote((p) => ({ ...p, [m.id]: e.target.value }))} placeholder="What needs to change?" className="w-full p-2 rounded-lg border border-amber-300 bg-white font-body text-xs text-foreground resize-none outline-none" rows={2} />
-                        <div className="flex gap-2">
-                          <button onClick={() => handleMenuRequestChanges(m)} disabled={menuActionLoading === m.id} className="px-4 py-2 rounded-lg font-body text-xs font-semibold bg-amber-500 text-white disabled:opacity-50 flex items-center gap-1">
-                            {menuActionLoading === m.id && <Loader2 className="w-3 h-3 animate-spin" />} Send Feedback
-                          </button>
-                          <button onClick={() => setMenuActionMode((p) => ({ ...p, [m.id]: null }))} className="px-3 py-2 rounded-lg font-body text-xs text-muted-foreground">Cancel</button>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Reject: comment required */}
-                    {mode === "reject" && (
-                      <div className="mt-3 space-y-2 p-3 rounded-lg bg-red-50 border border-red-200">
-                        <textarea value={menuActionNote[m.id] || ""} onChange={(e) => setMenuActionNote((p) => ({ ...p, [m.id]: e.target.value }))} placeholder="Reason for rejection..." className="w-full p-2 rounded-lg border border-red-300 bg-white font-body text-xs text-foreground resize-none outline-none" rows={2} />
-                        <div className="flex gap-2">
-                          <button onClick={() => handleMenuRejectFinal(m)} disabled={menuActionLoading === m.id} className="px-4 py-2 rounded-lg font-body text-xs font-semibold bg-destructive text-white disabled:opacity-50 flex items-center gap-1">
-                            {menuActionLoading === m.id && <Loader2 className="w-3 h-3 animate-spin" />} Reject Menu
-                          </button>
-                          <button onClick={() => setMenuActionMode((p) => ({ ...p, [m.id]: null }))} className="px-3 py-2 rounded-lg font-body text-xs text-muted-foreground">Cancel</button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-              {menus.length === 0 && (
-                <p className="font-body text-sm text-muted-foreground text-center py-8">No menus submitted yet.</p>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* ── Quality Audit ── */}
-        {activeTab === "quality" && (
-          <div>
-            <h2 className="font-display text-xl text-foreground mb-1">Quality Audit</h2>
-            <p className="font-body text-xs text-muted-foreground mb-4">
-              Review proof photos uploaded by cooks after sessions
-            </p>
-            {(() => {
-              const proofBookings = bookings.filter((b) => b.proof_status === "pending_review");
-              return proofBookings.length === 0 ? (
-                <div className="bg-card rounded-xl p-6 border border-border text-center" style={{ boxShadow: "var(--shadow-card)" }}>
-                  <Camera className="w-10 h-10 text-copper mx-auto mb-3" />
-                  <p className="font-body text-sm text-muted-foreground">No proof photos pending review</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {proofBookings.map((b) => {
-                    const bPhotos = photos.filter((p) => p.booking_id === b.id);
-                    return (
-                      <div key={b.id} className="bg-card rounded-xl p-4 border border-border" style={{ boxShadow: "var(--shadow-card)" }}>
-                        <div className="flex justify-between items-start mb-2">
-                          <div>
-                            <p className="font-body text-sm font-semibold text-foreground">{b.cook_name}</p>
-                            <p className="font-body text-xs text-muted-foreground">{b.customer_name} · {b.booking_date || "—"}</p>
-                          </div>
-                          <span className="font-body text-[10px] font-semibold px-2 py-0.5 rounded-full bg-copper/10 text-copper">Pending Review</span>
-                        </div>
-                        {bPhotos.length > 0 && (
-                          <div className="grid grid-cols-2 gap-3 mb-3">
-                            {bPhotos.map((p) => (
-                              <div key={p.id} className="relative rounded-lg overflow-hidden aspect-square bg-muted">
-                                <img src={p.photo_url} alt={p.photo_type} className="w-full h-full object-cover" />
-                                <div className="absolute bottom-0 left-0 right-0 bg-foreground/70 px-2 py-1">
-                                  <p className="font-body text-[10px] text-background capitalize">{p.photo_type.replace("_", " ")}</p>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                        {proofResubMode !== b.id ? (
-                          <div className="flex gap-2">
-                            <button onClick={() => handleProofApprove(b.id)} className="flex-1 py-2 rounded-lg font-body text-xs font-semibold bg-green-500/10 text-green-600 hover:bg-green-500/20 transition-colors">
-                              Approve ✓
-                            </button>
-                            <button onClick={() => { setProofResubMode(b.id); setProofResubNote(""); }} className="flex-1 py-2 rounded-lg font-body text-xs font-semibold bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 transition-colors">
-                              Request Resubmission
-                            </button>
-                          </div>
-                        ) : (
-                          <div className="mt-2 space-y-2 p-3 rounded-lg bg-amber-50 border border-amber-200">
-                            <textarea value={proofResubNote} onChange={(e) => setProofResubNote(e.target.value)} placeholder="What needs to be re-uploaded?" className="w-full p-2 rounded-lg border border-amber-300 bg-white font-body text-xs text-foreground resize-none outline-none" rows={2} />
-                            <div className="flex gap-2">
-                              <button onClick={() => handleProofResubmit(b.id, proofResubNote)} disabled={!proofResubNote.trim()} className="px-4 py-2 rounded-lg font-body text-xs font-semibold bg-amber-500 text-white disabled:opacity-50">Send Feedback</button>
-                              <button onClick={() => setProofResubMode(null)} className="px-3 py-2 rounded-lg font-body text-xs text-muted-foreground">Cancel</button>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              );
-            })()}
-          </div>
-        )}
-
-        {/* ── Triage Support ── */}
-        {activeTab === "triage" && (
-          <div>
-            <h2 className="font-display text-xl text-foreground mb-1">Triage Support</h2>
-            <p className="font-body text-xs text-muted-foreground mb-4">
-              Handle late check-ins, no-shows, and safety reports
-            </p>
-            <div className="space-y-4">
-              <div className="bg-card rounded-xl p-4 border border-border" style={{ boxShadow: "var(--shadow-card)" }}>
-                <div className="flex items-center gap-2 mb-2">
-                  <Clock className="w-4 h-4 text-copper" />
-                  <p className="font-body text-sm font-semibold text-foreground">Logistics (Automated)</p>
-                </div>
-                <p className="font-body text-xs text-muted-foreground">
-                  Late check-ins trigger auto-SMS/WhatsApp to cook. No-shows trigger auto-rebooking options for client.
-                </p>
-              </div>
-              <div className="bg-card rounded-xl p-4 border border-border" style={{ boxShadow: "var(--shadow-card)" }}>
-                <div className="flex items-center gap-2 mb-2">
-                  <AlertTriangle className="w-4 h-4 text-destructive" />
-                  <p className="font-body text-sm font-semibold text-foreground">Quality/Safety (Human)</p>
-                </div>
-                <p className="font-body text-xs text-muted-foreground">
-                  Client reports "Cook is unsafe/rude" during the session. This requires immediate human intervention.
-                </p>
-              </div>
-              <div className="bg-card rounded-xl p-4 border border-border" style={{ boxShadow: "var(--shadow-card)" }}>
-                <div className="flex items-center gap-2 mb-2">
-                  <Users className="w-4 h-4 text-primary" />
-                  <p className="font-body text-sm font-semibold text-foreground">Re-assignment</p>
-                </div>
-                <p className="font-body text-xs text-muted-foreground">
-                  Re-assign sessions for "No-Shows" to backup cooks in the same area.
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* ── Proof of Quality (Review Only) ── */}
         {activeTab === "proof" && (
@@ -1210,6 +954,18 @@ const Admin = () => {
           </DrawerHeader>
           {selectedCook && (
             <div className="px-4 pb-6">
+              {/* Cook photo */}
+              <div className="flex justify-center mb-4">
+                {selectedCook.photo_url ? (
+                  <img src={selectedCook.photo_url} alt={selectedCook.name} className="w-20 h-20 rounded-full object-cover border-2 border-primary/20" />
+                ) : (
+                  <div className="w-20 h-20 rounded-full flex items-center justify-center" style={{ backgroundColor: "rgba(134,163,131,0.15)" }}>
+                    <span className="font-display text-xl" style={{ color: "#86A383" }}>
+                      {selectedCook.name?.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase() || "?"}
+                    </span>
+                  </div>
+                )}
+              </div>
               <div className="flex justify-between items-start mb-4">
                 <div>
                   <p className="font-body text-base font-semibold text-foreground">{selectedCook.name}</p>
