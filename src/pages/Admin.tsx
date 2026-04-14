@@ -156,8 +156,7 @@ const Admin = () => {
   const [requestChangesMode, setRequestChangesMode] = useState(false);
   const [operatorFeedback, setOperatorFeedback] = useState("");
 
-  // Financial state
-  const [showPendingPayouts, setShowPendingPayouts] = useState(false);
+
 
   // Menu vetting state
   const [menuActionMode, setMenuActionMode] = useState<Record<string, "approve" | "changes" | "reject" | null>>({});
@@ -455,13 +454,6 @@ const Admin = () => {
     setMenuActionNote((prev) => ({ ...prev, [menu.id]: "" }));
   };
 
-
-
-  const totalRevenue = bookings.reduce((sum, b) => sum + (b.total_aed || 0), 0);
-  const pendingCount = bookings.filter((b) => b.status === "pending").length;
-  const confirmedCount = bookings.filter((b) => b.status === "confirmed").length;
-  const completedCount = bookings.filter((b) => b.status === "completed").length;
-
   // Supply search filter
   const filteredBookings = bookings.filter((b) => {
     if (!searchQuery) return true;
@@ -473,16 +465,6 @@ const Admin = () => {
     );
   });
 
-  // Financial pending payouts
-  const pendingPayouts = bookings.filter((b) => b.status === "completed" && !b.paid);
-  const pendingPayoutTotal = pendingPayouts.reduce((s, b) => s + Math.round((b.total_aed || 0) * 0.75), 0);
-
-  // Proof of Quality: group photos by booking_id
-  const photosByBooking = photos.reduce<Record<string, QualityPhoto[]>>((acc, p) => {
-    if (!acc[p.booking_id]) acc[p.booking_id] = [];
-    acc[p.booking_id].push(p);
-    return acc;
-  }, {});
 
   return (
     <div className="min-h-screen bg-background">
