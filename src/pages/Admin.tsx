@@ -281,10 +281,43 @@ const Admin = () => {
   };
 
   // ── Cook Status Update ──
-  const updateCookStatus = async (cookId: string, newStatus: string) => {
-    setCooks((prev) => prev.map((c) => (c.id === cookId ? { ...c, status: newStatus } : c)));
-    await supabase.from("cooks").update({ status: newStatus }).eq("id", cookId);
+  const updateCookStatus = async (cookId: string, newStatus: string, notes?: string) => {
+    const updateData: Record<string, unknown> = { status: newStatus };
+    if (notes !== undefined) updateData.operator_notes = notes;
+    setCooks((prev) => prev.map((c) => (c.id === cookId ? { ...c, status: newStatus, operator_notes: notes ?? c.operator_notes } : c)));
+    await supabase.from("cooks").update(updateData as any).eq("id", cookId);
     toast({ title: `Cook status updated to "${newStatus}" ✓` });
+  };
+
+  // ── Cook Drawer Actions ──
+  const openCookDrawer = (cook: CookRecord) => {
+    setSelectedCook(cook);
+    setRequestChangesMode(false);
+    setOperatorFeedback("");
+    setCookDrawerOpen(true);
+  };
+
+  const handleApproveCook = async () => {
+    if (!selectedCook) return;
+    await updateCookStatus(selectedCook.id, "approved");
+    setSelectedCook((prev) => prev ? { ...prev, status: "approved" } : prev);
+    setCookDrawerOpen(false);
+  };
+
+  const handleRequestChanges = async () => {
+    if (!selectedCook || !operatorFeedback.trim()) return;
+    await updateCookStatus(selectedCook.id, "needs_review", operatorFeedback.trim());
+    setSelectedCook((prev) => prev ? { ...prev, status: "needs_review", operator_notes: operatorFeedback.trim() } : prev);
+    setCookDrawerOpen(false);
+    setRequestChangesMode(false);
+    setOperatorFeedback("");
+  };
+
+  const handleSuspendCook = async () => {
+    if (!selectedCook) return;
+    await updateCookStatus(selectedCook.id, "suspended");
+    setSelectedCook((prev) => prev ? { ...prev, status: "suspended" } : prev);
+    setCookDrawerOpen(false);
   };
 
   // ── Menu Vetting Actions (cook_menus) ──
