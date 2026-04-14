@@ -166,6 +166,9 @@ const Admin = () => {
   const [rejectMenuId, setRejectMenuId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
 
+  // Cook documents state
+  const [cookDocs, setCookDocs] = useState<{ id: string; cook_id: string; document_type: string; file_url: string; status: string }[]>([]);
+
   const fetchBookings = async () => {
     const { data } = await supabase
       .from("bookings")
