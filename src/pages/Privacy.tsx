@@ -2,11 +2,12 @@ import { useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 
 const sections = [
-  { title: "What We Collect", body: "Name, email, phone, address, dietary needs. Payment processed by Stripe — not stored by Cooq." },
-  { title: "How We Use Your Data", body: "To match you with a cook, process bookings, and send updates." },
-  { title: "Who We Share It With", body: "Your address is shared with your cook on session day only. Your data is never sold." },
-  { title: "Data Storage", body: "Your data is stored securely on encrypted servers. Identity documents are accessible only to authorised Cooq staff and never shared with customers." },
-  { title: "Your Rights", body: "Request data deletion at admin.cooq@gmail.com" },
+  { title: "What We Collect", body: "Name, email, phone number, Emirates ID, health card/food safety certificate, bank details (when provided for payouts), profile photo, and session proof photos." },
+  { title: "Why We Collect It", body: "To verify your identity, onboard you as a Cooq cook partner, match you with customers, process monthly payments, and ensure platform safety and quality." },
+  { title: "Who We Share It With", body: "We share only your first name and profile photo with customers after they complete a booking. We never sell your data. We may share data with UAE authorities if legally required." },
+  { title: "How We Store It", body: "All data is stored securely on encrypted servers (Supabase, EU/US region). Documents are accessible only to authorised Cooq staff and are never shared with customers or third parties." },
+  { title: "Your Rights", body: "Under Federal Decree-Law No. 45 of 2021, you have the right to access, correct, or request deletion of your personal data at any time. Contact: admin.cooq@gmail.com" },
+  { title: "Document Retention", body: "Identity documents are retained for the duration of your active partnership and deleted within 30 days of account termination upon request."},
   { title: "Cookies", body: "Essential authentication cookies only." },
   { title: "Contact", body: "admin.cooq@gmail.com" },
 ];
