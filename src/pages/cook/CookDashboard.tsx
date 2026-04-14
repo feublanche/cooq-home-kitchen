@@ -138,11 +138,18 @@ const CookDashboard = () => {
           </button>
         </div>
         <h2 className="font-display italic text-xl mb-4" style={{ color: "#2C3B3A" }}>Hi {firstName} 👋</h2>
-        <div className="rounded-xl p-4 mb-4" style={{ backgroundColor: "rgba(181,126,93,0.1)", border: "1px solid rgba(181,126,93,0.25)" }}>
-          <p className="font-body text-sm" style={{ color: "#B57E5D" }}>
-            ⏳ Your application is under review. We'll WhatsApp you within 48 hours.
-          </p>
-        </div>
+        {hasOperatorNotes ? (
+          <div className="rounded-xl p-4 mb-4" style={{ backgroundColor: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.3)" }}>
+            <p className="font-body text-sm font-semibold mb-1" style={{ color: "#D97706" }}>⚠️ Changes Requested</p>
+            <p className="font-body text-sm" style={{ color: "#92400E" }}>{(cook as any)?.operator_notes}</p>
+          </div>
+        ) : (
+          <div className="rounded-xl p-4 mb-4" style={{ backgroundColor: "rgba(181,126,93,0.1)", border: "1px solid rgba(181,126,93,0.25)" }}>
+            <p className="font-body text-sm" style={{ color: "#B57E5D" }}>
+              ⏳ Your application is under review. We'll WhatsApp you within 48 hours.
+            </p>
+          </div>
+        )}
         <div className="rounded-xl p-4 bg-white border border-gray-100">
           <p className="font-body text-sm mb-3" style={{ color: "#666" }}>
             While you wait, prepare your Emirates ID and health card — you'll need to upload them once approved.
