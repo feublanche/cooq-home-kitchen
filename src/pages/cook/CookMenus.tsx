@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useCook } from "@/context/CookContext";
 import { toast } from "@/hooks/use-toast";
-import { ArrowLeft, Plus, Lock, Loader2 } from "lucide-react";
+import { ArrowLeft, Plus, Loader2 } from "lucide-react";
 import CookBottomNav from "@/components/cook/CookBottomNav";
 
 interface CookMenu {
