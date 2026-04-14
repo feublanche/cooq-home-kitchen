@@ -15,13 +15,15 @@ interface BookingSummary {
   booking_date: string | null;
   menu_selected: string;
   status: string | null;
+  total_aed: number | null;
+  proof_status: string | null;
 }
 
 const CookDashboard = () => {
   const { cook, loading: cookLoading } = useCook();
   const navigate = useNavigate();
   const [upcoming, setUpcoming] = useState<BookingSummary[]>([]);
-  const [stats, setStats] = useState({ upcoming: 0, completed: 0, earned: 0 });
+  const [stats, setStats] = useState({ upcoming: 0, completed: 0, earned: 0, monthlyEarnings: 0 });
   const [pendingCount, setPendingCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [menuNotification, setMenuNotification] = useState<string | null>(null);
@@ -34,10 +36,10 @@ const CookDashboard = () => {
   const fetchData = useCallback(async () => {
     if (!cook || !isApproved) { setLoading(false); return; }
 
-    const [upcomingRes, completedRes, paidRes, pendingRes] = await Promise.all([
+    const [upcomingRes, completedRes, paidRes, pendingRes, monthlyRes] = await Promise.all([
       supabase
         .from("bookings")
-        .select("id, customer_name, area, booking_date, menu_selected, status")
+        .select("id, customer_name, area, booking_date, menu_selected, status, total_aed, proof_status")
         .eq("cook_id", cook.id)
         .eq("status", "confirmed")
         .order("booking_date", { ascending: true })
@@ -58,15 +60,23 @@ const CookDashboard = () => {
         .select("id", { count: "exact" })
         .eq("cook_id", cook.id)
         .eq("status", "pending"),
+      supabase
+        .from("bookings")
+        .select("total_aed, proof_status")
+        .eq("cook_id", cook.id)
+        .eq("proof_status", "approved")
+        .gte("booking_date", new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split("T")[0]),
     ]);
 
     const completedCount = completedRes.count ?? 0;
     const earningsRate = completedCount >= 10 ? 0.80 : 0.75;
+    const monthlyTotal = (monthlyRes.data ?? []).reduce((s: number, b: any) => s + Math.round((b.total_aed ?? 0) * earningsRate), 0);
 
     setStats({
       upcoming: upcomingRes.data?.length ?? 0,
       completed: completedCount,
       earned: (paidRes.data ?? []).reduce((s, b) => s + Math.round((b.total_aed ?? 0) * earningsRate), 0),
+      monthlyEarnings: monthlyTotal,
     });
     setUpcoming((upcomingRes.data as BookingSummary[]) ?? []);
     setPendingCount(pendingRes.count ?? 0);
@@ -236,6 +246,16 @@ const CookDashboard = () => {
             </p>
           </div>
         ))}
+      </div>
+
+      {/* Monthly earnings */}
+      <div className="mx-4 mt-3 rounded-xl p-3" style={{ backgroundColor: "rgba(134,163,131,0.08)", border: "1px solid rgba(134,163,131,0.15)" }}>
+        <p className="font-body font-semibold" style={{ fontSize: "14px", color: "#86A383" }}>
+          This month's earnings: AED {loading ? "—" : stats.monthlyEarnings}
+        </p>
+        <p className="font-body mt-1" style={{ fontSize: "10px", color: "#999" }}>
+          Cooq processes cook payments monthly.
+        </p>
       </div>
 
       {/* New order alert */}

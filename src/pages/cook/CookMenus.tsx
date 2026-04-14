@@ -74,7 +74,7 @@ const CookMenus = () => {
   const canAddForCuisine = (c: string) => menusForCuisine(c) < 2;
 
   const openEdit = (m: CookMenu) => {
-    if (m.status !== "rejected" && m.status !== "pending_review") return;
+    if (m.status !== "rejected" && m.status !== "pending_review" && m.status !== "needs_review") return;
     setEditId(m.id);
     setMenuName(m.menu_name);
     setCuisine(m.cuisine || "");
@@ -152,6 +152,7 @@ const CookMenus = () => {
   const statusBadge = (s: string | null) => {
     if (s === "approved") return { bg: "rgba(134,163,131,0.15)", text: "#86A383", label: "Live ✓" };
     if (s === "rejected") return { bg: "rgba(239,68,68,0.08)", text: "#ef4444", label: "Not approved" };
+    if (s === "needs_review") return { bg: "rgba(245,158,11,0.1)", text: "#D97706", label: "Changes requested" };
     return { bg: "rgba(181,126,93,0.1)", text: "#B57E5D", label: "Awaiting approval" };
   };
 
@@ -205,7 +206,7 @@ const CookMenus = () => {
             menus.map((m) => {
               const badge = statusBadge(m.status);
               const isLocked = m.status === "approved";
-              const canEdit = m.status === "rejected" || m.status === "pending_review";
+              const canEdit = m.status === "rejected" || m.status === "pending_review" || m.status === "needs_review";
               return (
                 <div key={m.id} className={`rounded-xl p-4 mb-3 bg-white border border-gray-100 ${canEdit ? "cursor-pointer" : ""}`} onClick={() => canEdit && openEdit(m)}>
                   <div className="flex justify-between items-start">
@@ -214,7 +215,7 @@ const CookMenus = () => {
                         <span className="font-body font-bold" style={{ fontSize: "14px", color: "#2C3B3A" }}>{m.menu_name}</span>
                         {isLocked && <Lock className="w-3.5 h-3.5" style={{ color: "#ccc" }} />}
                       </div>
-                      <p className="font-body mt-1" style={{ fontSize: "12px", color: "#86A383" }}>AED {m.price_aed} · {m.cuisine}</p>
+                      <p className="font-body mt-1" style={{ fontSize: "12px", color: "#86A383" }}>{m.cuisine}</p>
                     </div>
                     <span className="font-body rounded-full px-2.5 py-0.5 shrink-0" style={{ fontSize: "10px", backgroundColor: badge.bg, color: badge.text }}>{badge.label}</span>
                   </div>

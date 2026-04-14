@@ -52,6 +52,7 @@ interface Booking {
   grocery_fee?: number;
   selected_menu_id?: string;
   payment_intent_id?: string;
+  proof_status?: string | null;
 }
 
 interface QualityPhoto {
@@ -120,6 +121,7 @@ const menuStatusColors: Record<string, string> = {
   pending_review: "bg-copper/10 text-copper",
   approved: "bg-primary/10 text-primary",
   rejected: "bg-destructive/10 text-destructive",
+  needs_review: "bg-amber-500/10 text-amber-500",
 };
 
 const cookStatusColors: Record<string, string> = {
@@ -164,6 +166,9 @@ const Admin = () => {
   // Menu vetting state
   const [rejectMenuId, setRejectMenuId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
+
+  // Cook documents state
+  const [cookDocs, setCookDocs] = useState<{ id: string; cook_id: string; document_type: string; file_url: string; status: string }[]>([]);
 
   const fetchBookings = async () => {
     const { data } = await supabase
@@ -289,10 +294,16 @@ const Admin = () => {
   };
 
   // ── Cook Drawer Actions ──
-  const openCookDrawer = (cook: CookRecord) => {
+  const openCookDrawer = async (cook: CookRecord) => {
     setSelectedCook(cook);
     setRequestChangesMode(false);
     setOperatorFeedback("");
+    // Fetch cook documents
+    const { data } = await supabase
+      .from("cook_documents")
+      .select("id, cook_id, document_type, file_url, status")
+      .eq("cook_id", cook.id);
+    setCookDocs((data ?? []) as any);
   };
 
   const handleApproveCook = async () => {
@@ -315,6 +326,33 @@ const Admin = () => {
     setSelectedCook(null);
   };
 
+  const handleVerifyDocument = async (docId: string) => {
+    await supabase.from("cook_documents").update({ status: "verified" } as any).eq("id", docId);
+    setCookDocs((prev) => prev.map((d) => d.id === docId ? { ...d, status: "verified" } : d));
+    toast({ title: "Document verified ✓" });
+  };
+
+  // ── Proof Review Actions ──
+  const handleProofApprove = async (bookingId: string) => {
+    await supabase.from("bookings").update({ proof_status: "approved", status: "completed" } as any).eq("id", bookingId);
+    setBookings((prev) => prev.map((b) => b.id === bookingId ? { ...b, proof_status: "approved", status: "completed" } : b));
+    toast({ title: "Proof approved ✓" });
+  };
+
+  const handleProofResubmit = async (bookingId: string) => {
+    await supabase.from("bookings").update({ proof_status: "resubmit" } as any).eq("id", bookingId);
+    setBookings((prev) => prev.map((b) => b.id === bookingId ? { ...b, proof_status: "resubmit" } : b));
+    // Notify cook
+    const booking = bookings.find((b) => b.id === bookingId);
+    if (booking) {
+      const cook = cooks.find((c) => c.id === booking.cook_id);
+      if (cook) {
+        await notifyCookGeneric(cook.name, cook.email, cook.phone, "proof_resubmit", { date: booking.booking_date });
+      }
+    }
+    toast({ title: "Resubmission requested" });
+  };
+
   // ── Menu Vetting Actions (cook_menus) ──
   const handleMenuApprove = async (menu: MenuRecord) => {
     setMenus((prev) => prev.map((m) => (m.id === menu.id ? { ...m, status: "approved" } : m)));
@@ -333,11 +371,11 @@ const Admin = () => {
   const handleMenuReject = async (menu: MenuRecord) => {
     if (!rejectReason.trim()) return;
     setMenus((prev) =>
-      prev.map((m) => (m.id === menu.id ? { ...m, status: "rejected", rejection_reason: rejectReason } : m))
+      prev.map((m) => (m.id === menu.id ? { ...m, status: "needs_review", rejection_reason: rejectReason } : m))
     );
     await supabase
       .from("cook_menus")
-      .update({ status: "rejected", rejection_reason: rejectReason })
+      .update({ status: "needs_review", rejection_reason: rejectReason })
       .eq("id", menu.id);
 
     if (menu.cook_id) {
@@ -346,7 +384,7 @@ const Admin = () => {
         await notifyCookGeneric(cook.name, cook.email, cook.phone, "menu_rejected", { menu: menu.menu_name });
       }
     }
-    toast({ title: "Menu Rejected", description: `${menu.cook_name}'s menu rejected.` });
+    toast({ title: "Changes requested", description: `${menu.cook_name}'s menu sent back for review.` });
     setRejectMenuId(null);
     setRejectReason("");
   };
@@ -710,7 +748,7 @@ const Admin = () => {
                             const newStatus = e.target.value;
                             if (newStatus === "approved") {
                               handleMenuApprove(m);
-                            } else if (newStatus === "rejected") {
+                            } else if (newStatus === "needs_review") {
                               setRejectMenuId(m.id);
                             } else if (newStatus === "pending_review") {
                               setMenus((prev) => prev.map((x) => (x.id === m.id ? { ...x, status: "pending_review" } : x)));
@@ -722,7 +760,7 @@ const Admin = () => {
                         >
                           <option value="pending_review">Pending</option>
                           <option value="approved">Approved</option>
-                          <option value="rejected">Rejected</option>
+                          <option value="needs_review">Request Changes</option>
                         </select>
                       </div>
                     </div>
@@ -791,26 +829,54 @@ const Admin = () => {
           <div>
             <h2 className="font-display text-xl text-foreground mb-1">Quality Audit</h2>
             <p className="font-body text-xs text-muted-foreground mb-4">
-              Auto-trigger Stripe transfer 24h after session completion (minus platform commission)
+              Review proof photos uploaded by cooks after sessions
             </p>
-            <div className="bg-card rounded-xl p-4 border border-border mb-4" style={{ boxShadow: "var(--shadow-card)" }}>
-              <p className="font-body text-sm font-semibold text-foreground mb-2">Session Completion Queue</p>
-              <p className="font-body text-xs text-muted-foreground mb-3">
-                Receives info about client/phone number to confirm appointment
-              </p>
-              {bookings
-                .filter((b) => b.status === "completed")
-                .slice(0, 5)
-                .map((b) => (
-                  <div key={b.id} className="flex justify-between py-2 border-b border-border last:border-0 font-body text-sm">
-                    <span className="text-foreground">{b.cook_name} → {b.customer_name}</span>
-                    <span className="text-copper font-semibold">AED {b.total_aed}</span>
-                  </div>
-                ))}
-              {bookings.filter((b) => b.status === "completed").length === 0 && (
-                <p className="font-body text-xs text-muted-foreground">No completed sessions yet</p>
-              )}
-            </div>
+            {(() => {
+              const proofBookings = bookings.filter((b) => b.proof_status === "pending_review");
+              return proofBookings.length === 0 ? (
+                <div className="bg-card rounded-xl p-6 border border-border text-center" style={{ boxShadow: "var(--shadow-card)" }}>
+                  <Camera className="w-10 h-10 text-copper mx-auto mb-3" />
+                  <p className="font-body text-sm text-muted-foreground">No proof photos pending review</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {proofBookings.map((b) => {
+                    const bPhotos = photos.filter((p) => p.booking_id === b.id);
+                    return (
+                      <div key={b.id} className="bg-card rounded-xl p-4 border border-border" style={{ boxShadow: "var(--shadow-card)" }}>
+                        <div className="flex justify-between items-start mb-2">
+                          <div>
+                            <p className="font-body text-sm font-semibold text-foreground">{b.cook_name}</p>
+                            <p className="font-body text-xs text-muted-foreground">{b.customer_name} · {b.booking_date || "—"}</p>
+                          </div>
+                          <span className="font-body text-[10px] font-semibold px-2 py-0.5 rounded-full bg-copper/10 text-copper">Pending Review</span>
+                        </div>
+                        {bPhotos.length > 0 && (
+                          <div className="grid grid-cols-2 gap-3 mb-3">
+                            {bPhotos.map((p) => (
+                              <div key={p.id} className="relative rounded-lg overflow-hidden aspect-square bg-muted">
+                                <img src={p.photo_url} alt={p.photo_type} className="w-full h-full object-cover" />
+                                <div className="absolute bottom-0 left-0 right-0 bg-foreground/70 px-2 py-1">
+                                  <p className="font-body text-[10px] text-background capitalize">{p.photo_type.replace("_", " ")}</p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        <div className="flex gap-2">
+                          <button onClick={() => handleProofApprove(b.id)} className="flex-1 py-2 rounded-lg font-body text-xs font-semibold bg-primary/10 text-primary hover:bg-primary/20 transition-colors">
+                            Approve ✓
+                          </button>
+                          <button onClick={() => handleProofResubmit(b.id)} className="flex-1 py-2 rounded-lg font-body text-xs font-semibold bg-copper/10 text-copper hover:bg-copper/20 transition-colors">
+                            Request Resubmission
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
           </div>
         )}
 
@@ -1071,6 +1137,33 @@ const Admin = () => {
                 <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
                   <p className="font-body text-xs font-semibold text-amber-800 mb-1">Operator Notes</p>
                   <p className="font-body text-xs text-amber-700">{selectedCook.operator_notes}</p>
+                </div>
+              )}
+
+              {/* Documents section */}
+              {cookDocs.length > 0 && (
+                <div className="mb-4">
+                  <p className="font-body text-xs font-semibold text-foreground mb-2">Documents</p>
+                  <div className="space-y-2">
+                    {cookDocs.map((doc) => (
+                      <div key={doc.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/30 border border-border">
+                        <div>
+                          <p className="font-body text-xs font-semibold text-foreground capitalize">{doc.document_type.replace("_", " ")}</p>
+                          <p className="font-body text-[10px] text-muted-foreground">{doc.status}</p>
+                        </div>
+                        {doc.status === "verified" ? (
+                          <span className="font-body text-xs font-semibold text-primary">Verified ✓</span>
+                        ) : (
+                          <button
+                            onClick={() => handleVerifyDocument(doc.id)}
+                            className="font-body text-xs font-semibold px-3 py-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                          >
+                            Verify
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
 
