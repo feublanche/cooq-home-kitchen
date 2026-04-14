@@ -748,7 +748,7 @@ const Admin = () => {
                             const newStatus = e.target.value;
                             if (newStatus === "approved") {
                               handleMenuApprove(m);
-                            } else if (newStatus === "rejected") {
+                            } else if (newStatus === "needs_review") {
                               setRejectMenuId(m.id);
                             } else if (newStatus === "pending_review") {
                               setMenus((prev) => prev.map((x) => (x.id === m.id ? { ...x, status: "pending_review" } : x)));
@@ -760,7 +760,7 @@ const Admin = () => {
                         >
                           <option value="pending_review">Pending</option>
                           <option value="approved">Approved</option>
-                          <option value="rejected">Rejected</option>
+                          <option value="needs_review">Request Changes</option>
                         </select>
                       </div>
                     </div>
