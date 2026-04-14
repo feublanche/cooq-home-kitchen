@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, forwardRef } from "react";
+import { useEffect, useState, forwardRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import cooqLogo from "@/assets/cooq-logo.png";
@@ -154,7 +154,6 @@ const Admin = () => {
   const [assigning, setAssigning] = useState(false);
 
   // Cook detail drawer state
-  const [cookDrawerOpen, setCookDrawerOpen] = useState(false);
   const [selectedCook, setSelectedCook] = useState<CookRecord | null>(null);
   const [requestChangesMode, setRequestChangesMode] = useState(false);
   const [operatorFeedback, setOperatorFeedback] = useState("");
