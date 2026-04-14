@@ -309,12 +309,29 @@ const Admin = () => {
     setSelectedCook(cook);
     setRequestChangesMode(false);
     setOperatorFeedback("");
+    setDocResubMode(null);
+    setDocResubNote("");
     // Fetch cook documents
     const { data } = await supabase
       .from("cook_documents")
       .select("id, cook_id, document_type, file_url, status")
       .eq("cook_id", cook.id);
-    setCookDocs((data ?? []) as any);
+    const docs = (data ?? []) as any;
+    setCookDocs(docs);
+    // Get signed URLs for document photos
+    const urlMap: Record<string, string> = {};
+    for (const doc of docs) {
+      if (doc.file_url) {
+        // file_url is the storage path like "cook-documents/cook_id/filename"
+        // Try to create signed URL from the cook-documents bucket
+        const path = doc.file_url.includes("cook-documents/")
+          ? doc.file_url.split("cook-documents/")[1]
+          : `${cook.id}/${doc.file_url}`;
+        const { data: signedData } = await supabase.storage.from("cook-documents").createSignedUrl(path, 3600);
+        if (signedData?.signedUrl) urlMap[doc.id] = signedData.signedUrl;
+      }
+    }
+    setDocSignedUrls(urlMap);
   };
 
   const handleApproveCook = async () => {
