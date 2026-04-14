@@ -1224,27 +1224,45 @@ const Admin = () => {
                 </div>
               )}
 
-              {/* Documents section */}
+              {/* Documents section - with photos */}
               {cookDocs.length > 0 && (
                 <div className="mb-4">
                   <p className="font-body text-xs font-semibold text-foreground mb-2">Documents</p>
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     {cookDocs.map((doc) => (
-                      <div key={doc.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/30 border border-border">
-                        <div>
-                          <p className="font-body text-xs font-semibold text-foreground capitalize">{doc.document_type.replace("_", " ")}</p>
-                          <p className="font-body text-[10px] text-muted-foreground">{doc.status}</p>
-                        </div>
-                        {doc.status === "verified" ? (
-                          <span className="font-body text-xs font-semibold text-primary">Verified ✓</span>
-                        ) : (
-                          <button
-                            onClick={() => handleVerifyDocument(doc.id)}
-                            className="font-body text-xs font-semibold px-3 py-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
-                          >
-                            Verify
-                          </button>
+                      <div key={doc.id} className="rounded-lg bg-muted/30 border border-border overflow-hidden">
+                        {/* Document photo */}
+                        {docSignedUrls[doc.id] && (
+                          <a href={docSignedUrls[doc.id]} target="_blank" rel="noopener noreferrer">
+                            <img src={docSignedUrls[doc.id]} alt={doc.document_type} className="w-full h-40 object-contain bg-white" />
+                          </a>
                         )}
+                        <div className="p-3">
+                          <div className="flex items-center justify-between mb-2">
+                            <div>
+                              <p className="font-body text-xs font-semibold text-foreground capitalize">{doc.document_type.replace(/_/g, " ")}</p>
+                              <p className="font-body text-[10px] text-muted-foreground capitalize">{doc.status.replace(/_/g, " ")}</p>
+                            </div>
+                            {doc.status === "verified" && (
+                              <span className="font-body text-xs font-semibold text-green-600 bg-green-50 px-2 py-0.5 rounded-full">Verified ✓</span>
+                            )}
+                          </div>
+                          {doc.status !== "verified" && docResubMode !== doc.id && (
+                            <div className="flex gap-2">
+                              <button onClick={() => handleVerifyDocument(doc.id)} className="flex-1 py-2 rounded-lg font-body text-xs font-semibold bg-green-500/10 text-green-600 hover:bg-green-500/20 transition-colors">Verify ✓</button>
+                              <button onClick={() => { setDocResubMode(doc.id); setDocResubNote(""); }} className="flex-1 py-2 rounded-lg font-body text-xs font-semibold bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 transition-colors">Request Resubmission</button>
+                            </div>
+                          )}
+                          {docResubMode === doc.id && (
+                            <div className="mt-2 space-y-2 p-2 rounded-lg bg-amber-50 border border-amber-200">
+                              <textarea value={docResubNote} onChange={(e) => setDocResubNote(e.target.value)} placeholder="What's wrong with this document?" className="w-full p-2 rounded-lg border border-amber-300 bg-white font-body text-xs text-foreground resize-none outline-none" rows={2} />
+                              <div className="flex gap-2">
+                                <button onClick={() => handleDocResubmission(doc.id, doc.cook_id)} disabled={!docResubNote.trim()} className="px-3 py-1.5 rounded-lg font-body text-xs font-semibold bg-amber-500 text-white disabled:opacity-50">Send</button>
+                                <button onClick={() => setDocResubMode(null)} className="px-3 py-1.5 rounded-lg font-body text-xs text-muted-foreground">Cancel</button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>
