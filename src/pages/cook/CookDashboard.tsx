@@ -347,7 +347,21 @@ const CookDashboard = () => {
 
       {/* Status banner */}
       <div className="mx-4 mt-3 rounded-xl p-3" style={{ backgroundColor: "rgba(134,163,131,0.1)", border: "1px solid rgba(134,163,131,0.2)" }}>
-        <p className="font-body text-sm" style={{ color: "#86A383" }}>✓ You're live on Cooq!</p>
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="font-body text-sm" style={{ color: "#86A383" }}>✓ You're live on Cooq!</p>
+            <p className="font-body mt-1" style={{ fontSize: "11px", color: "#666" }}>
+              Need to update your profile or photo? Edit and resubmit for review.
+            </p>
+          </div>
+          <button
+            onClick={handleEditProfile}
+            className="shrink-0 rounded-lg px-3 py-2 font-body font-semibold text-xs"
+            style={{ backgroundColor: "#86A383", color: "#FAF9F6" }}
+          >
+            Edit profile
+          </button>
+        </div>
       </div>
 
       {/* Stats */}
