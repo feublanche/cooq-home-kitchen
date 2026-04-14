@@ -370,11 +370,11 @@ const Admin = () => {
   const handleMenuReject = async (menu: MenuRecord) => {
     if (!rejectReason.trim()) return;
     setMenus((prev) =>
-      prev.map((m) => (m.id === menu.id ? { ...m, status: "rejected", rejection_reason: rejectReason } : m))
+      prev.map((m) => (m.id === menu.id ? { ...m, status: "needs_review", rejection_reason: rejectReason } : m))
     );
     await supabase
       .from("cook_menus")
-      .update({ status: "rejected", rejection_reason: rejectReason })
+      .update({ status: "needs_review", rejection_reason: rejectReason })
       .eq("id", menu.id);
 
     if (menu.cook_id) {
@@ -383,7 +383,7 @@ const Admin = () => {
         await notifyCookGeneric(cook.name, cook.email, cook.phone, "menu_rejected", { menu: menu.menu_name });
       }
     }
-    toast({ title: "Menu Rejected", description: `${menu.cook_name}'s menu rejected.` });
+    toast({ title: "Changes requested", description: `${menu.cook_name}'s menu sent back for review.` });
     setRejectMenuId(null);
     setRejectReason("");
   };
