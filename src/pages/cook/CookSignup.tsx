@@ -37,6 +37,7 @@ const CookSignup = () => {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [agreed, setAgreed] = useState(false);
+  const [dataConsent, setDataConsent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [userId, setUserId] = useState("");
@@ -105,6 +106,7 @@ const CookSignup = () => {
     if (!email.trim() || !email.includes("@")) newErrors.email = "Valid email is required";
     if (!phone.trim()) newErrors.phone = "Phone number is required";
     if (!agreed) newErrors.agreed = "Please agree to the cook terms";
+    if (!dataConsent) newErrors.dataConsent = "Please provide data consent";
     setErrors(newErrors);
     if (Object.keys(newErrors).length > 0) return;
 
@@ -346,6 +348,19 @@ const CookSignup = () => {
                   </span>
                 </label>
                 {errors.agreed && <p className="font-body text-xs text-red-500 mt-1">{errors.agreed}</p>}
+
+                <label className="flex items-start gap-2 cursor-pointer mt-2">
+                  <input
+                    type="checkbox"
+                    checked={dataConsent}
+                    onChange={(e) => setDataConsent(e.target.checked)}
+                    className="accent-[#86A383] mt-1"
+                  />
+                  <span className="font-body text-xs" style={{ color: "#666" }}>
+                    I consent to Cooq collecting and storing my identity documents for verification purposes, in compliance with UAE Federal Decree-Law No. 45 of 2021 on Personal Data Protection.
+                  </span>
+                </label>
+                {errors.dataConsent && <p className="font-body text-xs text-red-500 mt-1">{errors.dataConsent}</p>}
               </div>
             </div>
 
