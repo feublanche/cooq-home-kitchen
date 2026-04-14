@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -61,7 +61,8 @@ const App = () => (
               <Route path="/account-page" element={<CustomerProtectedRoute><AccountPage /></CustomerProtectedRoute>} />
               <Route path="/bookings" element={<CustomerProtectedRoute><Bookings /></CustomerProtectedRoute>} />
               <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
-              <Route path="/login" element={<Login />} />
+              <Route path="/operator/login" element={<Login />} />
+              <Route path="/login" element={<Navigate to="/operator/login" replace />} />
               <Route path="/my-bookings" element={<CustomerProtectedRoute><MyBookings /></CustomerProtectedRoute>} />
               <Route path="/payment" element={<CustomerProtectedRoute><Payment /></CustomerProtectedRoute>} />
               <Route path="/rate/:bookingId" element={<CustomerProtectedRoute><RateSession /></CustomerProtectedRoute>} />

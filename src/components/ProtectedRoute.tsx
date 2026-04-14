@@ -12,7 +12,7 @@ const ProtectedRoute = ({ children }: { children: ReactNode }) => {
     const checkSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
-        navigate("/login", { replace: true });
+        navigate("/operator/login", { replace: true });
         setChecking(false);
         return;
       }
@@ -30,7 +30,7 @@ const ProtectedRoute = ({ children }: { children: ReactNode }) => {
           navigate("/cook/dashboard", { replace: true });
         } else {
           await supabase.auth.signOut();
-          navigate("/login", { replace: true });
+          navigate("/operator/login", { replace: true });
         }
         setChecking(false);
         return;
@@ -45,7 +45,7 @@ const ProtectedRoute = ({ children }: { children: ReactNode }) => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!session) {
         setAuthorized(false);
-        navigate("/login", { replace: true });
+        navigate("/operator/login", { replace: true });
       }
     });
 
