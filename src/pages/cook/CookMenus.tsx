@@ -206,7 +206,7 @@ const CookMenus = () => {
             menus.map((m) => {
               const badge = statusBadge(m.status);
               const isLocked = m.status === "approved";
-              const canEdit = m.status === "rejected" || m.status === "pending_review";
+              const canEdit = m.status === "rejected" || m.status === "pending_review" || m.status === "needs_review";
               return (
                 <div key={m.id} className={`rounded-xl p-4 mb-3 bg-white border border-gray-100 ${canEdit ? "cursor-pointer" : ""}`} onClick={() => canEdit && openEdit(m)}>
                   <div className="flex justify-between items-start">
