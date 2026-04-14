@@ -885,7 +885,8 @@ const Admin = () => {
 
 
       {/* Cook Detail Drawer */}
-      <Drawer open={!!selectedCook} onOpenChange={(open) => { if (!open) { setSelectedCook(null); setRequestChangesMode(false); setOperatorFeedback(""); } }}>
+      {selectedCook && (
+      <Drawer open={true} onOpenChange={(open) => { if (!open) { setSelectedCook(null); setRequestChangesMode(false); setOperatorFeedback(""); } }}>
         <DrawerContent>
           <DrawerHeader>
             <DrawerTitle className="font-display text-lg">Cook Details</DrawerTitle>
