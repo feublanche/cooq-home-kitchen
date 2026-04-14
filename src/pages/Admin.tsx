@@ -5,17 +5,12 @@ import cooqLogo from "@/assets/cooq-logo.png";
 import { toast } from "@/hooks/use-toast";
 import {
   ShieldCheck,
-  MapPin,
   UtensilsCrossed,
   ClipboardCheck,
   AlertTriangle,
   Camera,
-  DollarSign,
   ArrowLeft,
-  Users,
-  Clock,
   CheckCircle2,
-  XCircle,
   Loader2,
   LogOut,
   Search,

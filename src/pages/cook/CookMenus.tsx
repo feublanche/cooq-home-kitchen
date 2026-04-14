@@ -13,7 +13,7 @@ interface CookMenu {
   meals: string[] | null;
   cuisine: string | null;
   dietary: string[] | null;
-  price_aed: number;
+  price_aed?: number;
   status: string | null;
   rejection_reason: string | null;
   admin_notes: string | null;
