@@ -628,7 +628,13 @@ const Admin = () => {
             {supplyView === "cooks" && (
               <div className="space-y-3">
                 {cooks.map((c) => (
-                  <div key={c.id} className="bg-card rounded-xl p-4 border border-border" style={{ boxShadow: "var(--shadow-card)" }}>
+                  <button
+                    type="button"
+                    key={c.id}
+                    onClick={() => openCookDrawer(c)}
+                    className="w-full text-left bg-card rounded-xl p-4 border border-border hover:border-primary/40 transition-colors"
+                    style={{ boxShadow: "var(--shadow-card)" }}
+                  >
                     <div className="flex justify-between items-start mb-2">
                       <div>
                         <p className="font-body text-sm font-semibold text-foreground">{c.name}</p>
@@ -638,74 +644,10 @@ const Admin = () => {
                         {c.status || "applied"}
                       </span>
                     </div>
-                    <p className="font-body text-xs text-foreground mb-1">
-                      {c.cuisine?.join(" · ") || "—"} · {c.area || "—"}
+                    <p className="font-body text-xs text-foreground">
+                      {c.cuisine?.join(" · ") || "—"} · {c.area || "—"} · {c.years_experience ?? 0}y exp
                     </p>
-                    <div className="flex items-center gap-3 font-body text-xs text-muted-foreground mb-2">
-                      <span>{c.years_experience ?? 0}y exp</span>
-                      <span className="flex items-center gap-1">
-                        {c.health_card ? (
-                          <CheckCircle2 className="w-3 h-3 text-primary" />
-                        ) : (
-                          <XCircle className="w-3 h-3 text-muted-foreground" />
-                        )}
-                        Health Card
-                      </span>
-                      <span>Visa: {c.visa_type || "—"}</span>
-                    </div>
-                    <div className="flex gap-2">
-                      {c.status === "applied" && (
-                        <button
-                          onClick={() => updateCookStatus(c.id, "reviewed")}
-                          className="font-body text-xs px-3 py-1.5 rounded-lg bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 transition-colors"
-                        >
-                          Mark Reviewed
-                        </button>
-                      )}
-                      {c.status === "reviewed" && (
-                        <>
-                          <button
-                            onClick={() => updateCookStatus(c.id, "approved")}
-                            className="font-body text-xs px-3 py-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
-                          >
-                            Approve ✓
-                          </button>
-                          <button
-                            onClick={() => updateCookStatus(c.id, "rejected")}
-                            className="font-body text-xs px-3 py-1.5 rounded-lg bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors"
-                          >
-                            Reject ✗
-                          </button>
-                        </>
-                      )}
-                      {c.status === "approved" && (
-                        <button
-                          onClick={() => updateCookStatus(c.id, "active")}
-                          className="font-body text-xs px-3 py-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
-                        >
-                          Set Active
-                        </button>
-                      )}
-                      {(c.status === "active" || c.status === "approved") && (
-                        <button
-                          type="button"
-                          onClick={() => updateCookStatus(c.id, "suspended")}
-                          className="font-body text-xs px-3 py-1.5 rounded-lg bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors"
-                        >
-                          Suspend
-                        </button>
-                      )}
-                      {c.status === "suspended" && (
-                        <button
-                          type="button"
-                          onClick={() => updateCookStatus(c.id, "approved")}
-                          className="font-body text-xs px-3 py-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
-                        >
-                          Reinstate
-                        </button>
-                      )}
-                    </div>
-                  </div>
+                  </button>
                 ))}
                 {cooks.length === 0 && (
                   <p className="font-body text-sm text-muted-foreground text-center py-8">No cooks registered</p>
