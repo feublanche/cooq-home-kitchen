@@ -761,7 +761,170 @@ const Admin = () => {
           </div>
         )}
 
-      </div>
+        {/* ── Menu Vetting Queue ── */}
+        {activeTab === "vetting" && (
+          <div>
+            <h2 className="font-display text-xl text-foreground mb-1">Menu Vetting Queue</h2>
+            <p className="font-body text-xs text-muted-foreground mb-4">
+              Review proposed menus for balance, appeal, and accurate ingredient lists
+            </p>
+            <div className="space-y-3">
+              {menus.map((m) => {
+                const ms = m.status || "pending_review";
+                const mode = menuActionMode[m.id] || null;
+                return (
+                  <div key={m.id} className="bg-card rounded-xl p-4 border border-border" style={{ boxShadow: "var(--shadow-card)" }}>
+                    <div className="flex justify-between items-start mb-2">
+                      <div>
+                        <p className="font-body text-sm font-semibold text-foreground">{m.cook_name}</p>
+                        <p className="font-body text-xs text-foreground">{m.menu_name}</p>
+                        <p className="font-body text-xs text-copper mt-0.5">{m.cuisine || "—"}</p>
+                      </div>
+                      <span className={`font-body text-[10px] font-semibold px-2 py-0.5 rounded-full ${menuStatusColors[ms] || ""}`}>
+                        {ms === "pending_review" ? "Pending" : ms === "approved" ? "Approved" : ms === "needs_review" ? "Changes Requested" : ms === "rejected" ? "Rejected" : ms}
+                      </span>
+                    </div>
+                    {m.meals && m.meals.length > 0 && (
+                      <div className="mb-2">
+                        {m.meals.map((meal, i) => (
+                          <p key={i} className="font-body text-xs text-foreground">{i + 1}. {meal}</p>
+                        ))}
+                      </div>
+                    )}
+                    {m.dietary && m.dietary.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mb-2">
+                        {m.dietary.map((d) => (
+                          <span key={d} className="font-body text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary">{d}</span>
+                        ))}
+                      </div>
+                    )}
+                    {m.photo_urls && m.photo_urls.length > 0 && (
+                      <div className="flex gap-2 mb-2">
+                        {m.photo_urls.map((url, i) => (
+                          <img key={i} src={url} alt="" className="w-16 h-16 rounded-lg object-cover" />
+                        ))}
+                      </div>
+                    )}
+                    {(ms === "needs_review" || ms === "rejected") && m.admin_notes && (
+                      <p className="font-body text-xs text-destructive/70 italic mt-1">Notes: {m.admin_notes}</p>
+                    )}
+                    {!mode && (
+                      <div className="flex gap-2 mt-3">
+                        <button onClick={() => setMenuActionMode((p) => ({ ...p, [m.id]: "approve" }))} className="flex-1 py-2 rounded-lg font-body text-xs font-semibold bg-green-500/10 text-green-600 hover:bg-green-500/20 transition-colors">Approve</button>
+                        <button onClick={() => setMenuActionMode((p) => ({ ...p, [m.id]: "changes" }))} className="flex-1 py-2 rounded-lg font-body text-xs font-semibold bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 transition-colors">Request Changes</button>
+                        <button onClick={() => setMenuActionMode((p) => ({ ...p, [m.id]: "reject" }))} className="flex-1 py-2 rounded-lg font-body text-xs font-semibold bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors">Reject</button>
+                      </div>
+                    )}
+                    {mode === "approve" && (
+                      <div className="mt-3 space-y-2 p-3 rounded-lg bg-green-50 border border-green-200">
+                        <p className="font-body text-xs font-semibold text-green-700">Upload food photo to approve</p>
+                        <input type="file" accept="image/*" onChange={(e) => setMenuPhotoFile(e.target.files?.[0] || null)} className="font-body text-xs" />
+                        <div className="flex gap-2">
+                          <button onClick={() => handleMenuApproveWithPhoto(m)} disabled={menuActionLoading === m.id || !menuPhotoFile} className="px-4 py-2 rounded-lg font-body text-xs font-semibold bg-green-500 text-white disabled:opacity-50 flex items-center gap-1">
+                            {menuActionLoading === m.id && <Loader2 className="w-3 h-3 animate-spin" />} Approve & Publish
+                          </button>
+                          <button onClick={() => { setMenuActionMode((p) => ({ ...p, [m.id]: null })); setMenuPhotoFile(null); }} className="px-3 py-2 rounded-lg font-body text-xs text-muted-foreground">Cancel</button>
+                        </div>
+                      </div>
+                    )}
+                    {mode === "changes" && (
+                      <div className="mt-3 space-y-2 p-3 rounded-lg bg-amber-50 border border-amber-200">
+                        <textarea value={menuActionNote[m.id] || ""} onChange={(e) => setMenuActionNote((p) => ({ ...p, [m.id]: e.target.value }))} placeholder="What needs to change?" className="w-full p-2 rounded-lg border border-amber-300 bg-white font-body text-xs text-foreground resize-none outline-none" rows={2} />
+                        <div className="flex gap-2">
+                          <button onClick={() => handleMenuRequestChanges(m)} disabled={menuActionLoading === m.id} className="px-4 py-2 rounded-lg font-body text-xs font-semibold bg-amber-500 text-white disabled:opacity-50 flex items-center gap-1">
+                            {menuActionLoading === m.id && <Loader2 className="w-3 h-3 animate-spin" />} Send Feedback
+                          </button>
+                          <button onClick={() => setMenuActionMode((p) => ({ ...p, [m.id]: null }))} className="px-3 py-2 rounded-lg font-body text-xs text-muted-foreground">Cancel</button>
+                        </div>
+                      </div>
+                    )}
+                    {mode === "reject" && (
+                      <div className="mt-3 space-y-2 p-3 rounded-lg bg-red-50 border border-red-200">
+                        <textarea value={menuActionNote[m.id] || ""} onChange={(e) => setMenuActionNote((p) => ({ ...p, [m.id]: e.target.value }))} placeholder="Reason for rejection..." className="w-full p-2 rounded-lg border border-red-300 bg-white font-body text-xs text-foreground resize-none outline-none" rows={2} />
+                        <div className="flex gap-2">
+                          <button onClick={() => handleMenuRejectFinal(m)} disabled={menuActionLoading === m.id} className="px-4 py-2 rounded-lg font-body text-xs font-semibold bg-destructive text-white disabled:opacity-50 flex items-center gap-1">
+                            {menuActionLoading === m.id && <Loader2 className="w-3 h-3 animate-spin" />} Reject Menu
+                          </button>
+                          <button onClick={() => setMenuActionMode((p) => ({ ...p, [m.id]: null }))} className="px-3 py-2 rounded-lg font-body text-xs text-muted-foreground">Cancel</button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+              {menus.length === 0 && (
+                <p className="font-body text-sm text-muted-foreground text-center py-8">No menus submitted yet.</p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ── Quality Audit ── */}
+        {activeTab === "quality" && (
+          <div>
+            <h2 className="font-display text-xl text-foreground mb-1">Quality Audit</h2>
+            <p className="font-body text-xs text-muted-foreground mb-4">
+              Review proof photos uploaded by cooks after sessions
+            </p>
+            {(() => {
+              const proofBookings = bookings.filter((b) => b.proof_status === "pending_review");
+              return proofBookings.length === 0 ? (
+                <div className="bg-card rounded-xl p-6 border border-border text-center" style={{ boxShadow: "var(--shadow-card)" }}>
+                  <Camera className="w-10 h-10 text-copper mx-auto mb-3" />
+                  <p className="font-body text-sm text-muted-foreground">No proof photos pending review</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {proofBookings.map((b) => {
+                    const bPhotos = photos.filter((p) => p.booking_id === b.id);
+                    return (
+                      <div key={b.id} className="bg-card rounded-xl p-4 border border-border" style={{ boxShadow: "var(--shadow-card)" }}>
+                        <div className="flex justify-between items-start mb-2">
+                          <div>
+                            <p className="font-body text-sm font-semibold text-foreground">{b.cook_name}</p>
+                            <p className="font-body text-xs text-muted-foreground">{b.customer_name} · {b.booking_date || "—"}</p>
+                          </div>
+                          <span className="font-body text-[10px] font-semibold px-2 py-0.5 rounded-full bg-copper/10 text-copper">Pending Review</span>
+                        </div>
+                        {bPhotos.length > 0 && (
+                          <div className="grid grid-cols-2 gap-3 mb-3">
+                            {bPhotos.map((p) => (
+                              <div key={p.id} className="relative rounded-lg overflow-hidden aspect-square bg-muted">
+                                <img src={p.photo_url} alt={p.photo_type} className="w-full h-full object-cover" />
+                                <div className="absolute bottom-0 left-0 right-0 bg-foreground/70 px-2 py-1">
+                                  <p className="font-body text-[10px] text-background capitalize">{p.photo_type.replace("_", " ")}</p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        {proofResubMode !== b.id ? (
+                          <div className="flex gap-2">
+                            <button onClick={() => handleProofApprove(b.id)} className="flex-1 py-2 rounded-lg font-body text-xs font-semibold bg-green-500/10 text-green-600 hover:bg-green-500/20 transition-colors">
+                              Approve ✓
+                            </button>
+                            <button onClick={() => { setProofResubMode(b.id); setProofResubNote(""); }} className="flex-1 py-2 rounded-lg font-body text-xs font-semibold bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 transition-colors">
+                              Request Resubmission
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="mt-2 space-y-2 p-3 rounded-lg bg-amber-50 border border-amber-200">
+                            <textarea value={proofResubNote} onChange={(e) => setProofResubNote(e.target.value)} placeholder="What needs to be re-uploaded?" className="w-full p-2 rounded-lg border border-amber-300 bg-white font-body text-xs text-foreground resize-none outline-none" rows={2} />
+                            <div className="flex gap-2">
+                              <button onClick={() => handleProofResubmit(b.id, proofResubNote)} disabled={!proofResubNote.trim()} className="px-4 py-2 rounded-lg font-body text-xs font-semibold bg-amber-500 text-white disabled:opacity-50">Send</button>
+                              <button onClick={() => setProofResubMode(null)} className="px-3 py-2 rounded-lg font-body text-xs text-muted-foreground">Cancel</button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
+          </div>
+        )}
+
 
       {/* Cook Detail Drawer */}
       <Drawer open={!!selectedCook} onOpenChange={(open) => { if (!open) { setSelectedCook(null); setRequestChangesMode(false); setOperatorFeedback(""); } }}>
