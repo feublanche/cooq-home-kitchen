@@ -761,8 +761,58 @@ const Admin = () => {
           </div>
         )}
 
+      </div>
 
-              {/* Documents section - with photos */}
+      {/* Cook Detail Drawer */}
+      <Drawer open={!!selectedCook} onOpenChange={(open) => { if (!open) { setSelectedCook(null); setRequestChangesMode(false); setOperatorFeedback(""); } }}>
+        <DrawerContent>
+          <DrawerHeader>
+            <DrawerTitle className="font-display text-lg">Cook Details</DrawerTitle>
+          </DrawerHeader>
+          {selectedCook && (
+            <div className="px-4 pb-6">
+              {/* Cook photo */}
+              <div className="flex justify-center mb-4">
+                {selectedCook.photo_url ? (
+                  <img src={selectedCook.photo_url} alt={selectedCook.name} className="w-20 h-20 rounded-full object-cover border-2 border-primary/20" />
+                ) : (
+                  <div className="w-20 h-20 rounded-full flex items-center justify-center" style={{ backgroundColor: "rgba(134,163,131,0.15)" }}>
+                    <span className="font-display text-xl" style={{ color: "#86A383" }}>
+                      {selectedCook.name?.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase() || "?"}
+                    </span>
+                  </div>
+                )}
+              </div>
+              <div className="flex justify-between items-start mb-4">
+                <div>
+                  <p className="font-body text-base font-semibold text-foreground">{selectedCook.name}</p>
+                  <p className="font-body text-xs text-muted-foreground">{selectedCook.email} · {selectedCook.phone || "—"}</p>
+                </div>
+                <span className={`font-body text-[10px] font-semibold px-2 py-0.5 rounded-full ${cookStatusColors[selectedCook.status || "applied"] || ""}`}>
+                  {selectedCook.status || "applied"}
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1 font-body text-xs mb-4">
+                <p className="text-muted-foreground">Cuisines</p><p className="text-foreground">{selectedCook.cuisine?.join(", ") || "—"}</p>
+                <p className="text-muted-foreground">Area</p><p className="text-foreground">{selectedCook.area || "—"}</p>
+                <p className="text-muted-foreground">Experience</p><p className="text-foreground">{selectedCook.years_experience ?? 0} years</p>
+                <p className="text-muted-foreground">Health Card</p><p className="text-foreground">{selectedCook.health_card ? "Yes ✓" : "No ✗"}</p>
+                <p className="text-muted-foreground">Visa</p><p className="text-foreground">{selectedCook.visa_type || "—"}</p>
+                <p className="text-muted-foreground">Applied</p><p className="text-foreground">{selectedCook.created_at ? new Date(selectedCook.created_at).toLocaleDateString("en-GB") : "—"}</p>
+              </div>
+              {selectedCook.bio && (
+                <div className="mb-4">
+                  <p className="font-body text-xs text-muted-foreground mb-1">Bio</p>
+                  <p className="font-body text-xs text-foreground">{selectedCook.bio}</p>
+                </div>
+              )}
+              {selectedCook.operator_notes && (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
+                  <p className="font-body text-xs font-semibold text-amber-800 mb-1">Operator Notes</p>
+                  <p className="font-body text-xs text-amber-700">{selectedCook.operator_notes}</p>
+                </div>
+              )}
+
               {cookDocs.length > 0 && (
                 <div className="mb-4">
                   <p className="font-body text-xs font-semibold text-foreground mb-2">Documents</p>
