@@ -5,7 +5,7 @@ const sections = [
   { title: "What We Collect", body: "Name, email, phone, address, dietary needs. Payment processed by Stripe — not stored by Cooq." },
   { title: "How We Use Your Data", body: "To match you with a cook, process bookings, and send updates." },
   { title: "Who We Share It With", body: "Your address is shared with your cook on session day only. Your data is never sold." },
-  { title: "Data Storage", body: "[TO BE COMPLETED]" },
+  { title: "Data Storage", body: "Your data is stored securely on encrypted servers. Identity documents are accessible only to authorised Cooq staff and never shared with customers." },
   { title: "Your Rights", body: "Request data deletion at admin.cooq@gmail.com" },
   { title: "Cookies", body: "Essential authentication cookies only." },
   { title: "Contact", body: "admin.cooq@gmail.com" },
