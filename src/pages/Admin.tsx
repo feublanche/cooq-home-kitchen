@@ -611,12 +611,22 @@ const Admin = () => {
                           Set Active
                         </button>
                       )}
-                      {c.status === "active" && (
+                      {(c.status === "active" || c.status === "approved") && (
                         <button
-                          onClick={() => updateCookStatus(c.id, "rejected")}
+                          type="button"
+                          onClick={() => updateCookStatus(c.id, "suspended")}
                           className="font-body text-xs px-3 py-1.5 rounded-lg bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors"
                         >
                           Suspend
+                        </button>
+                      )}
+                      {c.status === "suspended" && (
+                        <button
+                          type="button"
+                          onClick={() => updateCookStatus(c.id, "approved")}
+                          className="font-body text-xs px-3 py-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                        >
+                          Reinstate
                         </button>
                       )}
                     </div>
