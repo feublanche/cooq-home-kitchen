@@ -75,7 +75,7 @@ const CookMenus = () => {
   const canAddForCuisine = (c: string) => menusForCuisine(c) < 2;
 
   const openEdit = (m: CookMenu) => {
-    if (m.status !== "rejected" && m.status !== "needs_review") return;
+    if (m.status !== "rejected" && m.status !== "needs_review" && m.status !== "approved") return;
     setEditId(m.id);
     setMenuName(m.menu_name);
     setCuisine(m.cuisine || "");
@@ -217,9 +217,8 @@ const CookMenus = () => {
           ) : (
             menus.map((m) => {
               const badge = statusBadge(m.status);
-              const isLocked = m.status === "approved";
               const isPendingApproval = m.status === "pending_review" || m.status === "pending_approval";
-              const canEdit = m.status === "rejected" || m.status === "needs_review";
+              const canEdit = m.status === "rejected" || m.status === "needs_review" || m.status === "approved";
               const feedbackNotes = m.admin_notes || m.rejection_reason;
 
               return (
@@ -228,7 +227,6 @@ const CookMenus = () => {
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
                         <span className="font-body font-bold" style={{ fontSize: "14px", color: "#2C3B3A" }}>{m.menu_name}</span>
-                        {isLocked && <Lock className="w-3.5 h-3.5" style={{ color: "#ccc" }} />}
                       </div>
                       <p className="font-body mt-1" style={{ fontSize: "12px", color: "#86A383" }}>{m.cuisine}</p>
                     </div>
@@ -260,20 +258,14 @@ const CookMenus = () => {
                   )}
 
                   {canEdit && (
-                    <button className="mt-2 font-body text-xs font-semibold" style={{ color: "#D97706" }}>
-                      ✏️ Tap to edit & resubmit
+                    <button className="mt-2 font-body text-xs font-semibold" style={{ color: m.status === "approved" ? "#86A383" : "#D97706" }}>
+                      ✏️ {m.status === "approved" ? "Tap to edit & resubmit" : "Tap to edit & resubmit"}
                     </button>
                   )}
 
                   {isPendingApproval && (
                     <p className="font-body mt-2 italic" style={{ fontSize: "10px", color: "#B57E5D" }}>
                       No edits allowed while under review.
-                    </p>
-                  )}
-
-                  {isLocked && (
-                    <p className="font-body mt-2" style={{ fontSize: "10px", color: "#999" }}>
-                      🔒 Contact admin.cooq@gmail.com to make changes
                     </p>
                   )}
 
