@@ -191,7 +191,7 @@ const CookProfile = () => {
             <div className="space-y-2">
               {menus.map((menu: any) => {
                 const isSelected = selectedMenu?.id === menu.id;
-                const dietaryFiltered = (menu.dietary || []).filter((d: string) => d.toLowerCase() !== "halal");
+                const dietaryTags = (menu.dietary || []) as string[];
                 return (
                   <button
                     key={menu.id}
@@ -206,6 +206,9 @@ const CookProfile = () => {
                         <Check className="w-4 h-4 text-white" />
                       </div>
                     )}
+                    {menu.photo_urls?.length > 0 && (
+                      <img src={menu.photo_urls[0]} alt="" className="w-full h-32 object-cover rounded-lg mb-2" />
+                    )}
                     <p className="font-body text-[13px] font-bold text-foreground">{menu.menu_name}</p>
                     {menu.cuisine && <p className="font-body text-[11px] text-copper mt-0.5">{menu.cuisine}</p>}
                     {menu.meals?.length > 0 && (
@@ -215,9 +218,9 @@ const CookProfile = () => {
                         ))}
                       </div>
                     )}
-                    {dietaryFiltered.length > 0 && (
+                    {dietaryTags.length > 0 && (
                       <div className="flex flex-wrap gap-1 mt-2">
-                        {dietaryFiltered.map((d: string, i: number) => (
+                        {dietaryTags.map((d: string, i: number) => (
                           <span key={i} className="px-2 py-0.5 rounded-full bg-primary/10 font-body text-[9px] text-foreground">{d}</span>
                         ))}
                       </div>
