@@ -11,7 +11,6 @@ const cuisineOptions = [
   "American", "Italian", "Keto/Healthy", "Vegan", "Other",
 ];
 
-
 const CookProfilePage = () => {
   const { cook, setCook } = useCook();
   const navigate = useNavigate();
@@ -19,17 +18,17 @@ const CookProfilePage = () => {
 
   const [bio, setBio] = useState(cook?.bio || "");
   const [cuisines, setCuisines] = useState<string[]>(cook?.cuisine || []);
-  
   const [experience, setExperience] = useState(String(cook?.years_experience || ""));
   const [photoUrl, setPhotoUrl] = useState(cook?.photo_url || "");
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
 
+  const isNeedsReview = cook?.status === "needs_review";
+
   useEffect(() => {
     if (cook) {
       setBio(cook.bio || "");
       setCuisines(cook.cuisine || []);
-      
       setExperience(String(cook.years_experience || ""));
       setPhotoUrl(cook.photo_url || "");
     }
@@ -65,21 +64,49 @@ const CookProfilePage = () => {
       newPhotoUrl = urlData.publicUrl;
     }
 
+    const updatePayload: any = {
+      bio: bio.trim() || null,
+      cuisine: cuisines,
+      years_experience: parseInt(experience) || 0,
+      photo_url: newPhotoUrl,
+    };
+
+    // If cook was in needs_review, reset to pending on save
+    if (isNeedsReview) {
+      updatePayload.status = "pending";
+      updatePayload.operator_notes = null;
+    }
+
     const { error } = await supabase
       .from("cooks")
-      .update({
-        bio: bio.trim() || null,
-        cuisine: cuisines,
-        years_experience: parseInt(experience) || 0,
-        photo_url: newPhotoUrl,
-      } as any)
+      .update(updatePayload)
       .eq("id", cook.id);
 
     if (error) {
       toast({ title: "Save failed: " + error.message, variant: "destructive" });
     } else {
-      setCook({ ...cook, bio: bio.trim() || null, cuisine: cuisines, years_experience: parseInt(experience) || 0, photo_url: newPhotoUrl });
+      const updatedCook = {
+        ...cook,
+        bio: bio.trim() || null,
+        cuisine: cuisines,
+        years_experience: parseInt(experience) || 0,
+        photo_url: newPhotoUrl,
+        ...(isNeedsReview ? { status: "pending", operator_notes: null } : {}),
+      };
+      setCook(updatedCook);
       toast({ title: "Profile updated ✓" });
+
+      // Notify operator if profile was updated after review
+      if (isNeedsReview) {
+        try {
+          await supabase.functions.invoke("notify-operator", {
+            body: {
+              event_type: "profile_updated",
+              details: { cook_name: cook.name },
+            },
+          });
+        } catch {}
+      }
     }
     setSaving(false);
   };
@@ -103,6 +130,18 @@ const CookProfilePage = () => {
           <LogOut className="w-4 h-4" /> Sign out
         </button>
       </div>
+
+      {/* Needs review banner */}
+      {isNeedsReview && (
+        <div className="rounded-xl p-3 mb-4" style={{ backgroundColor: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.3)" }}>
+          <p className="font-body text-sm" style={{ color: "#D97706" }}>
+            ⚠️ Please update your profile based on feedback: {cook?.operator_notes || "See dashboard for details."}
+          </p>
+          <p className="font-body text-xs mt-1" style={{ color: "#92400E" }}>
+            Saving will resubmit your profile for review.
+          </p>
+        </div>
+      )}
 
       {/* Photo */}
       <div className="flex justify-center mb-6">
@@ -158,7 +197,6 @@ const CookProfilePage = () => {
           </div>
         </div>
 
-
         <div>
           <label className="font-body text-xs block mb-1" style={{ color: "#666" }}>Years of experience</label>
           <input type="number" min="0" max="50" value={experience} onChange={(e) => setExperience(e.target.value)} className={inputCls} style={{ color: "#2C3B3A" }} />
@@ -167,7 +205,7 @@ const CookProfilePage = () => {
 
       <button onClick={handleSave} disabled={saving} className="w-full py-3 rounded-xl font-body font-semibold text-sm mt-6 flex items-center justify-center gap-2 disabled:opacity-50" style={{ backgroundColor: "#B87355", color: "#FAF9F6" }}>
         {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-        Save Changes
+        {isNeedsReview ? "Save & Resubmit for Review" : "Save Changes"}
       </button>
     </div>
   );

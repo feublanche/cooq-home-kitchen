@@ -19,6 +19,7 @@ interface Order {
   total_aed: number | null;
   created_at: string;
   proof_status: string | null;
+  proof_notes: string | null;
 }
 
 const CookOrders = () => {
@@ -38,7 +39,7 @@ const CookOrders = () => {
     const fetchOrders = async () => {
       const { data } = await supabase
         .from("bookings")
-        .select("id, customer_name, address, area, booking_date, menu_selected, status, tier, total_aed, created_at, proof_status")
+        .select("id, customer_name, address, area, booking_date, menu_selected, status, tier, total_aed, created_at, proof_status, proof_notes")
         .eq("cook_id", cook.id)
         .order("booking_date", { ascending: true });
 
@@ -68,10 +69,10 @@ const CookOrders = () => {
     return "Duo";
   };
 
-  const statusBadge = (s: string | null) => {
-    if (s === "confirmed") return { bg: "rgba(134,163,131,0.15)", color: "#86A383", label: "Upcoming" };
-    if (s === "completed") return { bg: "rgba(0,0,0,0.05)", color: "#999", label: "Completed" };
+  const statusBadge = (s: string | null, proofStatus: string | null) => {
     if (s === "cancelled") return { bg: "rgba(239,68,68,0.08)", color: "#ef4444", label: "Cancelled" };
+    if (s === "completed" || proofStatus === "approved") return { bg: "rgba(134,163,131,0.15)", color: "#86A383", label: "Session complete ✓" };
+    if (s === "confirmed") return { bg: "rgba(134,163,131,0.15)", color: "#86A383", label: "Upcoming" };
     return { bg: "rgba(181,126,93,0.1)", color: "#B57E5D", label: "Pending" };
   };
 
@@ -116,15 +117,14 @@ const CookOrders = () => {
       await supabase.from("bookings").update({ proof_status: "pending_review" } as any).eq("id", bookingId);
       setOrders((prev) => prev.map((o) => o.id === bookingId ? { ...o, proof_status: "pending_review" } : o));
 
-      // Notify operator
+      const order = orders.find((o) => o.id === bookingId);
+      const isResubmit = order?.proof_status === "resubmit";
+
       try {
-        const order = orders.find((o) => o.id === bookingId);
-        await supabase.functions.invoke("notify-cook", {
+        await supabase.functions.invoke("notify-operator", {
           body: {
-            cook_name: cook.name,
-            cook_email: cook.email,
-            event_type: "proof_uploaded",
-            booking_details: { date: order?.booking_date },
+            event_type: isResubmit ? "proof_resubmitted" : "proof_uploaded",
+            details: { cook_name: cook.name, date: order?.booking_date },
           },
         });
       } catch {}
@@ -164,11 +164,12 @@ const CookOrders = () => {
           </div>
         ) : (
           orders.map((o) => {
-            const badge = statusBadge(o.status);
+            const badge = statusBadge(o.status, o.proof_status);
             const customerFirst = o.customer_name?.split(" ")[0] || "Customer";
             const cookEarnings = Math.round((o.total_aed ?? 350) * earningsRate);
             const showAddress = isWithin24Hours(o.booking_date) || isSessionPast(o.booking_date);
             const needsProof = isSessionPast(o.booking_date) && !o.proof_status && o.status !== "cancelled";
+            const needsResubmit = o.proof_status === "resubmit";
             const isProofMode = proofBookingId === o.id;
 
             return (
@@ -181,7 +182,6 @@ const CookOrders = () => {
                 <div className="flex items-center gap-3 mt-2">
                   <span style={{ fontSize: "11px", fontFamily: "'DM Mono', monospace", color: "#86A383" }}>{formatDate(o.booking_date)}</span>
                   <span className="font-body" style={{ fontSize: "11px", color: "#999" }}>{tierLabel(o.tier)}</span>
-                  <span className="font-body" style={{ fontSize: "11px", color: "#999" }}>{o.area || "—"}</span>
                 </div>
 
                 <p className="font-body italic mt-1" style={{ fontSize: "12px", color: "#666" }}>{o.menu_selected}</p>
@@ -197,24 +197,35 @@ const CookOrders = () => {
 
                 {/* Proof status badges */}
                 {o.proof_status === "pending_review" && (
-                  <p className="font-body mt-1" style={{ fontSize: "11px", color: "#B57E5D" }}>📸 Proof uploaded — under review</p>
+                  <div className="mt-2 rounded-lg px-3 py-1.5" style={{ backgroundColor: "rgba(181,126,93,0.08)", border: "1px solid rgba(181,126,93,0.15)" }}>
+                    <p className="font-body" style={{ fontSize: "11px", color: "#B57E5D" }}>📸 Proof submitted — under review</p>
+                  </div>
                 )}
                 {o.proof_status === "approved" && (
-                  <p className="font-body mt-1" style={{ fontSize: "11px", color: "#86A383" }}>✓ Proof approved</p>
+                  <div className="mt-2 rounded-lg px-3 py-1.5" style={{ backgroundColor: "rgba(134,163,131,0.08)", border: "1px solid rgba(134,163,131,0.15)" }}>
+                    <p className="font-body" style={{ fontSize: "11px", color: "#86A383" }}>✓ Session complete — earnings added to this month</p>
+                  </div>
                 )}
-                {o.proof_status === "resubmit" && (
-                  <p className="font-body mt-1" style={{ fontSize: "11px", color: "#ef4444" }}>⚠️ Please re-upload your proof photos</p>
+
+                {/* Resubmit alert with notes */}
+                {needsResubmit && (
+                  <div className="mt-2 rounded-lg p-2.5" style={{ backgroundColor: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.2)" }}>
+                    <p className="font-body font-semibold" style={{ fontSize: "11px", color: "#D97706" }}>⚠️ Please re-upload your proof photos</p>
+                    {o.proof_notes && (
+                      <p className="font-body mt-1" style={{ fontSize: "11px", color: "#92400E" }}>{o.proof_notes}</p>
+                    )}
+                  </div>
                 )}
 
                 {/* Upload proof button */}
-                {(needsProof || o.proof_status === "resubmit") && !isProofMode && (
+                {(needsProof || needsResubmit) && !isProofMode && (
                   <button
                     onClick={() => { setProofBookingId(o.id); setProofFiles({ kitchen: null, containers: null }); }}
                     className="flex items-center gap-2 mt-2 rounded-lg px-4 py-2 font-body text-sm"
-                    style={{ backgroundColor: "rgba(184,115,85,0.1)", color: "#B87355" }}
+                    style={{ backgroundColor: needsResubmit ? "rgba(245,158,11,0.1)" : "rgba(184,115,85,0.1)", color: needsResubmit ? "#D97706" : "#B87355" }}
                   >
                     <Upload className="w-4 h-4" />
-                    {o.proof_status === "resubmit" ? "Re-upload proof" : "Upload proof"}
+                    {needsResubmit ? "Re-upload proof" : "Upload proof of completion"}
                   </button>
                 )}
 

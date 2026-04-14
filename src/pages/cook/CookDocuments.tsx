@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useCook } from "@/context/CookContext";
 import { toast } from "@/hooks/use-toast";
-import { ArrowLeft, Upload, Check, Clock, Loader2 } from "lucide-react";
+import { ArrowLeft, Upload, Check, Clock, AlertTriangle, Loader2 } from "lucide-react";
 import CookBottomNav from "@/components/cook/CookBottomNav";
 
 interface DocSlot {
@@ -95,14 +95,11 @@ const CookDocuments = () => {
     } else {
       toast({ title: "Uploaded — under review ✓" });
 
-      // Notify operator
       try {
-        await supabase.functions.invoke("notify-cook", {
+        await supabase.functions.invoke("notify-operator", {
           body: {
-            cook_name: cook.name,
-            cook_email: cook.email,
             event_type: "document_uploaded",
-            booking_details: { document_type: type },
+            details: { cook_name: cook.name, document_type: type },
           },
         });
       } catch (e) { console.log("Notification skipped:", e); }
@@ -114,15 +111,21 @@ const CookDocuments = () => {
 
   const statusIcon = (status: string) => {
     if (status === "verified") return <Check className="w-4 h-4" style={{ color: "#86A383" }} />;
+    if (status === "needs_resubmission") return <AlertTriangle className="w-4 h-4" style={{ color: "#D97706" }} />;
     return <Clock className="w-4 h-4" style={{ color: "#B57E5D" }} />;
   };
 
   const statusLabel = (status: string) => {
     if (status === "verified") return "Verified ✓";
+    if (status === "needs_resubmission") return "Resubmission required";
     return "Uploaded — under review";
   };
 
-  const statusColor = (status: string) => status === "verified" ? "#86A383" : "#B57E5D";
+  const statusColor = (status: string) => {
+    if (status === "verified") return "#86A383";
+    if (status === "needs_resubmission") return "#D97706";
+    return "#B57E5D";
+  };
 
   return (
     <div className="min-h-screen pb-24 px-4 pt-4" style={{ backgroundColor: "#FAF9F6" }}>
@@ -156,6 +159,7 @@ const CookDocuments = () => {
           {DOC_SLOTS.map((slot) => {
             const doc = getDocForType(slot.type);
             const isUploading = uploadingType === slot.type;
+            const needsResubmission = doc?.status === "needs_resubmission";
 
             return (
               <div key={slot.type} className="rounded-xl p-4 bg-white border border-gray-100">
@@ -178,6 +182,15 @@ const CookDocuments = () => {
                   <p className="font-body mt-1" style={{ fontSize: "11px", color: "#ccc" }}>Not uploaded</p>
                 )}
 
+                {/* Doc notes for resubmission */}
+                {needsResubmission && cook?.doc_notes && (
+                  <div className="mt-2 rounded-lg p-2.5" style={{ backgroundColor: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.2)" }}>
+                    <p className="font-body" style={{ fontSize: "11px", color: "#D97706" }}>
+                      {cook.doc_notes}
+                    </p>
+                  </div>
+                )}
+
                 <input
                   ref={(el) => { fileRefs.current[slot.type] = el; }}
                   type="file"
@@ -186,19 +199,29 @@ const CookDocuments = () => {
                   onChange={(e) => handleUpload(slot.type, e.target.files?.[0] || null)}
                 />
 
-                <button
-                  onClick={() => fileRefs.current[slot.type]?.click()}
-                  disabled={isUploading}
-                  className="flex items-center gap-2 mt-3 rounded-lg px-4 py-2 font-body text-sm disabled:opacity-50"
-                  style={{
-                    backgroundColor: doc ? "transparent" : "rgba(134,163,131,0.1)",
-                    border: doc ? "1px solid rgba(134,163,131,0.2)" : "none",
-                    color: "#86A383",
-                  }}
-                >
-                  {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-                  {doc ? "Re-upload" : "Upload"}
-                </button>
+                {/* Show upload/re-upload button */}
+                {(!doc || needsResubmission || doc.status === "uploaded") && (
+                  <button
+                    onClick={() => fileRefs.current[slot.type]?.click()}
+                    disabled={isUploading}
+                    className="flex items-center gap-2 mt-3 rounded-lg px-4 py-2 font-body text-sm disabled:opacity-50"
+                    style={{
+                      backgroundColor: needsResubmission ? "rgba(245,158,11,0.1)" : doc ? "transparent" : "rgba(134,163,131,0.1)",
+                      border: doc ? `1px solid ${needsResubmission ? "rgba(245,158,11,0.3)" : "rgba(134,163,131,0.2)"}` : "none",
+                      color: needsResubmission ? "#D97706" : "#86A383",
+                    }}
+                  >
+                    {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                    {needsResubmission ? "Re-upload" : doc ? "Re-upload" : "Upload"}
+                  </button>
+                )}
+
+                {/* Verified - no re-upload needed */}
+                {doc?.status === "verified" && (
+                  <p className="font-body mt-2" style={{ fontSize: "10px", color: "#86A383" }}>
+                    ✓ Document verified — no action needed
+                  </p>
+                )}
               </div>
             );
           })}

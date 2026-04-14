@@ -17,6 +17,8 @@ export interface CookRow {
   health_card_expiry: string | null;
   visa_type: string | null;
   stripe_account_id: string | null;
+  operator_notes: string | null;
+  doc_notes: string | null;
 }
 
 interface CookContextType {
