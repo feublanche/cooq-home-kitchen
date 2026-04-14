@@ -293,21 +293,18 @@ const Admin = () => {
     setSelectedCook(cook);
     setRequestChangesMode(false);
     setOperatorFeedback("");
-    setCookDrawerOpen(true);
   };
 
   const handleApproveCook = async () => {
     if (!selectedCook) return;
     await updateCookStatus(selectedCook.id, "approved");
-    setSelectedCook((prev) => prev ? { ...prev, status: "approved" } : prev);
-    setCookDrawerOpen(false);
+    setSelectedCook(null);
   };
 
   const handleRequestChanges = async () => {
     if (!selectedCook || !operatorFeedback.trim()) return;
     await updateCookStatus(selectedCook.id, "needs_review", operatorFeedback.trim());
-    setSelectedCook((prev) => prev ? { ...prev, status: "needs_review", operator_notes: operatorFeedback.trim() } : prev);
-    setCookDrawerOpen(false);
+    setSelectedCook(null);
     setRequestChangesMode(false);
     setOperatorFeedback("");
   };
@@ -315,8 +312,7 @@ const Admin = () => {
   const handleSuspendCook = async () => {
     if (!selectedCook) return;
     await updateCookStatus(selectedCook.id, "suspended");
-    setSelectedCook((prev) => prev ? { ...prev, status: "suspended" } : prev);
-    setCookDrawerOpen(false);
+    setSelectedCook(null);
   };
 
   // ── Menu Vetting Actions (cook_menus) ──
