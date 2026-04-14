@@ -207,7 +207,7 @@ const CookDocuments = () => {
 
       <div className="mt-6 rounded-xl p-4" style={{ backgroundColor: "rgba(134,163,131,0.06)", border: "1px solid rgba(134,163,131,0.15)" }}>
         <p className="font-body" style={{ fontSize: "12px", color: "#999" }}>
-          Your documents are encrypted and stored securely. They are used solely to verify your identity and are never shared with customers. Cooq complies with UAE data protection regulations.
+          Your documents are collected solely for identity verification and are never shared with customers or third parties. By uploading, you consent to Cooq storing your data securely in compliance with UAE Federal Decree-Law No. 45 of 2021 on Personal Data Protection. To request deletion of your data, contact admin.cooq@gmail.com.
         </p>
       </div>
 
