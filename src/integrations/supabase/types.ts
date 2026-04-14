@@ -44,6 +44,7 @@ export type Database = {
           party_size: number | null
           payment_intent_id: string | null
           phone: string
+          proof_notes: string | null
           proof_status: string | null
           punctuality_rating: number | null
           rated_at: string | null
@@ -87,6 +88,7 @@ export type Database = {
           party_size?: number | null
           payment_intent_id?: string | null
           phone: string
+          proof_notes?: string | null
           proof_status?: string | null
           punctuality_rating?: number | null
           rated_at?: string | null
@@ -130,6 +132,7 @@ export type Database = {
           party_size?: number | null
           payment_intent_id?: string | null
           phone?: string
+          proof_notes?: string | null
           proof_status?: string | null
           punctuality_rating?: number | null
           rated_at?: string | null
@@ -316,6 +319,7 @@ export type Database = {
           bio: string | null
           created_at: string | null
           cuisine: string[] | null
+          doc_notes: string | null
           email: string
           health_card: boolean | null
           health_card_expiry: string | null
@@ -335,6 +339,7 @@ export type Database = {
           bio?: string | null
           created_at?: string | null
           cuisine?: string[] | null
+          doc_notes?: string | null
           email: string
           health_card?: boolean | null
           health_card_expiry?: string | null
@@ -354,6 +359,7 @@ export type Database = {
           bio?: string | null
           created_at?: string | null
           cuisine?: string[] | null
+          doc_notes?: string | null
           email?: string
           health_card?: boolean | null
           health_card_expiry?: string | null
