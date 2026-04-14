@@ -52,6 +52,7 @@ interface Booking {
   grocery_fee?: number;
   selected_menu_id?: string;
   payment_intent_id?: string;
+  proof_status?: string | null;
 }
 
 interface QualityPhoto {
