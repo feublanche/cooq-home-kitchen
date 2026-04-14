@@ -473,17 +473,49 @@ const Admin = () => {
               Review/Approve new Cook applications (Visa/EID check)
             </p>
             <div className="grid grid-cols-3 gap-3 mb-6">
-              <StatCard label="Pending" value={pendingCount} />
-              <StatCard label="Active Cooks" value={cooks.filter((c) => c.status === "active").length} />
-              <StatCard label="Total" value={bookings.length} />
+              <StatCard label="Pending" value={cooks.filter((c) => c.status === "applied" || c.status === "pending").length} />
+              <StatCard label="Active Cooks" value={cooks.filter((c) => c.status === "approved" || c.status === "active").length} />
+              <StatCard label="Total Cooks" value={cooks.length} />
             </div>
-            <div className="bg-card rounded-xl p-4 border border-border mb-4" style={{ boxShadow: "var(--shadow-card)" }}>
-              <p className="font-body text-sm font-semibold text-foreground mb-2">Alerts</p>
-              <div className="space-y-2">
-                <AlertItem icon={<AlertTriangle className="w-4 h-4 text-copper" />} text='Late check-ins or missing "Proof Photos"' />
-                <AlertItem icon={<ShieldCheck className="w-4 h-4 text-primary" />} text="All visa/health certificates up to date" />
-              </div>
-            </div>
+            {(() => {
+              const confirmedNoPhoto = bookings.filter(
+                (b) => b.status === "confirmed" && !photos.some((p) => p.booking_id === b.id)
+              );
+              const completedNoPhoto = bookings.filter(
+                (b) => b.status === "completed" && !photos.some((p) => p.booking_id === b.id)
+              );
+              const alerts: { icon: React.ReactNode; text: string }[] = [];
+              if (confirmedNoPhoto.length > 0) {
+                alerts.push({
+                  icon: <AlertTriangle className="w-4 h-4 text-copper" />,
+                  text: `${confirmedNoPhoto.length} confirmed booking(s) missing proof photos`,
+                });
+              }
+              if (completedNoPhoto.length > 0) {
+                alerts.push({
+                  icon: <AlertTriangle className="w-4 h-4 text-copper" />,
+                  text: `${completedNoPhoto.length} completed booking(s) with no proof photos uploaded`,
+                });
+              }
+              if (expiringCooks.length > 0) {
+                alerts.push({
+                  icon: <AlertTriangle className="w-4 h-4 text-copper" />,
+                  text: `${expiringCooks.length} cook(s) with DHA health cards expiring within 30 days`,
+                });
+              }
+              return (
+                <div className="bg-card rounded-xl p-4 border border-border mb-4" style={{ boxShadow: "var(--shadow-card)" }}>
+                  <p className="font-body text-sm font-semibold text-foreground mb-2">Alerts</p>
+                  <div className="space-y-2">
+                    {alerts.length > 0 ? (
+                      alerts.map((a, i) => <AlertItem key={i} icon={a.icon} text={a.text} />)
+                    ) : (
+                      <AlertItem icon={<CheckCircle2 className="w-4 h-4 text-primary" />} text="No alerts — everything looks good ✓" />
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Toggle */}
             <div className="flex gap-2 mb-4">
