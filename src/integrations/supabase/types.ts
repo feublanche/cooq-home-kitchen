@@ -348,6 +348,7 @@ export type Database = {
       }
       cooks: {
         Row: {
+          agreement_accepted_at: string | null
           area: string | null
           bio: string | null
           created_at: string | null
@@ -368,6 +369,7 @@ export type Database = {
           years_experience: number | null
         }
         Insert: {
+          agreement_accepted_at?: string | null
           area?: string | null
           bio?: string | null
           created_at?: string | null
@@ -388,6 +390,7 @@ export type Database = {
           years_experience?: number | null
         }
         Update: {
+          agreement_accepted_at?: string | null
           area?: string | null
           bio?: string | null
           created_at?: string | null
