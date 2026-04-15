@@ -1,39 +1,61 @@
 
 
-## Plan: EID Front+Back Documents + Bio Limit Increase
+## Plan: Implement Items 1-3
 
-### 1. Split Emirates ID into Front and Back
-**Current:** Single document slot `emirates_id` with label "Emirates ID (front)".
-**Change:** Add a second slot `emirates_id_back` so cooks must upload both sides.
+### 1. Decouple Menu Approval from Photo Upload (Admin.tsx)
 
-Update `DOC_SLOTS` in `CookDocuments.tsx`:
-```
-emirates_id_front → "Emirates ID (Front)"
-emirates_id_back  → "Emirates ID (Back)"
-health_card       → unchanged
-```
+**Current:** The "Approve" mode requires a photo upload — `handleMenuApproveWithPhoto` checks `if (!menuPhotoFile)` and blocks approval without it.
 
-Also update `Admin.tsx` to display both document types correctly in the cook review modal (label mapping for `emirates_id_front` and `emirates_id_back`).
+**Changes to `src/pages/Admin.tsx`:**
+- Create a new `handleMenuApprove` function that sets `status = 'approved'` directly without requiring a photo
+- In the approve UI (lines 775-785), replace with two buttons:
+  - **"Approve"** — calls `handleMenuApprove(m)`, no photo needed
+  - **"Upload Photo"** — optional file input + upload button, can be done on approved menus too
+- Allow photo upload on already-approved menus (add an "Add Photo" button for menus with `status === 'approved'` and no `photo_urls`)
 
-### 2. Increase Bio Character Limit
-**Current:** Bio is capped at 200 characters in `CookProfile.tsx`.
-**Change:** Increase to 500 characters. Update the `slice(0, 200)` to `slice(0, 500)`, the counter label from `/200` to `/500`, and increase `rows` from 3 to 4 for better visibility.
+### 2. Remove Neighborhood from User Flow
 
-The bio column in the database is `text` type (no length constraint), so no migration needed.
+**Changes to `src/pages/Search.tsx`:**
+- Remove the entire neighborhood dropdown section (lines 94-155)
+- Remove `neighborhood` state, `dropdownOpen`, `searchQuery`, `filteredNeighborhoods`, `dropdownRef`, and the `dubaiNeighborhoods` import
+- Show cuisine selection immediately (no gate behind `neighborhood`)
+- Remove `neighborhood` from session storage and from `handleFinal` navigation state
+- Update conditions: dietary/frequency sections gated on `selectedCuisines.length > 0` only (not `neighborhood &&`)
+- CTA gated on `selectedCuisines.length > 0 && frequency` only
 
-### 3. Ensure Bio Displays Fully
-The customer-facing `CookProfile.tsx` (line 158) and `Admin.tsx` (line 928) both render `cook.bio` without truncation — the bio should display in full. If it appears cut off, it may be the 200-char input limit causing short text. Increasing to 500 will help. No display changes needed.
+**Changes to `src/pages/Results.tsx`:**
+- Remove `neighborhood` from location state destructuring (line 11)
+- Remove from `queryKey` (line 14)
+- Update heading text to remove "in this area" phrasing
 
----
+**Changes to `src/pages/BookingForm.tsx`:**
+- Remove `searchNeighborhood` variable (lines 129-132)
+- Remove the neighborhood display block (lines 503-507)
+- Remove `searchNeighborhood` from the `area` field in insert data (line 253) — use `booking.location || routerState.cookArea || ""` instead
+
+### 3. Fix Customer Auth: Existing vs New Users
+
+**Current:** Always shows name + email + phone form. Uses `shouldCreateUser: true` for all users, causing returning users to re-enter their name.
+
+**Changes to `src/pages/CustomerAuth.tsx`:**
+- Add session check on mount: if already signed in, redirect immediately (prevents loop)
+- Change to email-first flow with 3 screens: `"email"` → `"signup"` (new users) → `"waiting"`
+  - **Email screen**: Just email input + "Continue" button
+  - On continue: try `signInWithOtp({ email, shouldCreateUser: false })`
+  - If succeeds → go to "waiting" screen (existing user, link sent)
+  - If fails with signup error → switch to "signup" screen showing name + phone fields
+  - **Signup screen**: Name + phone + email (pre-filled) → sends OTP with `shouldCreateUser: true`
+- Update heading text: "Welcome back" for sign-in, "Create your account" for signup
 
 ### Files Changed
 
 | File | Change |
 |------|--------|
-| `src/pages/cook/CookDocuments.tsx` | Split `emirates_id` into `emirates_id_front` and `emirates_id_back` slots |
-| `src/pages/cook/CookProfile.tsx` | Increase bio limit from 200 to 500 chars, increase textarea rows |
-| `src/pages/Admin.tsx` | Update document type labels for front/back EID in review modal |
+| `src/pages/Admin.tsx` | Decouple menu approve from photo; add separate "Add Photo" for approved menus |
+| `src/pages/Search.tsx` | Remove neighborhood dropdown entirely; cuisine is first step |
+| `src/pages/Results.tsx` | Remove neighborhood from state/query |
+| `src/pages/BookingForm.tsx` | Remove searchNeighborhood references |
+| `src/pages/CustomerAuth.tsx` | Smart login: email-first, signup only for new users, session check on mount |
 
-### Database Changes
-None required.
+No database changes needed.
 
