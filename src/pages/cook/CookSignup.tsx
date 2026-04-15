@@ -567,7 +567,68 @@ const CookSignup = () => {
 
             <button onClick={handleSubmitProfile} disabled={submitting} className="w-full py-3 rounded-xl font-body font-semibold text-sm mt-6 flex items-center justify-center gap-2 disabled:opacity-50" style={{ backgroundColor: "#B87355", color: "#FAF9F6" }}>
               {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
-              Submit for Review
+              Continue →
+            </button>
+          </div>
+        )}
+
+        {step === 3 && (
+          <div className="rounded-2xl p-6 bg-white border border-gray-100">
+            <h1 className="font-display italic text-xl text-center mb-1" style={{ color: "#2C3B3A" }}>
+              Upload your documents
+            </h1>
+            <p className="font-body text-xs text-center mb-6" style={{ color: "#999" }}>
+              Required for verification. Accepted: JPG, PNG, PDF.
+            </p>
+
+            <div className="space-y-4">
+              {[
+                { label: "Emirates ID (front) *", file: docFront, preview: docFrontPreview, setter: setDocFront, previewSetter: setDocFrontPreview, ref: docFrontRef },
+                { label: "Emirates ID (back) *", file: docBack, preview: docBackPreview, setter: setDocBack, previewSetter: setDocBackPreview, ref: docBackRef },
+                { label: "Health Card *", file: docHealth, preview: docHealthPreview, setter: setDocHealth, previewSetter: setDocHealthPreview, ref: docHealthRef },
+              ].map((doc) => (
+                <div key={doc.label}>
+                  <label className="font-body text-xs block mb-2" style={{ color: "#666" }}>{doc.label}</label>
+                  <div
+                    className="rounded-xl border-2 border-dashed p-4 text-center cursor-pointer"
+                    style={{ borderColor: doc.file ? "#86A383" : "rgba(0,0,0,0.12)", backgroundColor: doc.file ? "rgba(134,163,131,0.05)" : "rgba(0,0,0,0.02)" }}
+                    onClick={() => doc.ref.current?.click()}
+                  >
+                    <input
+                      ref={doc.ref}
+                      type="file"
+                      accept="image/jpeg,image/png,application/pdf"
+                      className="hidden"
+                      onChange={(e) => handleDocSelect(e.target.files?.[0] || null, doc.setter, doc.previewSetter)}
+                    />
+                    {doc.preview && doc.preview !== "pdf" ? (
+                      <img src={doc.preview} alt={doc.label} className="w-20 h-20 object-cover rounded-lg mx-auto" />
+                    ) : doc.preview === "pdf" ? (
+                      <div className="flex flex-col items-center">
+                        <div className="w-12 h-12 rounded-lg flex items-center justify-center mb-1" style={{ backgroundColor: "rgba(134,163,131,0.15)" }}>
+                          <Check className="w-5 h-5" style={{ color: "#86A383" }} />
+                        </div>
+                        <span className="font-body text-xs" style={{ color: "#86A383" }}>PDF selected</span>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center">
+                        <Upload className="w-6 h-6 mb-1" style={{ color: "#999" }} />
+                        <span className="font-body text-xs" style={{ color: "#999" }}>Tap to upload</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <button
+              onClick={handleSubmitDocuments}
+              disabled={submitting || !docFront || !docBack || !docHealth}
+              className="w-full py-3 rounded-xl font-body font-semibold text-sm mt-6 flex items-center justify-center gap-2 disabled:opacity-50"
+              style={{ backgroundColor: "#B87355", color: "#FAF9F6" }}
+            >
+              {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
+              Submit Application
             </button>
           </div>
         )}
