@@ -1,37 +1,39 @@
 
 
-## Plan
+## Plan: EID Front+Back Documents + Bio Limit Increase
 
-### 1. Create Customer Privacy Policy (`/privacy`) — New Content
-The current `src/pages/Privacy.tsx` contains cook-specific privacy content (Emirates ID, health cards, bank details, cook partner onboarding). This needs to become a **customer-facing** privacy policy instead, since `/privacy` is linked from the homepage, customer auth, and booking form.
+### 1. Split Emirates ID into Front and Back
+**Current:** Single document slot `emirates_id` with label "Emirates ID (front)".
+**Change:** Add a second slot `emirates_id_back` so cooks must upload both sides.
 
-**Changes to `src/pages/Privacy.tsx`:**
-- Rewrite the sections array with customer-relevant content: name, email, phone, address, booking history, payment info (processed by Stripe), dietary preferences
-- Purpose: matching with cooks, processing bookings, communication
-- Remove references to Emirates ID, health cards, cook partnerships, session proof photos
+Update `DOC_SLOTS` in `CookDocuments.tsx`:
+```
+emirates_id_front → "Emirates ID (Front)"
+emirates_id_back  → "Emirates ID (Back)"
+health_card       → unchanged
+```
 
-### 2. Create Cook Privacy Policy (`/cook-privacy`) — Keep Current Content
-- Create `src/pages/CookPrivacy.tsx` with the current cook-specific privacy content (the existing sections about Emirates ID, health cards, bank details, etc.)
-- Add route `/cook-privacy` in `App.tsx`
-- Update cook signup and cook agreement pages to link to `/cook-privacy` instead of `/privacy`
+Also update `Admin.tsx` to display both document types correctly in the cook review modal (label mapping for `emirates_id_front` and `emirates_id_back`).
 
-### 3. Fix Document Photos in Admin Modal
-**Bug:** In `Admin.tsx` line 319, the signed URL path computation is wrong. When `file_url` is `cook_id/health_card.png`, it doesn't contain `cook-documents/`, so the fallback prepends `cook.id/` again, producing a doubled path like `cook_id/cook_id/health_card.png`.
+### 2. Increase Bio Character Limit
+**Current:** Bio is capped at 200 characters in `CookProfile.tsx`.
+**Change:** Increase to 500 characters. Update the `slice(0, 200)` to `slice(0, 500)`, the counter label from `/200` to `/500`, and increase `rows` from 3 to 4 for better visibility.
 
-**Fix:** Change the path logic to use `doc.file_url` directly (it's already the correct storage path relative to the bucket).
+The bio column in the database is `text` type (no length constraint), so no migration needed.
 
-### 4. Fix Cook Photo in Admin Modal
-The cook photo URL is a full public URL and should display. Will verify the `<img>` tag renders correctly. If the issue is that the photo file doesn't exist or the URL is stale after re-upload (browser caching), will add a cache-busting query param. Will also ensure the fallback initials circle works when no photo exists.
+### 3. Ensure Bio Displays Fully
+The customer-facing `CookProfile.tsx` (line 158) and `Admin.tsx` (line 928) both render `cook.bio` without truncation — the bio should display in full. If it appears cut off, it may be the 200-char input limit causing short text. Increasing to 500 will help. No display changes needed.
+
+---
 
 ### Files Changed
+
 | File | Change |
 |------|--------|
-| `src/pages/Privacy.tsx` | Rewrite sections for customer-facing privacy |
-| `src/pages/CookPrivacy.tsx` | New file with current cook privacy content |
-| `src/App.tsx` | Add `/cook-privacy` route |
-| `src/pages/cook/CookSignup.tsx` | Link to `/cook-privacy` |
-| `src/pages/CookAgreement.tsx` | Link to `/cook-privacy` |
-| `src/pages/Admin.tsx` | Fix document signed URL path (line ~319); add cache-bust to cook photo |
+| `src/pages/cook/CookDocuments.tsx` | Split `emirates_id` into `emirates_id_front` and `emirates_id_back` slots |
+| `src/pages/cook/CookProfile.tsx` | Increase bio limit from 200 to 500 chars, increase textarea rows |
+| `src/pages/Admin.tsx` | Update document type labels for front/back EID in review modal |
 
-No database changes needed.
+### Database Changes
+None required.
 
