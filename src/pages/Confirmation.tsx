@@ -187,6 +187,7 @@ const Confirmation = () => {
           View my bookings →
         </button>
       </div>
+      <div className="onesignal-customlink-container mx-4 mt-4"></div>
       <button onClick={() => navigate("/")} className="text-center text-muted-foreground text-sm mt-3">Back to Home</button>
       <a href="mailto:hello@cooq.ae" className="text-center text-muted-foreground text-xs mt-2 mb-8 block">Questions? hello@cooq.ae</a>
     </div>

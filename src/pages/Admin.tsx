@@ -479,6 +479,7 @@ const Admin = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <div className="onesignal-customlink-container mx-4 mt-2 mb-2"></div>
       {/* Header */}
       <div className="bg-foreground px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">

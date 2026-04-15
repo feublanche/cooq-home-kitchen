@@ -445,6 +445,8 @@ const CookDashboard = () => {
         )}
       </div>
 
+      <div className="onesignal-customlink-container mx-4 mt-4 mb-4"></div>
+
       <CookBottomNav pendingCount={pendingCount} />
     </div>
   );
