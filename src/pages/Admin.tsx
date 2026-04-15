@@ -318,8 +318,7 @@ const Admin = () => {
   // ── Cook Drawer Actions ──
   const openCookDrawer = async (cook: CookRecord) => {
     setSelectedCook(cook);
-    setRequestChangesMode(false);
-    setOperatorFeedback("");
+    setDocResubMode(null);
     setDocResubMode(null);
     setDocResubNote("");
     const { data } = await supabase
@@ -862,7 +861,7 @@ const Admin = () => {
 
       {/* Cook Detail Drawer */}
       {selectedCook && (
-        <Drawer open={true} onOpenChange={(open) => { if (!open) { setSelectedCook(null); setRequestChangesMode(false); setOperatorFeedback(""); } }}>
+        <Drawer open={true} onOpenChange={(open) => { if (!open) { setSelectedCook(null); } }}>
           <DrawerContent>
             <DrawerHeader>
               <DrawerTitle className="font-display text-lg">Cook Details</DrawerTitle>
