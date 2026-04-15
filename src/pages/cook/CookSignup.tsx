@@ -336,6 +336,10 @@ const CookSignup = () => {
             <div className="w-8 h-1 rounded-full bg-gray-200 mx-auto mb-1" />
             <span className="font-body" style={{ fontSize: "10px", color: "#999" }}>2 · Your profile</span>
           </div>
+          <div className="text-center">
+            <div className="w-8 h-1 rounded-full bg-gray-200 mx-auto mb-1" />
+            <span className="font-body" style={{ fontSize: "10px", color: "#999" }}>3 · Your documents</span>
+          </div>
         </div>
         <div className="w-full max-w-sm rounded-2xl p-6 bg-white border border-gray-100">
           <button onClick={() => setWaitingForLink(false)} className="flex items-center gap-1 font-body text-xs mb-4" style={{ color: "#86A383" }}>
@@ -361,15 +365,18 @@ const CookSignup = () => {
     <div className="min-h-screen flex flex-col items-center px-6 py-8" style={{ backgroundColor: "#FAF9F6" }}>
       <img src={cooqLogo} alt="Cooq" className="h-8 mb-6" />
 
-      {/* Progress */}
       <div className="flex items-center gap-6 mb-6">
         <div className="text-center">
-          <div className={`w-8 h-1 rounded-full mx-auto mb-1`} style={{ backgroundColor: step >= 1 ? "#86A383" : "#e5e5e5" }} />
+          <div className="w-8 h-1 rounded-full mx-auto mb-1" style={{ backgroundColor: step >= 1 ? "#86A383" : "#e5e5e5" }} />
           <span className="font-body" style={{ fontSize: "10px", color: step >= 1 ? "#86A383" : "#999" }}>1 · Your details</span>
         </div>
         <div className="text-center">
-          <div className={`w-8 h-1 rounded-full mx-auto mb-1`} style={{ backgroundColor: step >= 2 ? "#86A383" : "#e5e5e5" }} />
+          <div className="w-8 h-1 rounded-full mx-auto mb-1" style={{ backgroundColor: step >= 2 ? "#86A383" : "#e5e5e5" }} />
           <span className="font-body" style={{ fontSize: "10px", color: step >= 2 ? "#86A383" : "#999" }}>2 · Your profile</span>
+        </div>
+        <div className="text-center">
+          <div className="w-8 h-1 rounded-full mx-auto mb-1" style={{ backgroundColor: step >= 3 ? "#86A383" : "#e5e5e5" }} />
+          <span className="font-body" style={{ fontSize: "10px", color: step >= 3 ? "#86A383" : "#999" }}>3 · Your documents</span>
         </div>
       </div>
 
