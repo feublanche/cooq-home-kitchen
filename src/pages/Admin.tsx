@@ -859,100 +859,119 @@ const Admin = () => {
         )}
       </div>
 
-      {/* Cook Detail Drawer */}
+      {/* Cook Detail Page */}
       {selectedCook && (
-        <Drawer open={true} onOpenChange={(open) => { if (!open) { setSelectedCook(null); } }}>
-          <DrawerContent>
-            <DrawerHeader>
-              <DrawerTitle className="font-display text-lg">Cook Details</DrawerTitle>
-            </DrawerHeader>
-            <div className="px-4 pb-6 max-h-[75vh] overflow-y-auto">
-              {/* Cook photo */}
-              <div className="flex justify-center mb-4">
+        <div className="fixed inset-0 z-50 bg-background overflow-y-auto">
+          <div className="max-w-[700px] mx-auto px-4 py-6 pb-28">
+            {/* Back button */}
+            <button type="button" onClick={() => setSelectedCook(null)} className="flex items-center gap-1.5 font-body text-sm text-muted-foreground hover:text-foreground mb-6 transition-colors">
+              <ArrowLeft className="w-4 h-4" /> Back to cooks
+            </button>
+
+            {/* Card */}
+            <div className="bg-card rounded-xl border border-border p-6" style={{ boxShadow: "var(--shadow-card)" }}>
+              {/* HEADER */}
+              <div className="flex items-center gap-4 mb-6">
                 {selectedCook.photo_url ? (
-                  <img src={`${selectedCook.photo_url}?t=${Date.now()}`} alt={selectedCook.name} className="w-20 h-20 rounded-full object-cover border-2 border-primary/20" />
+                  <img src={`${selectedCook.photo_url}?t=${Date.now()}`} alt={selectedCook.name} className="w-20 h-20 rounded-full object-cover border-2 border-border shrink-0" />
                 ) : (
-                  <div className="w-20 h-20 rounded-full flex items-center justify-center" style={{ backgroundColor: "rgba(134,163,131,0.15)" }}>
+                  <div className="w-20 h-20 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: "rgba(134,163,131,0.15)" }}>
                     <span className="font-display text-xl" style={{ color: "#86A383" }}>
-                      {selectedCook.name?.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase() || "?"}
+                      {selectedCook.name?.split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase() || "?"}
                     </span>
                   </div>
                 )}
-              </div>
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <p className="font-body text-base font-semibold text-foreground">{selectedCook.name}</p>
-                  <p className="font-body text-xs text-muted-foreground">{selectedCook.email} · {selectedCook.phone || "—"}</p>
-                </div>
-                <span className={`font-body text-[10px] font-semibold px-2 py-0.5 rounded-full ${cookStatusColors[selectedCook.status || "applied"] || ""}`}>
-                  {selectedCook.status || "applied"}
-                </span>
-              </div>
-
-              {/* Cuisines as pills */}
-              <div className="mb-3">
-                <p className="font-body text-xs text-muted-foreground mb-1">Cuisines</p>
-                <div className="flex flex-wrap gap-1">
-                  {selectedCook.cuisine && selectedCook.cuisine.length > 0 ? selectedCook.cuisine.map((cu) => (
-                    <span key={cu} className="font-body text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary">{cu}</span>
-                  )) : <span className="font-body text-xs text-muted-foreground">—</span>}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h2 className="font-display text-xl text-foreground">{selectedCook.name}</h2>
+                    <span className={`font-body text-[11px] font-semibold px-2.5 py-0.5 rounded-full shrink-0 ${
+                      selectedCook.status === "approved" || selectedCook.status === "active" ? "bg-green-100 text-green-700" :
+                      selectedCook.status === "suspended" ? "bg-red-100 text-red-700" :
+                      "bg-amber-100 text-amber-700"
+                    }`}>
+                      {selectedCook.status || "applied"}
+                    </span>
+                  </div>
+                  <p className="font-body text-sm text-muted-foreground mt-0.5">{selectedCook.email}</p>
+                  <p className="font-body text-sm text-muted-foreground">{selectedCook.phone || "—"}</p>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-x-4 gap-y-1 font-body text-xs mb-4">
-                <p className="text-muted-foreground">Area</p><p className="text-foreground">{selectedCook.area || "—"}</p>
-                <p className="text-muted-foreground">Experience</p><p className="text-foreground">{selectedCook.years_experience ?? 0} years</p>
-                <p className="text-muted-foreground">Health Card</p><p className="text-foreground">{selectedCook.health_card ? "Yes ✓" : "No ✗"}</p>
-                <p className="text-muted-foreground">Visa</p><p className="text-foreground">{selectedCook.visa_type || "—"}</p>
-                <p className="text-muted-foreground">Applied</p><p className="text-foreground">{selectedCook.created_at ? new Date(selectedCook.created_at).toLocaleDateString("en-GB") : "—"}</p>
+              <hr className="border-border mb-5" />
+
+              {/* INFO SECTION */}
+              <div className="space-y-3 mb-5">
+                <div className="flex items-baseline gap-3">
+                  <span className="font-body text-xs text-muted-foreground w-24 shrink-0">Area</span>
+                  <span className="font-body text-sm text-foreground">{selectedCook.area || "—"}</span>
+                </div>
+                <div className="flex items-baseline gap-3">
+                  <span className="font-body text-xs text-muted-foreground w-24 shrink-0">Experience</span>
+                  <span className="font-body text-sm text-foreground">{selectedCook.years_experience ?? 0} years</span>
+                </div>
+                <div className="flex items-baseline gap-3">
+                  <span className="font-body text-xs text-muted-foreground w-24 shrink-0">Applied</span>
+                  <span className="font-body text-sm text-foreground">{selectedCook.created_at ? new Date(selectedCook.created_at).toLocaleDateString("en-GB") : "—"}</span>
+                </div>
+                <div className="flex items-start gap-3">
+                  <span className="font-body text-xs text-muted-foreground w-24 shrink-0 pt-0.5">Cuisines</span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {selectedCook.cuisine && selectedCook.cuisine.length > 0 ? selectedCook.cuisine.map((cu) => (
+                      <span key={cu} className="font-body text-[11px] px-2.5 py-0.5 rounded-full bg-primary/10 text-primary font-medium">{cu}</span>
+                    )) : <span className="font-body text-sm text-muted-foreground">—</span>}
+                  </div>
+                </div>
               </div>
 
-              {/* Bio - full text, no truncation */}
+              {/* Bio */}
               {selectedCook.bio && (
-                <div className="mb-4">
-                  <p className="font-body text-xs text-muted-foreground mb-1">Bio</p>
-                  <p className="font-body text-xs text-foreground whitespace-pre-wrap">{selectedCook.bio}</p>
-                </div>
+                <>
+                  <p className="font-body text-xs text-muted-foreground mb-1.5">Bio</p>
+                  <div className="bg-muted/40 rounded-lg p-4 mb-5">
+                    <p className="font-body text-sm text-foreground whitespace-pre-wrap leading-relaxed">{selectedCook.bio}</p>
+                  </div>
+                </>
               )}
 
+              {/* Operator Notes */}
               {selectedCook.operator_notes && (
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-5">
                   <p className="font-body text-xs font-semibold text-amber-800 mb-1">Operator Notes</p>
-                  <p className="font-body text-xs text-amber-700">{selectedCook.operator_notes}</p>
+                  <p className="font-body text-sm text-amber-700">{selectedCook.operator_notes}</p>
                 </div>
               )}
 
-              {/* Documents */}
+              <hr className="border-border mb-5" />
+
+              {/* DOCUMENTS SECTION */}
               {cookDocs.length > 0 && (
-                <div className="mb-4">
-                  <p className="font-body text-xs font-semibold text-foreground mb-2">Documents</p>
-                  <div className="space-y-3">
+                <div>
+                  <h3 className="font-display text-base text-foreground mb-3">Documents</h3>
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     {cookDocs.map((doc) => (
-                      <div key={doc.id} className="rounded-lg bg-muted/30 border border-border overflow-hidden">
+                      <div key={doc.id} className="rounded-xl border border-border bg-card overflow-hidden" style={{ boxShadow: "var(--shadow-card)" }}>
                         {docSignedUrls[doc.id] && (
-                          <button type="button" onClick={() => setLightboxUrl(docSignedUrls[doc.id])} className="block w-full">
-                            <img src={docSignedUrls[doc.id]} alt={doc.document_type} className="mx-auto object-contain bg-white" style={{ maxHeight: "160px" }} />
+                          <button type="button" onClick={() => setLightboxUrl(docSignedUrls[doc.id])} className="block w-full bg-muted/20 p-2">
+                            <img src={docSignedUrls[doc.id]} alt={doc.document_type} className="mx-auto object-contain rounded" style={{ maxWidth: "180px", maxHeight: "180px" }} />
                           </button>
                         )}
-                        <div className="p-3">
-                          <div className="flex items-center justify-between mb-2">
-                            <p className="font-body text-xs font-semibold text-foreground capitalize">
-                              {{ emirates_id_front: "Emirates ID (Front)", emirates_id_back: "Emirates ID (Back)", health_card: "Health Card" }[doc.document_type] || doc.document_type.replace(/_/g, " ")}
-                            </p>
-                            {docStatusBadge(doc.status)}
-                          </div>
+                        <div className="p-3 space-y-2">
+                          <p className="font-body text-xs font-semibold text-foreground">
+                            {{ emirates_id_front: "Emirates ID (Front)", emirates_id_back: "Emirates ID (Back)", health_card: "Health Card" }[doc.document_type] || doc.document_type.replace(/_/g, " ")}
+                          </p>
+                          {docStatusBadge(doc.status)}
                           {doc.status !== "verified" && doc.status !== "needs_resubmission" && docResubMode !== doc.id && (
-                            <div className="flex gap-2">
-                              <button onClick={() => handleVerifyDocument(doc.id)} className="flex-1 py-2 rounded-lg font-body text-xs font-semibold bg-green-500/10 text-green-600 hover:bg-green-500/20 transition-colors">Verify ✓</button>
-                              <button onClick={() => { setDocResubMode(doc.id); setDocResubNote(""); }} className="flex-1 py-2 rounded-lg font-body text-xs font-semibold bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 transition-colors">Request Resubmission</button>
+                            <div className="flex gap-2 pt-1">
+                              <button onClick={() => handleVerifyDocument(doc.id)} className="px-3 py-1.5 rounded-lg font-body text-[11px] font-semibold bg-green-500/10 text-green-600 hover:bg-green-500/20 transition-colors">Verify ✓</button>
+                              <button onClick={() => { setDocResubMode(doc.id); setDocResubNote(""); }} className="px-3 py-1.5 rounded-lg font-body text-[11px] font-semibold bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 transition-colors">Resubmit</button>
                             </div>
                           )}
                           {docResubMode === doc.id && (
-                            <div className="mt-2 space-y-2 p-2 rounded-lg bg-amber-50 border border-amber-200">
+                            <div className="space-y-2 p-2 rounded-lg bg-amber-50 border border-amber-200">
                               <textarea value={docResubNote} onChange={(e) => setDocResubNote(e.target.value)} placeholder="What's wrong with this document?" className="w-full p-2 rounded-lg border border-amber-300 bg-white font-body text-xs text-foreground resize-none outline-none" rows={2} />
                               <div className="flex gap-2">
-                                <button onClick={() => handleDocResubmission(doc.id, doc.cook_id)} disabled={!docResubNote.trim()} className="px-3 py-1.5 rounded-lg font-body text-xs font-semibold bg-amber-500 text-white disabled:opacity-50">Send</button>
-                                <button onClick={() => setDocResubMode(null)} className="px-3 py-1.5 rounded-lg font-body text-xs text-muted-foreground">Cancel</button>
+                                <button onClick={() => handleDocResubmission(doc.id, doc.cook_id)} disabled={!docResubNote.trim()} className="px-3 py-1.5 rounded-lg font-body text-[11px] font-semibold bg-amber-500 text-white disabled:opacity-50">Send</button>
+                                <button onClick={() => setDocResubMode(null)} className="px-3 py-1.5 rounded-lg font-body text-[11px] text-muted-foreground">Cancel</button>
                               </div>
                             </div>
                           )}
@@ -962,33 +981,33 @@ const Admin = () => {
                   </div>
                 </div>
               )}
-
-              {/* Action buttons */}
-              <div className="space-y-2">
-                {selectedCook.status === "approved" ? (
-                  <>
-                    <button type="button" onClick={handleUndoApproval} className="w-full py-2.5 rounded-xl font-body font-semibold text-sm bg-muted text-muted-foreground hover:bg-muted/80 transition-colors">Undo Approval</button>
-                    <div className="flex gap-2">
-                      <button type="button" onClick={handleSuspendCook} className="flex-1 py-2.5 rounded-xl font-body font-semibold text-sm bg-destructive text-destructive-foreground hover:bg-destructive/90 transition-colors">Suspend</button>
-                      <button type="button" onClick={handleRejectCook} className="flex-1 py-2.5 rounded-xl font-body font-semibold text-sm bg-destructive/20 text-destructive hover:bg-destructive/30 transition-colors">Reject</button>
-                    </div>
-                  </>
-                ) : selectedCook.status === "suspended" ? (
-                  <div className="flex gap-2">
-                    <button type="button" onClick={handleApproveCook} className="flex-1 py-2.5 rounded-xl font-body font-semibold text-sm bg-primary text-primary-foreground hover:bg-primary/90 transition-colors">Re-approve</button>
-                    <button type="button" onClick={handleRejectCook} className="flex-1 py-2.5 rounded-xl font-body font-semibold text-sm bg-destructive/20 text-destructive hover:bg-destructive/30 transition-colors">Reject</button>
-                  </div>
-                ) : (
-                  <div className="flex gap-2">
-                    <button type="button" onClick={handleApproveCook} className="flex-1 py-2.5 rounded-xl font-body font-semibold text-sm bg-primary text-primary-foreground hover:bg-primary/90 transition-colors">Approve ✓</button>
-                    <button type="button" onClick={handleRequestChangesOpen} className="flex-1 py-2.5 rounded-xl font-body font-semibold text-sm bg-amber-500 text-white hover:bg-amber-600 transition-colors">Request Changes</button>
-                    <button type="button" onClick={handleSuspendCook} className="flex-1 py-2.5 rounded-xl font-body font-semibold text-sm bg-destructive text-destructive-foreground hover:bg-destructive/90 transition-colors">Suspend</button>
-                  </div>
-                )}
-              </div>
             </div>
-          </DrawerContent>
-        </Drawer>
+          </div>
+
+          {/* FIXED BOTTOM BAR */}
+          <div className="fixed bottom-0 left-0 right-0 z-50 bg-card border-t border-border">
+            <div className="max-w-[700px] mx-auto px-4 py-3 flex items-center gap-2 flex-wrap">
+              {selectedCook.status === "approved" ? (
+                <>
+                  <button type="button" onClick={handleUndoApproval} className="px-4 py-2.5 rounded-xl font-body font-semibold text-sm bg-muted text-muted-foreground hover:bg-muted/80 transition-colors">Undo Approval</button>
+                  <button type="button" onClick={handleRequestChangesOpen} className="px-4 py-2.5 rounded-xl font-body font-semibold text-sm bg-amber-500 text-white hover:bg-amber-600 transition-colors">Request Changes</button>
+                  <button type="button" onClick={handleSuspendCook} className="px-4 py-2.5 rounded-xl font-body font-semibold text-sm bg-destructive text-destructive-foreground hover:bg-destructive/90 transition-colors">Suspend</button>
+                </>
+              ) : selectedCook.status === "suspended" ? (
+                <>
+                  <button type="button" onClick={handleApproveCook} className="px-4 py-2.5 rounded-xl font-body font-semibold text-sm bg-green-600 text-white hover:bg-green-700 transition-colors">Re-approve</button>
+                  <button type="button" onClick={handleRejectCook} className="px-4 py-2.5 rounded-xl font-body font-semibold text-sm bg-destructive/20 text-destructive hover:bg-destructive/30 transition-colors">Reject</button>
+                </>
+              ) : (
+                <>
+                  <button type="button" onClick={handleApproveCook} className="px-4 py-2.5 rounded-xl font-body font-semibold text-sm bg-green-600 text-white hover:bg-green-700 transition-colors">Approve ✓</button>
+                  <button type="button" onClick={handleRequestChangesOpen} className="px-4 py-2.5 rounded-xl font-body font-semibold text-sm bg-amber-500 text-white hover:bg-amber-600 transition-colors">Request Changes</button>
+                  <button type="button" onClick={handleSuspendCook} className="px-4 py-2.5 rounded-xl font-body font-semibold text-sm bg-destructive text-destructive-foreground hover:bg-destructive/90 transition-colors">Suspend</button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Assign Cook Drawer */}
