@@ -950,7 +950,7 @@ const Admin = () => {
                         <div className="p-3">
                           <div className="flex items-center justify-between mb-2">
                             <div>
-                              <p className="font-body text-xs font-semibold text-foreground capitalize">{doc.document_type.replace(/_/g, " ")}</p>
+                              <p className="font-body text-xs font-semibold text-foreground capitalize">{{emirates_id_front:"Emirates ID (Front)",emirates_id_back:"Emirates ID (Back)",health_card:"Health Card"}[doc.document_type] || doc.document_type.replace(/_/g, " ")}</p>
                               <p className="font-body text-[10px] text-muted-foreground capitalize">{doc.status.replace(/_/g, " ")}</p>
                             </div>
                             {doc.status === "verified" && (

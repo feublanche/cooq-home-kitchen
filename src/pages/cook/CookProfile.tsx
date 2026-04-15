@@ -189,8 +189,8 @@ const CookProfilePage = () => {
 
       <div className="space-y-4">
         <div>
-          <label className="font-body text-xs block mb-1" style={{ color: "#666" }}>Bio ({bio.length}/200)</label>
-          <textarea value={bio} onChange={(e) => setBio(e.target.value.slice(0, 200))} placeholder="Tell us about your cooking style and specialities" rows={3} className={inputCls} style={{ resize: "none", color: "#2C3B3A" }} />
+          <label className="font-body text-xs block mb-1" style={{ color: "#666" }}>Bio ({bio.length}/500)</label>
+          <textarea value={bio} onChange={(e) => setBio(e.target.value.slice(0, 500))} placeholder="Tell us about your cooking style and specialities" rows={4} className={inputCls} style={{ resize: "none", color: "#2C3B3A" }} />
         </div>
 
         <div>
