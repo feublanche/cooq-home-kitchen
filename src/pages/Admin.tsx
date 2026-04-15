@@ -14,7 +14,7 @@ import {
   Loader2,
   LogOut,
   Search,
-  X,
+  
 } from "lucide-react";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import {
@@ -180,8 +180,6 @@ const Admin = () => {
 
   // Cook detail drawer state
   const [selectedCook, setSelectedCook] = useState<CookRecord | null>(null);
-  const [requestChangesMode, setRequestChangesMode] = useState(false);
-  const [operatorFeedback, setOperatorFeedback] = useState("");
 
   // Confirmation dialogs
   const [confirmDialog, setConfirmDialog] = useState<{ open: boolean; title: string; description: string; onConfirm: () => void }>({ open: false, title: "", description: "", onConfirm: () => {} });
