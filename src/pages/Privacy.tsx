@@ -2,12 +2,12 @@ import { useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 
 const sections = [
-  { title: "What We Collect", body: "Name, email, phone number, Emirates ID, health card/food safety certificate, bank details (when provided for payouts), profile photo, and session proof photos." },
-  { title: "Why We Collect It", body: "To verify your identity, onboard you as a Cooq cook partner, match you with customers, process monthly payments, and ensure platform safety and quality." },
-  { title: "Who We Share It With", body: "We share only your first name and profile photo with customers after they complete a booking. We never sell your data. We may share data with UAE authorities if legally required." },
-  { title: "How We Store It", body: "All data is stored securely on encrypted servers (Supabase, EU/US region). Documents are accessible only to authorised Cooq staff and are never shared with customers or third parties." },
+  { title: "What We Collect", body: "Name, email address, phone number, delivery address, dietary preferences, booking history, and payment information (processed securely by Stripe — we do not store your card details)." },
+  { title: "Why We Collect It", body: "To match you with the right cook, process your bookings, communicate session details, handle payments, and improve the quality of our service." },
+  { title: "Who We Share It With", body: "Your first name, address, dietary preferences, and session details are shared with your assigned cook to fulfil your booking. We never sell your data. We may share data with UAE authorities if legally required." },
+  { title: "How We Store It", body: "All data is stored securely on encrypted servers. Payment processing is handled by Stripe, a PCI-compliant payment provider. We do not store your credit or debit card details." },
   { title: "Your Rights", body: "Under Federal Decree-Law No. 45 of 2021, you have the right to access, correct, or request deletion of your personal data at any time. Contact: admin.cooq@gmail.com" },
-  { title: "Document Retention", body: "Identity documents are retained for the duration of your active partnership and deleted within 30 days of account termination upon request."},
+  { title: "Data Retention", body: "Your account data is retained while your account is active. Booking history is retained for 12 months after the last session. You may request full deletion at any time." },
   { title: "Cookies", body: "Essential authentication cookies only." },
   { title: "Contact", body: "admin.cooq@gmail.com" },
 ];

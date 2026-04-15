@@ -37,6 +37,7 @@ import CustomerAuth from "./pages/CustomerAuth";
 import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
 import CookAgreement from "./pages/CookAgreement";
+import CookPrivacy from "./pages/CookPrivacy";
 import ResetPassword from "./pages/ResetPassword";
 
 const queryClient = new QueryClient();
@@ -69,6 +70,7 @@ const App = () => (
               <Route path="/terms" element={<Terms />} />
               <Route path="/privacy" element={<Privacy />} />
               <Route path="/cook-agreement" element={<CookAgreement />} />
+              <Route path="/cook-privacy" element={<CookPrivacy />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               {/* Cook portal */}
               <Route path="/cook/login" element={<CookLogin />} />

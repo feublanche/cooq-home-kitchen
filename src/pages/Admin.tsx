@@ -317,7 +317,7 @@ const Admin = () => {
         // Try to create signed URL from the cook-documents bucket
         const path = doc.file_url.includes("cook-documents/")
           ? doc.file_url.split("cook-documents/")[1]
-          : `${cook.id}/${doc.file_url}`;
+          : doc.file_url;
         const { data: signedData } = await supabase.storage.from("cook-documents").createSignedUrl(path, 3600);
         if (signedData?.signedUrl) urlMap[doc.id] = signedData.signedUrl;
       }
@@ -896,7 +896,7 @@ const Admin = () => {
               {/* Cook photo */}
               <div className="flex justify-center mb-4">
                 {selectedCook.photo_url ? (
-                  <img src={selectedCook.photo_url} alt={selectedCook.name} className="w-20 h-20 rounded-full object-cover border-2 border-primary/20" />
+                  <img src={`${selectedCook.photo_url}?t=${Date.now()}`} alt={selectedCook.name} className="w-20 h-20 rounded-full object-cover border-2 border-primary/20" />
                 ) : (
                   <div className="w-20 h-20 rounded-full flex items-center justify-center" style={{ backgroundColor: "rgba(134,163,131,0.15)" }}>
                     <span className="font-display text-xl" style={{ color: "#86A383" }}>
