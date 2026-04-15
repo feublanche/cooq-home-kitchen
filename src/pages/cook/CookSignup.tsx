@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import cooqLogo from "@/assets/cooq-logo.png";
-import { Loader2, Camera, Check, ArrowLeft } from "lucide-react";
+import { Loader2, Camera, Check, ArrowLeft, Upload } from "lucide-react";
 import { toast } from "sonner";
 
 const cuisineOptions = [
@@ -54,6 +54,17 @@ const CookSignup = () => {
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  // Step 3 — document uploads
+  const [docFront, setDocFront] = useState<File | null>(null);
+  const [docBack, setDocBack] = useState<File | null>(null);
+  const [docHealth, setDocHealth] = useState<File | null>(null);
+  const [docFrontPreview, setDocFrontPreview] = useState<string | null>(null);
+  const [docBackPreview, setDocBackPreview] = useState<string | null>(null);
+  const [docHealthPreview, setDocHealthPreview] = useState<string | null>(null);
+  const docFrontRef = useRef<HTMLInputElement>(null);
+  const docBackRef = useRef<HTMLInputElement>(null);
+  const docHealthRef = useRef<HTMLInputElement>(null);
 
   // On mount: detect ?step=2 with authenticated session
   useEffect(() => {
