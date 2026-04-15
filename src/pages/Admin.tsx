@@ -317,7 +317,7 @@ const Admin = () => {
         // Try to create signed URL from the cook-documents bucket
         const path = doc.file_url.includes("cook-documents/")
           ? doc.file_url.split("cook-documents/")[1]
-          : `${cook.id}/${doc.file_url}`;
+          : doc.file_url;
         const { data: signedData } = await supabase.storage.from("cook-documents").createSignedUrl(path, 3600);
         if (signedData?.signedUrl) urlMap[doc.id] = signedData.signedUrl;
       }
