@@ -8,7 +8,7 @@ import StepProgress from "@/components/StepProgress";
 const Results = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { cuisines, dietary, frequency } = (location.state as any) || {};
+  const { cuisines, dietary, frequency: _frequency } = (location.state as any) || {};
 
   const { data: cooks = [], isLoading } = useQuery({
     queryKey: ["cooks", cuisines, dietary],
