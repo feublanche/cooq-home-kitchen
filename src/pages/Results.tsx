@@ -8,10 +8,10 @@ import StepProgress from "@/components/StepProgress";
 const Results = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { neighborhood, cuisines, dietary, frequency } = (location.state as any) || {};
+  const { cuisines, dietary, frequency } = (location.state as any) || {};
 
   const { data: cooks = [], isLoading } = useQuery({
-    queryKey: ["cooks", neighborhood, cuisines, dietary],
+    queryKey: ["cooks", cuisines, dietary],
     queryFn: async () => {
       const { data } = await supabase.rpc("get_public_cooks");
       return data || [];
@@ -75,7 +75,7 @@ const Results = () => {
       <div className="px-6 pb-4">
         <p className="font-body text-xs font-semibold tracking-[0.15em] uppercase text-copper mb-1">Your Matches</p>
         <h1 className="font-display italic text-2xl text-foreground mb-2">
-          {isLoading ? "Finding cooks..." : noFilterMatch || displayCooks.length === 0 ? "No cooks available in this area yet — check back soon." : `${displayCooks.length} cook${displayCooks.length !== 1 ? "s" : ""} match your preferences`}
+          {isLoading ? "Finding cooks..." : noFilterMatch || displayCooks.length === 0 ? "No cooks available yet — check back soon." : `${displayCooks.length} cook${displayCooks.length !== 1 ? "s" : ""} match your preferences`}
         </h1>
       </div>
 
