@@ -896,7 +896,7 @@ const Admin = () => {
               {/* Cook photo */}
               <div className="flex justify-center mb-4">
                 {selectedCook.photo_url ? (
-                  <img src={selectedCook.photo_url} alt={selectedCook.name} className="w-20 h-20 rounded-full object-cover border-2 border-primary/20" />
+                  <img src={`${selectedCook.photo_url}?t=${Date.now()}`} alt={selectedCook.name} className="w-20 h-20 rounded-full object-cover border-2 border-primary/20" />
                 ) : (
                   <div className="w-20 h-20 rounded-full flex items-center justify-center" style={{ backgroundColor: "rgba(134,163,131,0.15)" }}>
                     <span className="font-display text-xl" style={{ color: "#86A383" }}>

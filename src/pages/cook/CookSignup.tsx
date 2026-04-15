@@ -347,7 +347,8 @@ const CookSignup = () => {
                   />
                   <span className="font-body text-xs" style={{ color: "#666" }}>
                     I agree to Cooq's{" "}
-                    <a href="/cook-agreement" target="_blank" className="underline" style={{ color: "#86A383" }}>cook terms</a>
+                    <a href="/cook-agreement" target="_blank" className="underline" style={{ color: "#86A383" }}>cook terms</a>{" "}and{" "}
+                    <a href="/cook-privacy" target="_blank" className="underline" style={{ color: "#86A383" }}>privacy policy</a>
                   </span>
                 </label>
                 {errors.agreed && <p className="font-body text-xs text-red-500 mt-1">{errors.agreed}</p>}
