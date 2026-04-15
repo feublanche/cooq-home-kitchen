@@ -13,7 +13,8 @@ interface DocSlot {
 }
 
 const DOC_SLOTS: DocSlot[] = [
-  { type: "emirates_id", label: "Emirates ID (front)", description: "Upload a photo of your Emirates ID (front side)" },
+  { type: "emirates_id_front", label: "Emirates ID (Front)", description: "Upload a clear photo of the front side of your Emirates ID" },
+  { type: "emirates_id_back", label: "Emirates ID (Back)", description: "Upload a clear photo of the back side of your Emirates ID" },
   { type: "health_card", label: "Health Card / Food Safety Certificate", description: "Upload your DHA health card or food handler certificate" },
 ];
 
