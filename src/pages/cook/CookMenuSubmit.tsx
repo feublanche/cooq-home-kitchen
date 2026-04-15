@@ -16,7 +16,7 @@ const schema = z.object({
   side1: z.string().min(3, "Min 3 characters"),
   side2: z.string().min(3, "Min 3 characters"),
   side3: z.string().min(3, "Min 3 characters"),
-  notes: z.string().max(300).optional(),
+  notes: z.string().min(3, "Min 3 characters").max(300, "Max 300 characters"),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -267,7 +267,7 @@ const CookMenuSubmit = () => {
 
         <div className="relative">
           <label className="font-body mb-1 block" style={{ fontSize: "12px", color: "rgba(249,247,242,0.5)" }}>
-            Notes (optional)
+            Description
           </label>
           <textarea
             {...register("notes")}
