@@ -240,6 +240,67 @@ const CookSignup = () => {
     }
 
     setSubmitting(false);
+    setStep(3);
+  };
+
+  const handleDocSelect = (file: File | null, setter: (f: File | null) => void, previewSetter: (s: string | null) => void) => {
+    if (!file) return;
+    const allowed = ["image/jpeg", "image/png", "application/pdf"];
+    if (!allowed.includes(file.type)) { toast.error("Only JPG, PNG or PDF allowed"); return; }
+    if (file.size > 10 * 1024 * 1024) { toast.error("File must be under 10MB"); return; }
+    setter(file);
+    if (file.type.startsWith("image/")) {
+      previewSetter(URL.createObjectURL(file));
+    } else {
+      previewSetter("pdf");
+    }
+  };
+
+  const handleSubmitDocuments = async () => {
+    if (!docFront || !docBack || !docHealth) { toast.error("Please upload all 3 documents"); return; }
+    setSubmitting(true);
+
+    // Get cook record
+    const { data: cookData } = await supabase.from("cooks").select("id, name").eq("user_id", userId).maybeSingle();
+    if (!cookData) { toast.error("Cook record not found"); setSubmitting(false); return; }
+
+    const uploads: { file: File; docType: string }[] = [
+      { file: docFront, docType: "emirates_id_front" },
+      { file: docBack, docType: "emirates_id_back" },
+      { file: docHealth, docType: "health_card" },
+    ];
+
+    for (const { file, docType } of uploads) {
+      const ext = file.name.split(".").pop() || "jpg";
+      const path = `${cookData.id}/${docType}.${ext}`;
+      const { error: uploadErr } = await supabase.storage
+        .from("cook-documents")
+        .upload(path, file, { upsert: true });
+      if (uploadErr) { toast.error(`Upload failed for ${docType}: ${uploadErr.message}`); setSubmitting(false); return; }
+
+      const { data: urlData } = supabase.storage.from("cook-documents").getPublicUrl(path);
+
+      await supabase.from("cook_documents").insert({
+        cook_id: cookData.id,
+        document_type: docType,
+        file_url: urlData.publicUrl,
+        status: "uploaded",
+      } as any);
+    }
+
+    // Notify operator
+    try {
+      await supabase.functions.invoke("notify-operator", {
+        body: {
+          event_type: "cook_signup",
+          details: { name: cookData.name || name.trim(), email: email.trim() },
+        },
+      });
+    } catch (e) {
+      console.log("Notification skipped:", e);
+    }
+
+    setSubmitting(false);
     setDone(true);
   };
 
@@ -254,10 +315,7 @@ const CookSignup = () => {
           </div>
           <h2 className="font-display italic text-xl mb-3" style={{ color: "#2C3B3A" }}>Application received!</h2>
           <p className="font-body text-sm mb-2" style={{ color: "#666" }}>
-            We'll review your profile and be in touch within 48 hours.
-          </p>
-          <p className="font-body text-xs" style={{ color: "#999" }}>
-            In the meantime, make sure your Emirates ID and health card are ready to upload once approved.
+            We'll review your profile and documents and be in touch within 48 hours.
           </p>
         </div>
       </div>
