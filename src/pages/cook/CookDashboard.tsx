@@ -234,14 +234,14 @@ const CookDashboard = () => {
         </div>
         <div className="rounded-xl p-4 bg-white border border-gray-100">
           <p className="font-body text-sm mb-3" style={{ color: "#666" }}>
-            While you wait, prepare your Emirates ID and health card — you'll need to upload them once approved.
+            Your application and documents are under review. We'll be in touch within 48 hours.
           </p>
           <button
             onClick={() => navigate("/cook/documents")}
             className="w-full py-3 rounded-xl font-body font-semibold text-sm"
             style={{ backgroundColor: "rgba(134,163,131,0.1)", color: "#86A383" }}
           >
-            Upload documents →
+            View documents
           </button>
         </div>
         <CookBottomNav />

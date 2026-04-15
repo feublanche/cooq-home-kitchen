@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import cooqLogo from "@/assets/cooq-logo.png";
-import { Loader2, Camera, Check, ArrowLeft } from "lucide-react";
+import { Loader2, Camera, Check, ArrowLeft, Upload } from "lucide-react";
 import { toast } from "sonner";
 
 const cuisineOptions = [
@@ -54,6 +54,17 @@ const CookSignup = () => {
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  // Step 3 — document uploads
+  const [docFront, setDocFront] = useState<File | null>(null);
+  const [docBack, setDocBack] = useState<File | null>(null);
+  const [docHealth, setDocHealth] = useState<File | null>(null);
+  const [docFrontPreview, setDocFrontPreview] = useState<string | null>(null);
+  const [docBackPreview, setDocBackPreview] = useState<string | null>(null);
+  const [docHealthPreview, setDocHealthPreview] = useState<string | null>(null);
+  const docFrontRef = useRef<HTMLInputElement>(null);
+  const docBackRef = useRef<HTMLInputElement>(null);
+  const docHealthRef = useRef<HTMLInputElement>(null);
 
   // On mount: detect ?step=2 with authenticated session
   useEffect(() => {
@@ -229,6 +240,67 @@ const CookSignup = () => {
     }
 
     setSubmitting(false);
+    setStep(3);
+  };
+
+  const handleDocSelect = (file: File | null, setter: (f: File | null) => void, previewSetter: (s: string | null) => void) => {
+    if (!file) return;
+    const allowed = ["image/jpeg", "image/png", "application/pdf"];
+    if (!allowed.includes(file.type)) { toast.error("Only JPG, PNG or PDF allowed"); return; }
+    if (file.size > 10 * 1024 * 1024) { toast.error("File must be under 10MB"); return; }
+    setter(file);
+    if (file.type.startsWith("image/")) {
+      previewSetter(URL.createObjectURL(file));
+    } else {
+      previewSetter("pdf");
+    }
+  };
+
+  const handleSubmitDocuments = async () => {
+    if (!docFront || !docBack || !docHealth) { toast.error("Please upload all 3 documents"); return; }
+    setSubmitting(true);
+
+    // Get cook record
+    const { data: cookData } = await supabase.from("cooks").select("id, name").eq("user_id", userId).maybeSingle();
+    if (!cookData) { toast.error("Cook record not found"); setSubmitting(false); return; }
+
+    const uploads: { file: File; docType: string }[] = [
+      { file: docFront, docType: "emirates_id_front" },
+      { file: docBack, docType: "emirates_id_back" },
+      { file: docHealth, docType: "health_card" },
+    ];
+
+    for (const { file, docType } of uploads) {
+      const ext = file.name.split(".").pop() || "jpg";
+      const path = `${cookData.id}/${docType}.${ext}`;
+      const { error: uploadErr } = await supabase.storage
+        .from("cook-documents")
+        .upload(path, file, { upsert: true });
+      if (uploadErr) { toast.error(`Upload failed for ${docType}: ${uploadErr.message}`); setSubmitting(false); return; }
+
+      const { data: urlData } = supabase.storage.from("cook-documents").getPublicUrl(path);
+
+      await supabase.from("cook_documents").insert({
+        cook_id: cookData.id,
+        document_type: docType,
+        file_url: urlData.publicUrl,
+        status: "uploaded",
+      } as any);
+    }
+
+    // Notify operator
+    try {
+      await supabase.functions.invoke("notify-operator", {
+        body: {
+          event_type: "cook_signup",
+          details: { name: cookData.name || name.trim(), email: email.trim() },
+        },
+      });
+    } catch (e) {
+      console.log("Notification skipped:", e);
+    }
+
+    setSubmitting(false);
     setDone(true);
   };
 
@@ -243,10 +315,7 @@ const CookSignup = () => {
           </div>
           <h2 className="font-display italic text-xl mb-3" style={{ color: "#2C3B3A" }}>Application received!</h2>
           <p className="font-body text-sm mb-2" style={{ color: "#666" }}>
-            We'll review your profile and be in touch within 48 hours.
-          </p>
-          <p className="font-body text-xs" style={{ color: "#999" }}>
-            In the meantime, make sure your Emirates ID and health card are ready to upload once approved.
+            We'll review your profile and documents and be in touch within 48 hours.
           </p>
         </div>
       </div>
@@ -266,6 +335,10 @@ const CookSignup = () => {
           <div className="text-center">
             <div className="w-8 h-1 rounded-full bg-gray-200 mx-auto mb-1" />
             <span className="font-body" style={{ fontSize: "10px", color: "#999" }}>2 · Your profile</span>
+          </div>
+          <div className="text-center">
+            <div className="w-8 h-1 rounded-full bg-gray-200 mx-auto mb-1" />
+            <span className="font-body" style={{ fontSize: "10px", color: "#999" }}>3 · Your documents</span>
           </div>
         </div>
         <div className="w-full max-w-sm rounded-2xl p-6 bg-white border border-gray-100">
@@ -292,15 +365,18 @@ const CookSignup = () => {
     <div className="min-h-screen flex flex-col items-center px-6 py-8" style={{ backgroundColor: "#FAF9F6" }}>
       <img src={cooqLogo} alt="Cooq" className="h-8 mb-6" />
 
-      {/* Progress */}
       <div className="flex items-center gap-6 mb-6">
         <div className="text-center">
-          <div className={`w-8 h-1 rounded-full mx-auto mb-1`} style={{ backgroundColor: step >= 1 ? "#86A383" : "#e5e5e5" }} />
+          <div className="w-8 h-1 rounded-full mx-auto mb-1" style={{ backgroundColor: step >= 1 ? "#86A383" : "#e5e5e5" }} />
           <span className="font-body" style={{ fontSize: "10px", color: step >= 1 ? "#86A383" : "#999" }}>1 · Your details</span>
         </div>
         <div className="text-center">
-          <div className={`w-8 h-1 rounded-full mx-auto mb-1`} style={{ backgroundColor: step >= 2 ? "#86A383" : "#e5e5e5" }} />
+          <div className="w-8 h-1 rounded-full mx-auto mb-1" style={{ backgroundColor: step >= 2 ? "#86A383" : "#e5e5e5" }} />
           <span className="font-body" style={{ fontSize: "10px", color: step >= 2 ? "#86A383" : "#999" }}>2 · Your profile</span>
+        </div>
+        <div className="text-center">
+          <div className="w-8 h-1 rounded-full mx-auto mb-1" style={{ backgroundColor: step >= 3 ? "#86A383" : "#e5e5e5" }} />
+          <span className="font-body" style={{ fontSize: "10px", color: step >= 3 ? "#86A383" : "#999" }}>3 · Your documents</span>
         </div>
       </div>
 
@@ -491,7 +567,68 @@ const CookSignup = () => {
 
             <button onClick={handleSubmitProfile} disabled={submitting} className="w-full py-3 rounded-xl font-body font-semibold text-sm mt-6 flex items-center justify-center gap-2 disabled:opacity-50" style={{ backgroundColor: "#B87355", color: "#FAF9F6" }}>
               {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
-              Submit for Review
+              Continue →
+            </button>
+          </div>
+        )}
+
+        {step === 3 && (
+          <div className="rounded-2xl p-6 bg-white border border-gray-100">
+            <h1 className="font-display italic text-xl text-center mb-1" style={{ color: "#2C3B3A" }}>
+              Upload your documents
+            </h1>
+            <p className="font-body text-xs text-center mb-6" style={{ color: "#999" }}>
+              Required for verification. Accepted: JPG, PNG, PDF.
+            </p>
+
+            <div className="space-y-4">
+              {[
+                { label: "Emirates ID (front) *", file: docFront, preview: docFrontPreview, setter: setDocFront, previewSetter: setDocFrontPreview, ref: docFrontRef },
+                { label: "Emirates ID (back) *", file: docBack, preview: docBackPreview, setter: setDocBack, previewSetter: setDocBackPreview, ref: docBackRef },
+                { label: "Health Card *", file: docHealth, preview: docHealthPreview, setter: setDocHealth, previewSetter: setDocHealthPreview, ref: docHealthRef },
+              ].map((doc) => (
+                <div key={doc.label}>
+                  <label className="font-body text-xs block mb-2" style={{ color: "#666" }}>{doc.label}</label>
+                  <div
+                    className="rounded-xl border-2 border-dashed p-4 text-center cursor-pointer"
+                    style={{ borderColor: doc.file ? "#86A383" : "rgba(0,0,0,0.12)", backgroundColor: doc.file ? "rgba(134,163,131,0.05)" : "rgba(0,0,0,0.02)" }}
+                    onClick={() => doc.ref.current?.click()}
+                  >
+                    <input
+                      ref={doc.ref}
+                      type="file"
+                      accept="image/jpeg,image/png,application/pdf"
+                      className="hidden"
+                      onChange={(e) => handleDocSelect(e.target.files?.[0] || null, doc.setter, doc.previewSetter)}
+                    />
+                    {doc.preview && doc.preview !== "pdf" ? (
+                      <img src={doc.preview} alt={doc.label} className="w-20 h-20 object-cover rounded-lg mx-auto" />
+                    ) : doc.preview === "pdf" ? (
+                      <div className="flex flex-col items-center">
+                        <div className="w-12 h-12 rounded-lg flex items-center justify-center mb-1" style={{ backgroundColor: "rgba(134,163,131,0.15)" }}>
+                          <Check className="w-5 h-5" style={{ color: "#86A383" }} />
+                        </div>
+                        <span className="font-body text-xs" style={{ color: "#86A383" }}>PDF selected</span>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center">
+                        <Upload className="w-6 h-6 mb-1" style={{ color: "#999" }} />
+                        <span className="font-body text-xs" style={{ color: "#999" }}>Tap to upload</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <button
+              onClick={handleSubmitDocuments}
+              disabled={submitting || !docFront || !docBack || !docHealth}
+              className="w-full py-3 rounded-xl font-body font-semibold text-sm mt-6 flex items-center justify-center gap-2 disabled:opacity-50"
+              style={{ backgroundColor: "#B87355", color: "#FAF9F6" }}
+            >
+              {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
+              Submit Application
             </button>
           </div>
         )}
