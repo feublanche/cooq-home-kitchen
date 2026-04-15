@@ -396,9 +396,26 @@ const Admin = () => {
   };
 
   // ── Menu Vetting Actions (cook_menus) ──
-  const handleMenuApproveWithPhoto = async (menu: MenuRecord) => {
+  const handleMenuApprove = async (menu: MenuRecord) => {
+    setMenuActionLoading(menu.id);
+    try {
+      await supabase.from("cook_menus").update({ status: "approved" } as any).eq("id", menu.id);
+      setMenus((prev) => prev.map((m) => (m.id === menu.id ? { ...m, status: "approved" } : m)));
+      if (menu.cook_id) {
+        const cook = cooks.find((c) => c.id === menu.cook_id);
+        if (cook) await notifyCookGeneric(cook.name, cook.email, cook.phone, "menu_approved", { menu: menu.menu_name });
+      }
+      toast({ title: "Menu Approved ✓" });
+    } catch (err: any) {
+      toast({ title: "Error: " + (err.message || "Failed"), variant: "destructive" });
+    }
+    setMenuActionLoading(null);
+    setMenuActionMode((prev) => ({ ...prev, [menu.id]: null }));
+  };
+
+  const handleMenuUploadPhoto = async (menu: MenuRecord) => {
     if (!menuPhotoFile) {
-      toast({ title: "Please upload a food photo first", variant: "destructive" });
+      toast({ title: "Please select a photo first", variant: "destructive" });
       return;
     }
     setMenuActionLoading(menu.id);
@@ -409,15 +426,9 @@ const Admin = () => {
       if (uploadErr) throw uploadErr;
       const { data: urlData } = supabase.storage.from("menu-photos").getPublicUrl(path);
       const photoUrl = urlData.publicUrl;
-
-      await supabase.from("cook_menus").update({ status: "approved", photo_urls: [photoUrl] } as any).eq("id", menu.id);
-      setMenus((prev) => prev.map((m) => (m.id === menu.id ? { ...m, status: "approved", photo_urls: [photoUrl] } : m)));
-
-      if (menu.cook_id) {
-        const cook = cooks.find((c) => c.id === menu.cook_id);
-        if (cook) await notifyCookGeneric(cook.name, cook.email, cook.phone, "menu_approved", { menu: menu.menu_name });
-      }
-      toast({ title: "Menu Approved ✓", description: `Photo uploaded and menu is now live.` });
+      await supabase.from("cook_menus").update({ photo_urls: [photoUrl] } as any).eq("id", menu.id);
+      setMenus((prev) => prev.map((m) => (m.id === menu.id ? { ...m, photo_urls: [photoUrl] } : m)));
+      toast({ title: "Photo uploaded ✓" });
     } catch (err: any) {
       toast({ title: "Error: " + (err.message || "Upload failed"), variant: "destructive" });
     }
@@ -774,14 +785,24 @@ const Admin = () => {
                     )}
                     {mode === "approve" && (
                       <div className="mt-3 space-y-2 p-3 rounded-lg bg-green-50 border border-green-200">
-                        <p className="font-body text-xs font-semibold text-green-700">Upload food photo to approve</p>
-                        <input type="file" accept="image/*" onChange={(e) => setMenuPhotoFile(e.target.files?.[0] || null)} className="font-body text-xs" />
+                        <p className="font-body text-xs font-semibold text-green-700">Approve this menu?</p>
                         <div className="flex gap-2">
-                          <button onClick={() => handleMenuApproveWithPhoto(m)} disabled={menuActionLoading === m.id || !menuPhotoFile} className="px-4 py-2 rounded-lg font-body text-xs font-semibold bg-green-500 text-white disabled:opacity-50 flex items-center gap-1">
-                            {menuActionLoading === m.id && <Loader2 className="w-3 h-3 animate-spin" />} Approve & Publish
+                          <button onClick={() => handleMenuApprove(m)} disabled={menuActionLoading === m.id} className="px-4 py-2 rounded-lg font-body text-xs font-semibold bg-green-500 text-white disabled:opacity-50 flex items-center gap-1">
+                            {menuActionLoading === m.id && <Loader2 className="w-3 h-3 animate-spin" />} Approve
                           </button>
-                          <button onClick={() => { setMenuActionMode((p) => ({ ...p, [m.id]: null })); setMenuPhotoFile(null); }} className="px-3 py-2 rounded-lg font-body text-xs text-muted-foreground">Cancel</button>
+                          <button onClick={() => setMenuActionMode((p) => ({ ...p, [m.id]: null }))} className="px-3 py-2 rounded-lg font-body text-xs text-muted-foreground">Cancel</button>
                         </div>
+                      </div>
+                    )}
+                    {(ms === "approved" || ms === "pending_review") && (!m.photo_urls || m.photo_urls.length === 0) && !mode && (
+                      <div className="mt-3 space-y-2 p-3 rounded-lg bg-blue-50 border border-blue-200">
+                        <p className="font-body text-xs font-semibold text-blue-700">Add food photo (optional)</p>
+                        <input type="file" accept="image/*" onChange={(e) => setMenuPhotoFile(e.target.files?.[0] || null)} className="font-body text-xs" />
+                        {menuPhotoFile && (
+                          <button onClick={() => handleMenuUploadPhoto(m)} disabled={menuActionLoading === m.id} className="px-4 py-2 rounded-lg font-body text-xs font-semibold bg-blue-500 text-white disabled:opacity-50 flex items-center gap-1">
+                            {menuActionLoading === m.id && <Loader2 className="w-3 h-3 animate-spin" />} Upload Photo
+                          </button>
+                        )}
                       </div>
                     )}
                     {mode === "changes" && (

@@ -126,10 +126,6 @@ const BookingForm = () => {
   const sessionPrice = discountedPrice || baseSessionPrice;
   const sessionCount = getSessionCount(frequency || "weekly");
 
-  // Pre-fill area from search session
-  const searchNeighborhood = (() => {
-    try { return JSON.parse(sessionStorage.getItem("cooq_search_state") || "{}").neighborhood || ""; } catch { return ""; }
-  })();
 
   // Fetch user
   useEffect(() => {
@@ -250,7 +246,7 @@ const BookingForm = () => {
         customer_name: booking.customerName,
         email: booking.email,
         phone: fullPhone,
-        area: searchNeighborhood || booking.location || routerState.cookArea || "",
+        area: booking.location || routerState.cookArea || "",
         address: fullAddress,
         cook_id: cookId || "unassigned",
         cook_name: cookInitials,
@@ -499,12 +495,6 @@ const BookingForm = () => {
         {tier && frequency && dateComplete && (
           <div ref={addressRef} className="animate-in fade-in slide-in-from-bottom-2 duration-300 space-y-4">
             <p className="font-body text-xs font-semibold tracking-[0.15em] uppercase text-copper mb-1">Your address</p>
-
-            {searchNeighborhood && (
-              <div className="bg-primary/5 border border-primary/20 rounded-lg p-3">
-                <p className="font-body text-sm text-foreground">📍 {searchNeighborhood}</p>
-              </div>
-            )}
 
             <div>
               <label className="font-body text-sm font-medium text-foreground mb-1 block">Street Number *</label>
