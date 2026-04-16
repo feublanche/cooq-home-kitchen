@@ -102,6 +102,8 @@ const BookingForm = () => {
   const [streetName, setStreetName] = useState("");
   const [building, setBuilding] = useState("");
   const [phone, setPhone] = useState("");
+  const [savedAddress, setSavedAddress] = useState<{streetNumber: string; streetName: string; building: string; phone: string} | null>(null);
+  const [usingSavedAddress, setUsingSavedAddress] = useState(false);
   const [dietaryNotes, setDietaryNotes] = useState("");
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [secondMenuId, setSecondMenuId] = useState("");
