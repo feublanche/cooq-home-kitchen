@@ -661,6 +661,14 @@ const Admin = () => {
                               <button onClick={(e) => { e.stopPropagation(); openAssignDrawer(b); }} className="font-body text-[10px] font-semibold px-2 py-1 rounded-lg bg-copper/10 text-copper hover:bg-copper/20 transition-colors">Assign Cook</button>
                             </div>
                           )}
+                          {b.status === "pending" && (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); if (window.confirm("Confirm this booking?")) updateStatus(b.id, "confirmed"); }}
+                              className="mt-2 font-body text-[11px] font-semibold px-3 py-1.5 rounded-lg bg-green-500/10 text-green-700 hover:bg-green-500/20 transition-colors"
+                            >
+                              ✓ Confirm booking
+                            </button>
+                          )}
                         </button>
                         {expanded && (
                           <div className="px-4 pb-4 border-t border-border pt-3 space-y-1.5">
