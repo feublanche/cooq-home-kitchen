@@ -217,12 +217,23 @@ const CookDocuments = () => {
                   </button>
                 )}
 
-                {/* Verified - no re-upload needed */}
-                {doc?.status === "verified" && (
-                  <p className="font-body mt-2" style={{ fontSize: "10px", color: "#86A383" }}>
-                    ✓ Document verified — no action needed
-                  </p>
-                )}
+                {/* Verified - allow re-upload for expiry or update */}
+                 {doc?.status === "verified" && (
+                   <div className="mt-2">
+                     <p className="font-body" style={{ fontSize: "10px", color: "#86A383" }}>
+                       ✓ Document verified
+                     </p>
+                     <button
+                       onClick={() => fileRefs.current[slot.type]?.click()}
+                       disabled={isUploading}
+                       className="flex items-center gap-2 mt-2 rounded-lg px-3 py-1.5 font-body text-xs disabled:opacity-50"
+                       style={{ border: "1px solid rgba(150,150,150,0.3)", color: "#888", backgroundColor: "transparent" }}
+                     >
+                       {isUploading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Upload className="w-3 h-3" />}
+                       Re-upload (expired / update)
+                     </button>
+                   </div>
+                 )}
               </div>
             );
           })}
