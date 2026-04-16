@@ -556,8 +556,25 @@ const Admin = () => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
             return (
-              <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`flex flex-col items-center gap-1 px-4 py-3 font-body text-[10px] font-medium transition-colors whitespace-nowrap border-b-2 ${isActive ? "text-primary border-primary" : "text-muted-foreground border-transparent hover:text-foreground"}`}>
-                <Icon className="w-4 h-4" />
+              <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`relative flex flex-col items-center gap-1 px-4 py-3 font-body text-[10px] font-medium transition-colors whitespace-nowrap border-b-2 ${isActive ? "text-primary border-primary" : "text-muted-foreground border-transparent hover:text-foreground"}`}>
+                <div className="relative">
+                  <Icon className="w-4 h-4" />
+                  {tab.id === "supply" && cooks.filter(c => c.status === "applied" || c.status === "pending").length > 0 && (
+                    <span className="absolute -top-1.5 -right-2 min-w-[14px] h-[14px] rounded-full bg-red-500 text-white text-[8px] font-bold flex items-center justify-center px-0.5">
+                      {cooks.filter(c => c.status === "applied" || c.status === "pending").length}
+                    </span>
+                  )}
+                  {tab.id === "vetting" && menus.filter(m => m.status === "pending").length > 0 && (
+                    <span className="absolute -top-1.5 -right-2 min-w-[14px] h-[14px] rounded-full bg-red-500 text-white text-[8px] font-bold flex items-center justify-center px-0.5">
+                      {menus.filter(m => m.status === "pending").length}
+                    </span>
+                  )}
+                  {tab.id === "quality" && bookings.filter(b => b.proof_status === "pending_review").length > 0 && (
+                    <span className="absolute -top-1.5 -right-2 min-w-[14px] h-[14px] rounded-full bg-red-500 text-white text-[8px] font-bold flex items-center justify-center px-0.5">
+                      {bookings.filter(b => b.proof_status === "pending_review").length}
+                    </span>
+                  )}
+                </div>
                 {tab.label}
               </button>
             );
