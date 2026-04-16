@@ -236,7 +236,13 @@ const CookDashboard = () => {
           <p className="font-body text-sm mb-3" style={{ color: "#666" }}>
             Your application and documents are under review. We'll be in touch within 48 hours.
           </p>
-          <button
+          {cook?.doc_notes && (
+              <div className="mb-3 rounded-lg p-3" style={{ backgroundColor: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)" }}>
+                <p className="font-body text-sm font-semibold" style={{ color: "#ef4444" }}>🔴 Action required — re-upload your document</p>
+                <p className="font-body text-xs mt-1" style={{ color: "#92400E" }}>{cook.doc_notes}</p>
+              </div>
+            )}
+            <button
             onClick={() => navigate("/cook/documents")}
             className="w-full py-3 rounded-xl font-body font-semibold text-sm"
             style={{ backgroundColor: "rgba(134,163,131,0.1)", color: "#86A383" }}
@@ -344,7 +350,13 @@ const CookDashboard = () => {
           </button>
         </div>
       </div>
-
+{/* Document resubmission alert */}
+      {cook?.doc_notes && (
+        <div className="mx-4 mt-3 rounded-xl p-3 cursor-pointer" style={{ backgroundColor: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.25)" }} onClick={() => navigate("/cook/documents")}>
+          <p className="font-body text-sm font-semibold" style={{ color: "#ef4444" }}>🔴 Action required — re-upload a document</p>
+          <p className="font-body text-xs mt-0.5" style={{ color: "#92400E" }}>{cook.doc_notes} — tap to go to Documents</p>
+        </div>
+      )}
       {/* Status banner */}
       <div className="mx-4 mt-3 rounded-xl p-3" style={{ backgroundColor: "rgba(134,163,131,0.1)", border: "1px solid rgba(134,163,131,0.2)" }}>
         <div className="flex items-center justify-between gap-3">
