@@ -1,12 +1,3 @@
-You're right, sorry. Let me give you the full replacement code for BookingForm.tsx — just select all and replace, same as File 1.
-
-Good. Here is the **complete replacement file** for `BookingForm.tsx`. Same as before — select all, delete, paste, commit.
-
-Go to: `src` → `pages` → `BookingForm.tsx` → ✏️ → select all → delete → paste this entire file:
-
-Go to: `src` → `pages` → `BookingForm.tsx` → ✏️ → **select all (`Cmd+A` or `Ctrl+A`) → delete → paste the entire code below → Commit changes.**
-
-```tsx
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useBooking } from "@/context/BookingContext";
@@ -422,6 +413,3 @@ const SummaryRow = ({ label, value }: { label: string; value: string }) => (
 );
 
 export default BookingForm;
-```
-
-Commit. Tell me when done and I'll give you Change 2.
