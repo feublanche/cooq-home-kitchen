@@ -1,0 +1,17 @@
+{
+  "name": "Cooq — Home Cooks Dubai",
+  "short_name": "Cooq",
+  "description": "Vetted personal cooks for Dubai families.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FAF9F6",
+  "theme_color": "#86A383",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "64x64",
+      "type": "image/x-icon"
+    }
+  ]
+}
