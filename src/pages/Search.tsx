@@ -10,12 +10,6 @@ const cuisineOptions = [
   "American", "Italian", "Keto/Healthy", "Vegan", "Other",
 ];
 const dietaryOptions = ["Gluten-free", "Dairy-free", "Nut-free", "Low-carb", "Keto", "High-protein", "Vegan-friendly", "Vegetarian-friendly", "Family-friendly", "Postpartum/Nourishing", "Diabetic-friendly", "No restrictions"];
-const frequencyOptions = [
-  { key: "once", label: "Try once" },
-  { key: "weekly", label: "Once a week" },
-  { key: "twice", label: "Twice a week" },
-  { key: "three", label: "3× a week" },
-];
 
 const SESSION_KEY = "cooq_search_state";
 
@@ -46,17 +40,16 @@ const Search = () => {
 
   const [selectedCuisines, setSelectedCuisines] = useState<string[]>(saved.cuisines || []);
   const [selectedDietaries, setSelectedDietaries] = useState<string[]>(saved.dietaries || []);
-  const [frequency, setFrequency] = useState<string>(saved.frequency || "");
 
   useEffect(() => {
     sessionStorage.setItem(SESSION_KEY, JSON.stringify({
-      cuisines: selectedCuisines, dietaries: selectedDietaries, frequency,
+      cuisines: selectedCuisines, dietaries: selectedDietaries,
     }));
-  }, [selectedCuisines, selectedDietaries, frequency]);
+  }, [selectedCuisines, selectedDietaries]);
 
   const handleFinal = () => {
     navigate("/results", {
-      state: { cuisines: selectedCuisines, dietary: selectedDietaries, frequency },
+      state: { cuisines: selectedCuisines, dietary: selectedDietaries },
     });
   };
 
@@ -70,7 +63,7 @@ const Search = () => {
       </nav>
       <StepProgress current={0} />
 
-      <div className="flex-1 px-6 pb-6 space-y-8 overflow-y-auto">
+      <div className="flex-1 px-6 pb-32 space-y-8 overflow-y-auto">
         {/* SECTION 1: Cuisine (multi-select) */}
         <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
           <SectionLabel>What cuisine are you looking for?</SectionLabel>
@@ -90,64 +83,36 @@ const Search = () => {
           </div>
         </div>
 
-        {/* SECTION 2: Dietary (multi-select, optional) */}
-        {selectedCuisines.length > 0 && (
-          <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-            <SectionLabel>Any dietary requirements?</SectionLabel>
-            <div className="flex flex-wrap gap-2">
-              {dietaryOptions.map((d) => (
-                <Pill
-                  key={d}
-                  label={d}
-                  selected={selectedDietaries.includes(d)}
-                  onClick={() => {
-                    setSelectedDietaries(prev =>
-                      prev.includes(d) ? prev.filter(x => x !== d) : [...prev, d]
-                    );
-                  }}
-                />
-              ))}
-            </div>
+        {/* SECTION 2: Dietary (always visible) */}
+        <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <SectionLabel>Any dietary requirements? (optional)</SectionLabel>
+          <div className="flex flex-wrap gap-2">
+            {dietaryOptions.map((d) => (
+              <Pill
+                key={d}
+                label={d}
+                selected={selectedDietaries.includes(d)}
+                onClick={() => {
+                  setSelectedDietaries(prev =>
+                    prev.includes(d) ? prev.filter(x => x !== d) : [...prev, d]
+                  );
+                }}
+              />
+            ))}
           </div>
-        )}
+        </div>
+      </div>
 
-        {/* SECTION 3: Frequency */}
-        {selectedCuisines.length > 0 && (
-          <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-            <SectionLabel>How often?</SectionLabel>
-            <div className="flex flex-wrap gap-2">
-              {frequencyOptions.map((f) => {
-                const badge = f.key === "twice" ? "Save 5%" : f.key === "three" ? "Save 10%" : "";
-                return (
-                  <div key={f.key} className="relative">
-                    <Pill
-                      label={f.label}
-                      selected={frequency === f.key}
-                      onClick={() => setFrequency(frequency === f.key ? "" : f.key)}
-                    />
-                    {badge && (
-                      <span className="absolute -top-2 -right-2 px-1.5 py-0.5 rounded-full bg-green-500 text-white text-[9px] font-bold leading-none">
-                        {badge}
-                      </span>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* CTA */}
-        {selectedCuisines.length > 0 && frequency && (
-          <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 pb-4">
-            <button
-              onClick={handleFinal}
-              className="w-full py-4 rounded-lg font-body font-semibold text-base bg-copper text-accent-foreground transition-opacity hover:opacity-90"
-            >
-              Find My Cook →
-            </button>
-          </div>
-        )}
+      {/* CTA — always visible, sticky at bottom */}
+      <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border px-6 py-4 z-30">
+        <div className="max-w-[430px] mx-auto">
+          <button
+            onClick={handleFinal}
+            className="w-full py-4 rounded-lg font-body font-semibold text-base bg-copper text-accent-foreground transition-opacity hover:opacity-90"
+          >
+            Find My Cook →
+          </button>
+        </div>
       </div>
     </div>
   );
