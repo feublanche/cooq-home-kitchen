@@ -168,7 +168,25 @@ const Confirmation = () => {
         </div>
         <p className="font-body text-[11px] text-primary mt-3">Full refund if cancelled 48hrs+ before your session.</p>
       </div>
-
+{/* What happens next */}
+      <div className="bg-primary/10 border border-primary/20 rounded-xl mx-4 mt-4 p-4 space-y-3">
+        <p className="font-body text-xs font-semibold tracking-[0.15em] uppercase text-copper">What happens next</p>
+        <div className="space-y-2">
+          <div className="flex gap-3 items-start">
+            <span className="font-body text-xs font-bold text-primary mt-0.5">1</span>
+            <p className="font-body text-sm text-primary leading-relaxed">You'll receive a confirmation email with all your booking details.</p>
+          </div>
+          <div className="flex gap-3 items-start">
+            <span className="font-body text-xs font-bold text-primary mt-0.5">2</span>
+            <p className="font-body text-sm text-primary leading-relaxed">We'll send you a reminder 24 hours before your session.</p>
+          </div>
+          <div className="flex gap-3 items-start">
+            <span className="font-body text-xs font-bold text-primary mt-0.5">3</span>
+            <p className="font-body text-sm text-primary leading-relaxed">Your cook will arrive at your address at the agreed time, ready to cook.</p>
+          </div>
+        </div>
+        <p className="font-body text-xs text-primary/70 pt-1">Questions? <a href="mailto:hello@cooq.ae" className="underline">hello@cooq.ae</a> or <a href="https://wa.me/971000000000" className="underline">WhatsApp us</a> (number coming soon)</p>
+      </div>
       {/* Info box */}
       <div className="bg-primary/10 border border-primary/20 rounded-xl mx-4 mt-4 p-4">
         <p className="text-primary text-sm leading-relaxed">
