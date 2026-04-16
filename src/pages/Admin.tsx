@@ -595,6 +595,7 @@ const Admin = () => {
               if (confirmedNoPhoto.length > 0) alerts.push({ icon: <AlertTriangle className="w-4 h-4 text-copper" />, text: `${confirmedNoPhoto.length} confirmed booking(s) missing proof photos` });
               if (completedNoPhoto.length > 0) alerts.push({ icon: <AlertTriangle className="w-4 h-4 text-copper" />, text: `${completedNoPhoto.length} completed booking(s) with no proof photos uploaded` });
               if (expiringCooks.length > 0) alerts.push({ icon: <AlertTriangle className="w-4 h-4 text-copper" />, text: `${expiringCooks.length} cook(s) with DHA health cards expiring within 30 days` });
+            if (cookDocs.filter(d => d.status === "uploaded").length > 0) alerts.push({ icon: <AlertTriangle className="w-4 h-4 text-copper" />, text: `${cookDocs.filter(d => d.status === "uploaded").length} document(s) awaiting your review — check Supply Manager` });
               return (
                 <div className="bg-card rounded-xl p-4 border border-border mb-4" style={{ boxShadow: "var(--shadow-card)" }}>
                   <p className="font-body text-sm font-semibold text-foreground mb-2">Alerts</p>
@@ -960,9 +961,9 @@ const Admin = () => {
                             {{ emirates_id_front: "Emirates ID (Front)", emirates_id_back: "Emirates ID (Back)", health_card: "Health Card" }[doc.document_type] || doc.document_type.replace(/_/g, " ")}
                           </p>
                           {docStatusBadge(doc.status)}
-                          {doc.status !== "verified" && doc.status !== "needs_resubmission" && docResubMode !== doc.id && (
+                          {doc.status !== "needs_resubmission" && docResubMode !== doc.id && (
                             <div className="flex gap-2 pt-1">
-                              <button onClick={() => handleVerifyDocument(doc.id)} className="px-3 py-1.5 rounded-lg font-body text-[11px] font-semibold bg-green-500/10 text-green-600 hover:bg-green-500/20 transition-colors">Verify ✓</button>
+                             {doc.status !== "verified" && <button onClick={() => handleVerifyDocument(doc.id)} className="px-3 py-1.5 rounded-lg font-body text-[11px] font-semibold bg-green-500/10 text-green-600 hover:bg-green-500/20 transition-colors">Verify ✓</button>}
                               <button onClick={() => { setDocResubMode(doc.id); setDocResubNote(""); }} className="px-3 py-1.5 rounded-lg font-body text-[11px] font-semibold bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 transition-colors">Resubmit</button>
                             </div>
                           )}
