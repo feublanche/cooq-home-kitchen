@@ -751,8 +751,16 @@ const Admin = () => {
                       </span>
                     </div>
                     {m.meals && m.meals.length > 0 && (
-                      <div className="mb-2">
-                        {m.meals.map((meal, i) => <p key={i} className="font-body text-xs text-foreground">{i + 1}. {meal}</p>)}
+                      <div className="mb-2 space-y-1">
+                        {m.meals.length >= 6 ? (
+                          <>
+                            <p className="font-body text-xs text-foreground"><span className="font-semibold text-copper">Starter:</span> {m.meals[0]}{m.meals[1] ? ` — ${m.meals[1]}` : ""}</p>
+                            <p className="font-body text-xs text-foreground"><span className="font-semibold text-copper">Main:</span> {m.meals[2]}{m.meals[3] ? ` — ${m.meals[3]}` : ""}</p>
+                            <p className="font-body text-xs text-foreground"><span className="font-semibold text-copper">Side:</span> {m.meals[4]}{m.meals[5] ? ` — ${m.meals[5]}` : ""}</p>
+                          </>
+                        ) : (
+                          m.meals.map((meal, i) => <p key={i} className="font-body text-xs text-foreground">• {meal}</p>)
+                        )}
                       </div>
                     )}
                     {m.dietary && m.dietary.length > 0 && (
