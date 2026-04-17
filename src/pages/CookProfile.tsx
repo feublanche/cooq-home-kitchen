@@ -212,10 +212,18 @@ const CookProfile = () => {
                     <p className="font-body text-[13px] font-bold text-foreground">{menu.menu_name}</p>
                     {menu.cuisine && <p className="font-body text-[11px] text-copper mt-0.5">{menu.cuisine}</p>}
                     {menu.meals?.length > 0 && (
-                      <div className="mt-1 space-y-0.5">
-                        {menu.meals.map((meal: string, i: number) => (
-                          <p key={i} className="font-body text-[12px] text-muted-foreground">● {meal}</p>
-                        ))}
+                      <div className="mt-1 space-y-1">
+                        {menu.meals.length >= 6 ? (
+                          <>
+                            <p className="font-body text-[12px] text-foreground"><span className="font-semibold text-copper">Starter:</span> {menu.meals[0]}{menu.meals[1] ? <span className="text-muted-foreground"> — {menu.meals[1]}</span> : ""}</p>
+                            <p className="font-body text-[12px] text-foreground"><span className="font-semibold text-copper">Main:</span> {menu.meals[2]}{menu.meals[3] ? <span className="text-muted-foreground"> — {menu.meals[3]}</span> : ""}</p>
+                            <p className="font-body text-[12px] text-foreground"><span className="font-semibold text-copper">Side:</span> {menu.meals[4]}{menu.meals[5] ? <span className="text-muted-foreground"> — {menu.meals[5]}</span> : ""}</p>
+                          </>
+                        ) : (
+                          menu.meals.map((meal: string, i: number) => (
+                            <p key={i} className="font-body text-[12px] text-muted-foreground">● {meal}</p>
+                          ))
+                        )}
                       </div>
                     )}
                     {dietaryTags.length > 0 && (
