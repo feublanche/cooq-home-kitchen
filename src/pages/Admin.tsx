@@ -834,7 +834,7 @@ const Admin = () => {
                             onClick={async () => {
                               setMenuActionLoading(m.id);
                               const ed = menuEditData[m.id];
-                              const updatedMeals = ed.meals.split("\n").map(s => s.trim()).filter(Boolean);
+                              const updatedMeals = ed.meals.split("\n").map((s) => s.trim()).filter(Boolean);
                               await supabase.from("cook_menus").update({ menu_name: ed.menu_name.trim(), cuisine: ed.cuisine.trim(), meals: updatedMeals } as any).eq("id", m.id);
                               setMenus((prev) => prev.map((x) => x.id === m.id ? { ...x, menu_name: ed.menu_name.trim(), cuisine: ed.cuisine.trim(), meals: updatedMeals } : x));
                               setMenuActionMode((p) => ({ ...p, [m.id]: null }));
