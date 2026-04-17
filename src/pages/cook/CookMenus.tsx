@@ -43,6 +43,7 @@ const CookMenus = () => {
   const [cuisine, setCuisine] = useState("");
   const [starterName, setStarterName] = useState("");
   const [starterDesc, setStarterDesc] = useState("");
+  const MAX_DESC = 100;
   const [mainName, setMainName] = useState("");
   const [mainDesc, setMainDesc] = useState("");
   const [sideName, setSideName] = useState("");
@@ -306,19 +307,22 @@ const CookMenus = () => {
           <div className="rounded-xl p-4 bg-white border border-gray-100 space-y-3">
             <p className="font-body text-xs font-semibold" style={{ color: "#2C3B3A" }}>Starter</p>
             <input value={starterName} onChange={(e) => setStarterName(e.target.value)} placeholder="Dish name (e.g. Hummus with warm pita)" className={inputCls} style={{ color: "#2C3B3A" }} />
-            <input value={starterDesc} onChange={(e) => setStarterDesc(e.target.value)} placeholder="Brief description (optional)" className={inputCls} style={{ color: "#2C3B3A" }} />
+           <input value={starterDesc} onChange={(e) => setStarterDesc(e.target.value.slice(0, MAX_DESC))} placeholder="Brief description — max 20 words (optional)" className={inputCls} style={{ color: "#2C3B3A" }} />
+            <p className="font-body text-right" style={{ fontSize: "10px", color: starterDesc.length >= MAX_DESC ? "#ef4444" : "#999" }}>{starterDesc.length}/{MAX_DESC}</p>
           </div>
 
           <div className="rounded-xl p-4 bg-white border border-gray-100 space-y-3">
             <p className="font-body text-xs font-semibold" style={{ color: "#2C3B3A" }}>Main</p>
             <input value={mainName} onChange={(e) => setMainName(e.target.value)} placeholder="Dish name (e.g. Grilled chicken shawarma)" className={inputCls} style={{ color: "#2C3B3A" }} />
-            <input value={mainDesc} onChange={(e) => setMainDesc(e.target.value)} placeholder="Brief description (optional)" className={inputCls} style={{ color: "#2C3B3A" }} />
+            <input value={mainDesc} onChange={(e) => setMainDesc(e.target.value.slice(0, MAX_DESC))} placeholder="Brief description — max 20 words (optional)" className={inputCls} style={{ color: "#2C3B3A" }} />
+            <p className="font-body text-right" style={{ fontSize: "10px", color: mainDesc.length >= MAX_DESC ? "#ef4444" : "#999" }}>{mainDesc.length}/{MAX_DESC}</p>
           </div>
 
           <div className="rounded-xl p-4 bg-white border border-gray-100 space-y-3">
             <p className="font-body text-xs font-semibold" style={{ color: "#2C3B3A" }}>Side</p>
             <input value={sideName} onChange={(e) => setSideName(e.target.value)} placeholder="Dish name (e.g. Fattoush salad)" className={inputCls} style={{ color: "#2C3B3A" }} />
-            <input value={sideDesc} onChange={(e) => setSideDesc(e.target.value)} placeholder="Brief description (optional)" className={inputCls} style={{ color: "#2C3B3A" }} />
+            <input value={sideDesc} onChange={(e) => setSideDesc(e.target.value.slice(0, MAX_DESC))} placeholder="Brief description — max 20 words (optional)" className={inputCls} style={{ color: "#2C3B3A" }} />
+            <p className="font-body text-right" style={{ fontSize: "10px", color: sideDesc.length >= MAX_DESC ? "#ef4444" : "#999" }}>{sideDesc.length}/{MAX_DESC}</p>
           </div>
 
           <div>
