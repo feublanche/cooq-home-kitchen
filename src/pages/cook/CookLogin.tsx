@@ -24,7 +24,7 @@ const CookLogin = () => {
           .from("cooks").select("id").eq("user_id", session.user.id).maybeSingle();
         if (cook && !hasRedirected.current) {
           hasRedirected.current = true;
-          navigate("/cook/dashboard", { replace: true });
+          navigate("/cook/dashboard");
           return;
         }
       }
@@ -41,7 +41,7 @@ const CookLogin = () => {
           navigate("/admin", { replace: true });
           return;
         }
-        navigate("/cook/dashboard", { replace: true });
+        navigate("/cook/dashboard");
       }
     });
     return () => subscription.unsubscribe();
