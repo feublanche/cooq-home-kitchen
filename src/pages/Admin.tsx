@@ -614,6 +614,8 @@ const Admin = () => {
               if (completedNoPhoto.length > 0) alerts.push({ icon: <AlertTriangle className="w-4 h-4 text-copper" />, text: `${completedNoPhoto.length} completed booking(s) with no proof photos uploaded` });
               if (expiringCooks.length > 0) alerts.push({ icon: <AlertTriangle className="w-4 h-4 text-copper" />, text: `${expiringCooks.length} cook(s) with DHA health cards expiring within 30 days` });
             if (cookDocs.filter(d => d.status === "uploaded").length > 0) alerts.push({ icon: <AlertTriangle className="w-4 h-4 text-copper" />, text: `${cookDocs.filter(d => d.status === "uploaded").length} document(s) awaiting your review — check Supply Manager` });
+            const pendingMenuCount = menus.filter(m => m.status === "pending" || m.status === "pending_review").length;
+              if (pendingMenuCount > 0) alerts.push({ icon: <AlertTriangle className="w-4 h-4 text-copper" />, text: `${pendingMenuCount} menu(s) submitted for approval — check Menu Vetting` });
               return (
                 <div className="bg-card rounded-xl p-4 border border-border mb-4" style={{ boxShadow: "var(--shadow-card)" }}>
                   <p className="font-body text-sm font-semibold text-foreground mb-2">Alerts</p>
