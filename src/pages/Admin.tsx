@@ -194,6 +194,7 @@ const Admin = () => {
   const [menuPhotoFile, setMenuPhotoFile] = useState<File | null>(null);
   const [menuActionNote, setMenuActionNote] = useState<Record<string, string>>({});
   const [menuActionLoading, setMenuActionLoading] = useState<string | null>(null);
+  const [menuEditData, setMenuEditData] = useState<Record<string, { menu_name: string; cuisine: string; meals: string; dietary: string[] }>>({});
 
   // Cook documents state
   const [cookDocs, setCookDocs] = useState<{ id: string; cook_id: string; document_type: string; file_url: string; status: string }[]>([]);
@@ -767,7 +768,8 @@ const Admin = () => {
                     )}
                     {!mode && (
                       <div className="flex gap-2 mt-3">
-                        <button onClick={() => setMenuActionMode((p) => ({ ...p, [m.id]: "approve" }))} className="flex-1 py-2 rounded-lg font-body text-xs font-semibold bg-green-500/10 text-green-600 hover:bg-green-500/20 transition-colors">Approve</button>
+                       <button onClick={() => setMenuActionMode((p) => ({ ...p, [m.id]: "approve" }))} className="flex-1 py-2 rounded-lg font-body text-xs font-semibold bg-green-500/10 text-green-600 hover:bg-green-500/20 transition-colors">Approve</button>
+                        <button onClick={() => { setMenuActionMode((p) => ({ ...p, [m.id]: "edit" })); setMenuEditData((p) => ({ ...p, [m.id]: { menu_name: m.menu_name, cuisine: m.cuisine || "", meals: (m.meals || []).join("\n"), dietary: m.dietary || [] } })); }} className="flex-1 py-2 rounded-lg font-body text-xs font-semibold bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 transition-colors">Edit</button>
                         <button onClick={() => setMenuActionMode((p) => ({ ...p, [m.id]: "changes" }))} className="flex-1 py-2 rounded-lg font-body text-xs font-semibold bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 transition-colors">Request Changes</button>
                         <button onClick={() => setMenuActionMode((p) => ({ ...p, [m.id]: "reject" }))} className="flex-1 py-2 rounded-lg font-body text-xs font-semibold bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors">Reject</button>
                       </div>
@@ -792,6 +794,42 @@ const Admin = () => {
                             {menuActionLoading === m.id && <Loader2 className="w-3 h-3 animate-spin" />} Upload Photo
                           </button>
                         )}
+                      </div>
+                    )}
+                    {mode === "edit" && menuEditData[m.id] && (
+                      <div className="mt-3 space-y-3 p-3 rounded-lg bg-blue-50 border border-blue-200">
+                        <p className="font-body text-xs font-semibold text-blue-700">Edit menu — changes save to Fasan's profile</p>
+                        <div>
+                          <label className="font-body text-[10px] text-blue-600 uppercase tracking-wider block mb-1">Menu name</label>
+                          <input value={menuEditData[m.id].menu_name} onChange={(e) => setMenuEditData((p) => ({ ...p, [m.id]: { ...p[m.id], menu_name: e.target.value } }))} className="w-full p-2 rounded-lg border border-blue-300 bg-white font-body text-xs text-foreground outline-none focus:ring-1 focus:ring-blue-400" />
+                        </div>
+                        <div>
+                          <label className="font-body text-[10px] text-blue-600 uppercase tracking-wider block mb-1">Cuisine</label>
+                          <input value={menuEditData[m.id].cuisine} onChange={(e) => setMenuEditData((p) => ({ ...p, [m.id]: { ...p[m.id], cuisine: e.target.value } }))} className="w-full p-2 rounded-lg border border-blue-300 bg-white font-body text-xs text-foreground outline-none focus:ring-1 focus:ring-blue-400" placeholder="e.g. Indian" />
+                        </div>
+                        <div>
+                          <label className="font-body text-[10px] text-blue-600 uppercase tracking-wider block mb-1">Dishes (one per line)</label>
+                          <textarea value={menuEditData[m.id].meals} onChange={(e) => setMenuEditData((p) => ({ ...p, [m.id]: { ...p[m.id], meals: e.target.value } }))} rows={4} className="w-full p-2 rounded-lg border border-blue-300 bg-white font-body text-xs text-foreground resize-none outline-none focus:ring-1 focus:ring-blue-400" />
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            disabled={menuActionLoading === m.id}
+                            onClick={async () => {
+                              setMenuActionLoading(m.id);
+                              const ed = menuEditData[m.id];
+                              const updatedMeals = ed.meals.split("\n").map(s => s.trim()).filter(Boolean);
+                              await supabase.from("cook_menus").update({ menu_name: ed.menu_name.trim(), cuisine: ed.cuisine.trim(), meals: updatedMeals } as any).eq("id", m.id);
+                              setMenus((prev) => prev.map((x) => x.id === m.id ? { ...x, menu_name: ed.menu_name.trim(), cuisine: ed.cuisine.trim(), meals: updatedMeals } : x));
+                              setMenuActionMode((p) => ({ ...p, [m.id]: null }));
+                              setMenuActionLoading(null);
+                              toast({ title: "Menu updated ✓" });
+                            }}
+                            className="px-4 py-2 rounded-lg font-body text-xs font-semibold bg-blue-500 text-white disabled:opacity-50 flex items-center gap-1"
+                          >
+                            {menuActionLoading === m.id && <Loader2 className="w-3 h-3 animate-spin" />} Save changes
+                          </button>
+                          <button onClick={() => setMenuActionMode((p) => ({ ...p, [m.id]: null }))} className="px-3 py-2 rounded-lg font-body text-xs text-muted-foreground">Cancel</button>
+                        </div>
                       </div>
                     )}
                     {mode === "changes" && (
