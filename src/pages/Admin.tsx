@@ -190,7 +190,7 @@ const Admin = () => {
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
 
   // Menu vetting state
-  const [menuActionMode, setMenuActionMode] = useState<Record<string, "approve" | "changes" | "reject" | null>>({});
+  const [menuActionMode, setMenuActionMode] = useState<Record<string, "approve" | "changes" | "reject" | "edit" | null>>({});
   const [menuPhotoFile, setMenuPhotoFile] = useState<File | null>(null);
   const [menuActionNote, setMenuActionNote] = useState<Record<string, string>>({});
   const [menuActionLoading, setMenuActionLoading] = useState<string | null>(null);
