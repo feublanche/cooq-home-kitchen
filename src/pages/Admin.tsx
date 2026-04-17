@@ -530,6 +530,8 @@ const Admin = () => {
   // Menu vetting: only show menus from cooks with status='approved' or 'active'
   const approvedCookIds = new Set(cooks.filter((c) => c.status === "approved" || c.status === "active").map((c) => c.id));
   const vettableMenus = menus.filter((m) => m.cook_id && approvedCookIds.has(m.cook_id));
+  const pendingMenus = vettableMenus.filter((m) => m.status === "pending" || m.status === "pending_review" || m.status === "needs_review" || m.status === "rejected");
+  const approvedMenus = vettableMenus.filter((m) => m.status === "approved");;
 
   return (
     <div className="min-h-screen bg-background">
@@ -637,8 +639,13 @@ const Admin = () => {
                   <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                   <input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search customer, cook, area..." className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-border bg-card font-body text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-primary" />
                 </div>
-                <div className="space-y-3">
-                  {filteredBookings.map((b) => {
+            <div className="space-y-3">
+              {pendingMenus.length > 0 && (
+                <p className="font-body text-xs font-semibold tracking-[0.15em] uppercase text-copper mb-1">
+                  Pending Review ({pendingMenus.length})
+                </p>
+              )}
+              {pendingMenus.map((m) => {
                     const hasCook = b.cook_name && b.cook_id;
                     const expanded = expandedBookingId === b.id;
                     return (
@@ -867,7 +874,45 @@ const Admin = () => {
                   </div>
                 );
               })}
-              {vettableMenus.length === 0 && <p className="font-body text-sm text-muted-foreground text-center py-8">No menus from approved cooks to review.</p>}
+              {pendingMenus.length === 0 && approvedMenus.length === 0 && <p className="font-body text-sm text-muted-foreground text-center py-8">No menus from approved cooks to review.</p>}
+
+              {approvedMenus.length > 0 && (
+                <div className="mt-4">
+                  <p className="font-body text-xs font-semibold tracking-[0.15em] uppercase text-copper mb-2">
+                    Approved ({approvedMenus.length})
+                  </p>
+                  <div className="space-y-2">
+                    {approvedMenus.map((m) => (
+                      <div key={m.id} className="bg-card rounded-xl px-4 py-3 border border-border flex items-center justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-body text-sm font-semibold text-foreground truncate">{m.cook_name}</p>
+                          <p className="font-body text-xs text-muted-foreground truncate">{m.menu_name} · <span className="text-copper">{m.cuisine || "—"}</span></p>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="font-body text-[10px] font-semibold px-2 py-0.5 rounded-full bg-primary/10 text-primary">Approved ✓</span>
+                          <button
+                            onClick={() => { setMenuActionMode((p) => ({ ...p, [m.id]: "edit" })); setMenuEditData((p) => ({ ...p, [m.id]: { menu_name: m.menu_name, cuisine: m.cuisine || "", meals: (m.meals || []).join("\n"), dietary: m.dietary || [] } })); }}
+                            className="font-body text-[11px] font-semibold px-2 py-1 rounded-lg bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 transition-colors"
+                          >
+                            Edit
+                          </button>
+                        </div>
+                        {menuActionMode[m.id] === "edit" && menuEditData[m.id] && (
+                          <div className="w-full mt-2 space-y-2 p-3 rounded-lg bg-blue-50 border border-blue-200">
+                            <input value={menuEditData[m.id].menu_name} onChange={(e) => setMenuEditData((p) => ({ ...p, [m.id]: { ...p[m.id], menu_name: e.target.value } }))} className="w-full p-2 rounded-lg border border-blue-300 bg-white font-body text-xs outline-none" placeholder="Menu name" />
+                            <input value={menuEditData[m.id].cuisine} onChange={(e) => setMenuEditData((p) => ({ ...p, [m.id]: { ...p[m.id], cuisine: e.target.value } }))} className="w-full p-2 rounded-lg border border-blue-300 bg-white font-body text-xs outline-none" placeholder="Cuisine" />
+                            <textarea value={menuEditData[m.id].meals} onChange={(e) => setMenuEditData((p) => ({ ...p, [m.id]: { ...p[m.id], meals: e.target.value } }))} rows={4} className="w-full p-2 rounded-lg border border-blue-300 bg-white font-body text-xs resize-none outline-none" />
+                            <div className="flex gap-2">
+                              <button disabled={menuActionLoading === m.id} onClick={async () => { setMenuActionLoading(m.id); const ed = menuEditData[m.id]; const updatedMeals = ed.meals.split("\n").map((s: string) => s.trim()).filter(Boolean); await supabase.from("cook_menus").update({ menu_name: ed.menu_name.trim(), cuisine: ed.cuisine.trim(), meals: updatedMeals } as any).eq("id", m.id); setMenus((prev) => prev.map((x) => x.id === m.id ? { ...x, menu_name: ed.menu_name.trim(), cuisine: ed.cuisine.trim(), meals: updatedMeals } : x)); setMenuActionMode((p) => ({ ...p, [m.id]: null })); setMenuActionLoading(null); toast({ title: "Menu updated ✓" }); }} className="px-4 py-2 rounded-lg font-body text-xs font-semibold bg-blue-500 text-white disabled:opacity-50 flex items-center gap-1">{menuActionLoading === m.id && <Loader2 className="w-3 h-3 animate-spin" />} Save</button>
+                              <button onClick={() => setMenuActionMode((p) => ({ ...p, [m.id]: null }))} className="px-3 py-2 rounded-lg font-body text-xs text-muted-foreground">Cancel</button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}
