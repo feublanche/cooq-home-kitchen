@@ -565,9 +565,9 @@ const Admin = () => {
                       {cooks.filter(c => c.status === "applied" || c.status === "pending").length}
                     </span>
                   )}
-                  {tab.id === "vetting" && menus.filter(m => m.status === "pending").length > 0 && (
+                 {tab.id === "vetting" && menus.filter(m => m.status === "pending" || m.status === "pending_review").length > 0 && (
                     <span className="absolute -top-1.5 -right-2 min-w-[14px] h-[14px] rounded-full bg-red-500 text-white text-[8px] font-bold flex items-center justify-center px-0.5">
-                      {menus.filter(m => m.status === "pending").length}
+                      {menus.filter(m => m.status === "pending" || m.status === "pending_review").length}
                     </span>
                   )}
                   {tab.id === "quality" && bookings.filter(b => b.proof_status === "pending_review").length > 0 && (
