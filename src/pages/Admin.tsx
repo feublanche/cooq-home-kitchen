@@ -737,7 +737,12 @@ const Admin = () => {
             <h2 className="font-display text-xl text-foreground mb-1">Menu Vetting Queue</h2>
             <p className="font-body text-xs text-muted-foreground mb-4">Step 2: Only cooks with approved documents appear here. Approving a menu makes the cook visible to customers.</p>
             <div className="space-y-3">
-              {vettableMenus.map((m) => {
+              {pendingMenus.length > 0 && (
+                <p className="font-body text-xs font-semibold tracking-[0.15em] uppercase text-copper mb-2">
+                  Pending Review ({pendingMenus.length})
+                </p>
+              )}
+              {pendingMenus.map((m) => {
                 const ms = m.status || "pending_review";
                 const mode = menuActionMode[m.id] || null;
                 return (
