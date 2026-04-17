@@ -211,7 +211,7 @@ const CookSignup = () => {
     if (updateError) { toast.error("Profile update failed: " + updateError.message); setSubmitting(false); return; }
 
     // Save availability to cook_availability table
-   let resolvedUserId = userId;
+    let resolvedUserId = userId;
     if (!resolvedUserId) {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) resolvedUserId = session.user.id;
@@ -219,6 +219,7 @@ const CookSignup = () => {
     if (!resolvedUserId) { toast.error("Session expired. Please sign in again."); setSubmitting(false); navigate("/cook/login"); return; }
     const { data: cookData } = await supabase.from("cooks").select("id, name").eq("user_id", resolvedUserId).maybeSingle();
     if (!cookData) { toast.error("Cook record not found. Please contact support."); setSubmitting(false); return; }
+    if (days.length > 0) {
       const rows = days.map((day) => ({
         cook_id: cookData.id,
         day_of_week: dayToNumber[day],
