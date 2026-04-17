@@ -640,12 +640,7 @@ const Admin = () => {
                   <input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search customer, cook, area..." className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-border bg-card font-body text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-primary" />
                 </div>
             <div className="space-y-3">
-              {pendingMenus.length > 0 && (
-                <p className="font-body text-xs font-semibold tracking-[0.15em] uppercase text-copper mb-1">
-                  Pending Review ({pendingMenus.length})
-                </p>
-              )}
-              {pendingMenus.map((m) => {
+              {filteredBookings.map((b) => {
                     const hasCook = b.cook_name && b.cook_id;
                     const expanded = expandedBookingId === b.id;
                     return (
