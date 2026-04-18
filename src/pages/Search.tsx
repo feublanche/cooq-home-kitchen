@@ -104,7 +104,7 @@ const Search = () => {
       </div>
 
       {/* CTA — always visible, sticky at bottom */}
-      <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border px-6 py-4 z-30">
+      <div className="fixed bottom-16 left-0 right-0 bg-background border-t border-border px-6 py-4 z-40">
         <div className="max-w-[430px] mx-auto">
           <button
             onClick={handleFinal}
