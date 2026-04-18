@@ -268,8 +268,14 @@ const CookSignup = () => {
     setSubmitting(true);
 
     // Get cook record
-    const { data: cookData } = await supabase.from("cooks").select("id, name").eq("user_id", userId).maybeSingle();
-    if (!cookData) { toast.error("Cook record not found"); setSubmitting(false); return; }
+   let docUserId = userId;
+    if (!docUserId) {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) docUserId = session.user.id;
+    }
+    if (!docUserId) { toast.error("Session expired. Please sign in again."); setSubmitting(false); navigate("/cook/login"); return; }
+    const { data: cookData } = await supabase.from("cooks").select("id, name").eq("user_id", docUserId).maybeSingle();
+    if (!cookData) { toast.error("Cook record not found. Please contact support."); setSubmitting(false); return; }
 
     const uploads: { file: File; docType: string }[] = [
       { file: docFront, docType: "emirates_id_front" },
