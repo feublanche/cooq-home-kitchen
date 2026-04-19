@@ -268,7 +268,7 @@ const CookSignup = () => {
     setSubmitting(true);
 
     // Get cook record
-   let docUserId = userId;
+    let docUserId = userId;
     if (!docUserId) {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) docUserId = session.user.id;
