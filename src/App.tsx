@@ -39,6 +39,7 @@ import Privacy from "./pages/Privacy";
 import CookAgreement from "./pages/CookAgreement";
 import CookPrivacy from "./pages/CookPrivacy";
 import ResetPassword from "./pages/ResetPassword";
+import PrototypeMap from "./pages/PrototypeMap";
 
 const queryClient = new QueryClient();
 
@@ -84,6 +85,7 @@ const App = () => (
               <Route path="/cook/availability" element={<CookProtectedRoute><CookAvailability /></CookProtectedRoute>} />
               <Route path="/cook/profile" element={<CookProtectedRoute><CookProfilePage /></CookProtectedRoute>} />
               <Route path="/cook/documents" element={<CookProtectedRoute><CookDocuments /></CookProtectedRoute>} />
+              <Route path="/prototype-map" element={<PrototypeMap />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </div>
