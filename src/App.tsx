@@ -39,6 +39,7 @@ import Privacy from "./pages/Privacy";
 import CookAgreement from "./pages/CookAgreement";
 import CookPrivacy from "./pages/CookPrivacy";
 import ResetPassword from "./pages/ResetPassword";
+import PrototypeMap from "./pages/PrototypeMap";
 
 const queryClient = new QueryClient();
 
