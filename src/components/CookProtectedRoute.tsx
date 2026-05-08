@@ -14,6 +14,18 @@ const CookProtectedRoute = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     let cancelled = false;
 
+    // Prototype preview bypass — show screens without real auth
+    const isPreview =
+      typeof window !== "undefined" &&
+      (sessionStorage.getItem("prototype_preview") === "1" ||
+        localStorage.getItem("prototype_preview") === "1");
+    if (isPreview) {
+      setCook({ id: "preview", name: "Preview Cook" } as unknown as CookRow);
+      setLoading(false);
+      setChecking(false);
+      return;
+    }
+
     const checkSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (cancelled) return;

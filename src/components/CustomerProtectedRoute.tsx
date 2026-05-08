@@ -8,6 +8,15 @@ const CustomerProtectedRoute = ({ children }: { children: React.ReactNode }) => 
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
+    const isPreview =
+      typeof window !== "undefined" &&
+      (sessionStorage.getItem("prototype_preview") === "1" ||
+        localStorage.getItem("prototype_preview") === "1");
+    if (isPreview) {
+      setReady(true);
+      return;
+    }
+
     const check = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
