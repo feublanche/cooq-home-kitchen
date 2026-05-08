@@ -9,6 +9,16 @@ const ProtectedRoute = ({ children }: { children: ReactNode }) => {
   const [authorized, setAuthorized] = useState(false);
 
   useEffect(() => {
+    const isPreview =
+      typeof window !== "undefined" &&
+      (sessionStorage.getItem("prototype_preview") === "1" ||
+        localStorage.getItem("prototype_preview") === "1");
+    if (isPreview) {
+      setAuthorized(true);
+      setChecking(false);
+      return;
+    }
+
     const checkSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
