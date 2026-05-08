@@ -85,6 +85,7 @@ const App = () => (
               <Route path="/cook/availability" element={<CookProtectedRoute><CookAvailability /></CookProtectedRoute>} />
               <Route path="/cook/profile" element={<CookProtectedRoute><CookProfilePage /></CookProtectedRoute>} />
               <Route path="/cook/documents" element={<CookProtectedRoute><CookDocuments /></CookProtectedRoute>} />
+              <Route path="/prototype-map" element={<PrototypeMap />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </div>
