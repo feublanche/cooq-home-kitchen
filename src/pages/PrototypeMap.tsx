@@ -1,6 +1,15 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { X, ExternalLink } from "lucide-react";
+
+// Enable a global preview-bypass so protected routes render inside the
+// prototype map iframes without requiring real auth.
+if (typeof window !== "undefined") {
+  try {
+    sessionStorage.setItem("prototype_preview", "1");
+    localStorage.setItem("prototype_preview", "1");
+  } catch {}
+}
 
 type PageItem = { path: string; label: string; note?: string };
 type Section = { title: string; color: string; items: PageItem[]; flow?: string };
@@ -123,6 +132,13 @@ const Thumb = ({ item, onOpen }: { item: PageItem; onOpen: (p: PageItem) => void
 
 const PrototypeMap = () => {
   const [active, setActive] = useState<PageItem | null>(null);
+
+  useEffect(() => {
+    try {
+      sessionStorage.setItem("prototype_preview", "1");
+      localStorage.setItem("prototype_preview", "1");
+    } catch {}
+  }, []);
 
   return (
     <div className="fixed inset-0 overflow-auto bg-background z-50">
