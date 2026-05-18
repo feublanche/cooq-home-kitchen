@@ -10,6 +10,7 @@ const ProtectedRoute = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const isPreview =
+      import.meta.env.DEV &&
       typeof window !== "undefined" &&
       (sessionStorage.getItem("prototype_preview") === "1" ||
         localStorage.getItem("prototype_preview") === "1");
