@@ -22,25 +22,39 @@ serve(async (req) => {
       });
     }
 
+    // Always validate the JWT for every event
+    const anonClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      { global: { headers: { Authorization: authHeader } } }
+    );
+
+    const { data: { user }, error: userError } = await anonClient.auth.getUser();
+    if (userError || !user) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const { cook_name, cook_email, cook_phone, event_type, booking_details } = await req.json();
 
-    // For cook-originated events, just verify they're authenticated
+    // Non-cook events require operator role
     if (!COOK_EVENTS.includes(event_type)) {
-      const anonClient = createClient(
-        Deno.env.get('SUPABASE_URL') ?? '',
-        Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-        { global: { headers: { Authorization: authHeader } } }
-      );
-
-      const { data: { user }, error: userError } = await anonClient.auth.getUser();
-      if (userError || !user) {
-        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-          status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-
       const appMetadata = user.app_metadata as Record<string, unknown> | undefined;
       if (appMetadata?.role !== 'operator') {
+        return new Response(JSON.stringify({ error: 'Forbidden' }), {
+          status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    } else {
+      // For cook events, verify the caller owns the cook record being notified about
+      const { data: cookRow } = await anonClient
+        .from('cooks')
+        .select('id, email')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (!cookRow || (cook_email && cookRow.email !== cook_email)) {
         return new Response(JSON.stringify({ error: 'Forbidden' }), {
           status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
