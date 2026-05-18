@@ -2,9 +2,10 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { X, ExternalLink } from "lucide-react";
 
-// Enable a global preview-bypass so protected routes render inside the
-// prototype map iframes without requiring real auth.
-if (typeof window !== "undefined") {
+// Enable a DEV-only preview-bypass so protected routes render inside the
+// prototype map iframes without requiring real auth. This is stripped from
+// production builds because `import.meta.env.DEV` is statically false in prod.
+if (import.meta.env.DEV && typeof window !== "undefined") {
   try {
     sessionStorage.setItem("prototype_preview", "1");
     localStorage.setItem("prototype_preview", "1");
@@ -134,6 +135,7 @@ const PrototypeMap = () => {
   const [active, setActive] = useState<PageItem | null>(null);
 
   useEffect(() => {
+    if (!import.meta.env.DEV) return;
     try {
       sessionStorage.setItem("prototype_preview", "1");
       localStorage.setItem("prototype_preview", "1");

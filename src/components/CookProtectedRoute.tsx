@@ -14,8 +14,9 @@ const CookProtectedRoute = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     let cancelled = false;
 
-    // Prototype preview bypass — show screens without real auth
+    // Prototype preview bypass — DEV builds only; stripped from production
     const isPreview =
+      import.meta.env.DEV &&
       typeof window !== "undefined" &&
       (sessionStorage.getItem("prototype_preview") === "1" ||
         localStorage.getItem("prototype_preview") === "1");

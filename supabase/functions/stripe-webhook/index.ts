@@ -18,20 +18,22 @@ serve(async (req) => {
 
   let event: Stripe.Event
 
-  if (webhookSecret && sig) {
-    try {
-      event = stripe.webhooks.constructEvent(body, sig, webhookSecret)
-    } catch (err) {
-      console.error('Webhook signature verification failed:', err)
-      return new Response(JSON.stringify({ error: 'Invalid signature' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
-    }
-  } else {
-    // No webhook secret configured — parse event but log warning
-    console.warn('STRIPE_WEBHOOK_SECRET not set — processing without signature verification')
-    event = JSON.parse(body) as Stripe.Event
+  if (!webhookSecret || !sig) {
+    console.error('Missing STRIPE_WEBHOOK_SECRET or stripe-signature header — rejecting request')
+    return new Response(JSON.stringify({ error: 'Missing webhook secret or signature' }), {
+      status: 400,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
+  }
+
+  try {
+    event = stripe.webhooks.constructEvent(body, sig, webhookSecret)
+  } catch (err) {
+    console.error('Webhook signature verification failed:', err)
+    return new Response(JSON.stringify({ error: 'Invalid signature' }), {
+      status: 400,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
   }
 
   if (event.type === 'payment_intent.succeeded') {
